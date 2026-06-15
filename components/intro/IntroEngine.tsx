@@ -506,162 +506,251 @@ function drawEnzyme(
 
 function drawKitchen(ctx: CanvasRenderingContext2D, GW: number, GH: number, cameraX: number, t: number) {
   const ox = -Math.floor(cameraX);
-
-  // Wall
-  ctx.fillStyle = '#f5e6c8';
-  ctx.fillRect(0, 0, GW * S, GH * S);
-
-  // Floor tiles
   const floorY = Math.floor(GH * 0.62);
-  for (let tx = 0; tx < GW + 8; tx += 8) {
-    for (let ty = floorY; ty < GH; ty += 8) {
-      const alt = ((Math.floor(tx / 8) + Math.floor(ty / 8)) % 2 === 0);
-      gr(ctx, tx + ox, ty, 8, 8, alt ? '#d4b896' : '#c8a87a');
+
+  // ── Undertale-dark background ──
+  // Wall (near-black warm)
+  ctx.fillStyle = '#0e0a06';
+  ctx.fillRect(0, 0, GW * S, floorY * S);
+
+  // Baseboard strip
+  gr(ctx, 0 + ox, floorY - 4, GW + 16, 4, '#1a1208');
+  gr(ctx, 0 + ox, floorY - 5, GW + 16, 1, '#2a1e10');
+
+  // Dark wood floor planks
+  for (let fy = floorY; fy < GH; fy += 6) {
+    ctx.fillStyle = fy % 12 === 0 ? '#130e04' : '#0f0a02';
+    ctx.fillRect(0, fy * S, GW * S, 6 * S);
+    // Plank lines
+    for (let fx = 0; fx < GW; fx += 24) {
+      ctx.fillStyle = '#0a0700';
+      ctx.fillRect((fx + ox) * S, fy * S, S, 6 * S);
     }
   }
 
-  // Window
-  const winX = 40 + ox;
-  const winY = 12;
-  gr(ctx, winX, winY, 24, 20, '#8B7355');
-  gr(ctx, winX + 2, winY + 2, 20, 16, '#b3d9f2');
-  // Sun
-  gr(ctx, winX + 8, winY + 3, 6, 6, '#ffdd44');
-  // Curtains
-  gr(ctx, winX, winY, 4, 20, '#fffde0');
-  gr(ctx, winX + 20, winY, 4, 20, '#fffde0');
-
-  // Counter
-  const ctrX = GW - 60 + ox;
-  gr(ctx, ctrX, 34, 60, 6, '#8B7355');
-  gr(ctx, ctrX, 34, 60, 3, '#d4b896');
-  // Cabinets
-  for (let c = 0; c < 3; c++) {
-    gr(ctx, ctrX + c * 18 + 2, 40, 16, 20, '#a08060');
-    gr(ctx, ctrX + c * 18 + 8, 49, 2, 4, '#7a6040');
+  // Wainscoting (dark wood paneling strip at bottom of wall)
+  gr(ctx, 0 + ox, floorY - 16, GW + 16, 12, '#1e1408');
+  gr(ctx, 0 + ox, floorY - 17, GW + 16, 1, '#2e1e0e');
+  for (let px = 0; px < GW; px += 20) {
+    gr(ctx, px + ox + 1, floorY - 15, 18, 10, '#201508');
+    gr(ctx, px + ox + 2, floorY - 14, 16, 1, '#2e1e0e');
   }
 
-  // Refrigerator
-  const fridgeX = GW - 20 + ox;
-  gr(ctx, fridgeX, 10, 18, 52, '#e8e8e8');
-  gr(ctx, fridgeX + 2, 12, 14, 2, '#999');
-  gr(ctx, fridgeX + 15, 25, 2, 8, '#999');
+  // Window (night — dark outside with stars)
+  const winX = 40 + ox;
+  const winY = 8;
+  gr(ctx, winX - 2, winY - 2, 28, 24, '#1e1408'); // frame
+  gr(ctx, winX, winY, 24, 20, '#050d1a');          // glass - night sky
+  gr(ctx, winX + 11, winY, 2, 20, '#1e1408');      // divider
+  // Stars
+  [[3,3],[8,6],[17,4],[21,8],[6,12],[19,14]].forEach(([sx,sy]) => {
+    gr(ctx, winX + sx, winY + sy, 1, 1, '#aaccff');
+  });
+  // Curtains
+  gr(ctx, winX - 2, winY - 2, 5, 22, '#2a0a0a');
+  gr(ctx, winX + 21, winY - 2, 5, 22, '#2a0a0a');
+  // Warm glow from inside light hitting window top
+  const wg = (Math.sin(t * 0.8) + 1) / 2;
+  ctx.fillStyle = `rgba(255,180,80,${0.04 + wg * 0.02})`;
+  ctx.fillRect(winX * S, winY * S, 24 * S, 20 * S);
+
+  // Counter (dark wood, right side)
+  const ctrX = GW - 70 + ox;
+  gr(ctx, ctrX, 30, 70, 5, '#1e1408');    // counter surface
+  gr(ctx, ctrX, 30, 70, 2, '#2a1c0c');    // highlight top
+  gr(ctx, ctrX, 35, 70, 28, '#160e04');   // cabinet body
+  // Cabinet doors
+  for (let c = 0; c < 3; c++) {
+    gr(ctx, ctrX + c * 22 + 2, 37, 18, 24, '#1c1208');
+    gr(ctx, ctrX + c * 22 + 3, 38, 16, 22, '#181006');
+    gr(ctx, ctrX + c * 22 + 10, 48, 2, 4, '#2a1e0c'); // handle
+    gr(ctx, ctrX + c * 22 + 3, 38, 16, 1, '#241808'); // inner top highlight
+  }
+
+  // Refrigerator (dark steel — not white)
+  const fridgeX = GW - 18 + ox;
+  gr(ctx, fridgeX, 5, 16, 57, '#1a1a1a');
+  gr(ctx, fridgeX + 1, 6, 14, 1, '#252525');  // highlight
+  gr(ctx, fridgeX + 14, 20, 1, 10, '#0f0f0f'); // handle
+  gr(ctx, fridgeX + 4, 32, 8, 1, '#101010'); // divider line
+  gr(ctx, fridgeX + 1, 33, 14, 1, '#0d0d0d');
 
   // Stove
-  gr(ctx, ctrX - 20, 34, 18, 6, '#555');
-  gr(ctx, ctrX - 18, 30, 14, 4, '#333');
-
+  gr(ctx, ctrX - 22, 30, 20, 5, '#0f0f0f');
+  gr(ctx, ctrX - 20, 24, 16, 6, '#0a0a0a');
+  // Burner glow
+  const heatPulse = (Math.sin(t * 3) + 1) / 2;
+  gr(ctx, ctrX - 16, 27, 5, 2, `#${Math.floor(80 + heatPulse * 80).toString(16).padStart(2,'0')}2000` as string);
+  gr(ctx, ctrX - 10, 28, 4, 2, '#301000');
   // Pot
-  gr(ctx, ctrX - 14, 27, 8, 3, '#444');
-  gr(ctx, ctrX - 12, 25, 4, 2, '#444');
+  gr(ctx, ctrX - 14, 21, 8, 4, '#1a1a1a');
+  gr(ctx, ctrX - 12, 18, 4, 3, '#222');
+  gr(ctx, ctrX - 14, 21, 8, 1, '#282828');
+  // Steam
+  if (Math.floor(t * 4) % 2 === 0) {
+    gr(ctx, ctrX - 12, 14, 1, 4, '#333');
+    gr(ctx, ctrX - 10, 12, 1, 5, '#2a2a2a');
+    gr(ctx, ctrX - 8, 15, 1, 3, '#333');
+  }
 
-  // Dining table
+  // Dining table (dark wood)
   const tableX = Math.floor(GW * 0.3) + ox;
   const tableY = Math.floor(GH * 0.52);
   const tableW = 60;
-  const tableH = 10;
-  gr(ctx, tableX, tableY, tableW, tableH, '#8B7355');
-  gr(ctx, tableX, tableY, tableW, 2, '#a09070');
-
-  // Table legs
-  gr(ctx, tableX + 2, tableY + tableH, 4, 14, '#6a5040');
-  gr(ctx, tableX + tableW - 6, tableY + tableH, 4, 14, '#6a5040');
+  gr(ctx, tableX, tableY, tableW, 8, '#2a1808'); // tabletop
+  gr(ctx, tableX, tableY, tableW, 2, '#3a2410'); // highlight
+  gr(ctx, tableX, tableY + 8, tableW, 1, '#1a1006'); // shadow
+  // Legs
+  gr(ctx, tableX + 2, tableY + 8, 4, 12, '#1e1206');
+  gr(ctx, tableX + tableW - 6, tableY + 8, 4, 12, '#1e1206');
 
   // Chairs
   for (let c = 0; c < 2; c++) {
-    const chX = tableX + c * (tableW - 12);
-    gr(ctx, chX + 2, tableY - 14, 10, 10, '#8B7355');
-    gr(ctx, chX + 2, tableY - 20, 10, 6, '#6a5040');
-    gr(ctx, chX + 3, tableY + tableH + 4, 3, 8, '#6a5040');
-    gr(ctx, chX + 8, tableY + tableH + 4, 3, 8, '#6a5040');
+    const chX = tableX + c * (tableW - 14);
+    gr(ctx, chX + 2, tableY - 12, 10, 8, '#241808');   // seat
+    gr(ctx, chX + 2, tableY - 12, 10, 1, '#341c0c');   // seat highlight
+    gr(ctx, chX + 2, tableY - 18, 10, 6, '#1e1206');   // back
+    gr(ctx, chX + 2, tableY - 19, 10, 1, '#2a1a0a');   // back highlight
+    gr(ctx, chX + 3, tableY - 4, 3, 8, '#1a1006');     // legs
+    gr(ctx, chX + 9, tableY - 4, 3, 8, '#1a1006');
   }
 
-  // Overhead light
+  // Wall shelf on left
+  const shelfX = 8 + ox;
+  gr(ctx, shelfX, 18, 30, 2, '#1e1408');
+  gr(ctx, shelfX, 18, 30, 1, '#2a1c0c');
+  gr(ctx, shelfX, 20, 2, 14, '#1a1006');
+  gr(ctx, shelfX + 28, 20, 2, 14, '#1a1006');
+  // Kitchen items on shelf
+  gr(ctx, shelfX + 4, 12, 5, 8, '#1a0a0a'); // dark jar
+  gr(ctx, shelfX + 5, 11, 3, 1, '#220e0e');
+  gr(ctx, shelfX + 12, 13, 4, 7, '#0a1a0a'); // green jar
+  gr(ctx, shelfX + 12, 12, 4, 1, '#0e220e');
+  gr(ctx, shelfX + 20, 14, 6, 6, '#1a1510'); // container
+
+  // Overhead light fixture
   const lightX = Math.floor(GW / 2) + ox;
-  gr(ctx, lightX - 6, 0, 12, 6, '#ccc');
-  const glow = (Math.sin(t * 2) + 1) / 2;
-  ctx.fillStyle = `rgba(255,220,100,${0.3 + glow * 0.1})`;
-  ctx.fillRect((lightX - 20) * S, 6 * S, 40 * S, 30 * S);
-  gr(ctx, lightX - 6, 6, 12, 6, '#ffdd88');
+  gr(ctx, lightX - 5, 0, 10, 4, '#1a1a18');
+  gr(ctx, lightX - 3, 4, 6, 4, '#282824');
+  const glow = (Math.sin(t * 0.8) + 1) / 2;
+  // Warm cone of light downward
+  ctx.fillStyle = `rgba(255,200,80,${0.08 + glow * 0.03})`;
+  ctx.fillRect((lightX - 30) * S, 8 * S, 60 * S, 40 * S);
+  ctx.fillStyle = `rgba(255,200,80,${0.04 + glow * 0.02})`;
+  ctx.fillRect((lightX - 50) * S, 8 * S, 100 * S, 30 * S);
+  gr(ctx, lightX - 3, 4, 6, 2, '#504840'); // glowing bulb
 
-  // Stairs indicator on right
-  const stairX = GW - 8 + ox;
-  ctx.fillStyle = '#6b4226';
-  ctx.fillRect(stairX * S, floorY * S, 12 * S, (GH - floorY) * S);
-  for (let s = 0; s < 6; s++) {
-    ctx.fillStyle = '#8B6535';
-    ctx.fillRect((stairX + s) * S, (floorY + s * 4) * S, (12 - s) * S, 4 * S);
+  // Stairs indicator on right (leading off-screen)
+  const stairX = GW - 10 + ox;
+  for (let ss = 0; ss < 8; ss++) {
+    gr(ctx, stairX + ss, floorY + ss * 3, 12 - ss, 3, `#${(0x14 + ss * 2).toString(16)}${(0x0e + ss).toString(16)}04`);
+    gr(ctx, stairX + ss, floorY + ss * 3, 12 - ss, 1, `#${(0x1e + ss * 2).toString(16)}${(0x14 + ss).toString(16)}08`);
   }
-  drawPixelText(ctx, 'STAIRS', stairX - 2, floorY - 10, '#ffffff', 1);
+  drawPixelText(ctx, '> STAIRS', stairX - 4, floorY - 12, '#887766', 1);
 }
 
 function drawUpstairs(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: number) {
-  // Floor
-  ctx.fillStyle = '#6b4226';
-  ctx.fillRect(0, Math.floor(GH * 0.65) * S, GW * S, GH * S);
+  const floorY = Math.floor(GH * 0.65);
 
-  // Wall
-  ctx.fillStyle = '#d4c5a9';
-  ctx.fillRect(0, 0, GW * S, Math.floor(GH * 0.65) * S);
+  // ── Undertale-dark hallway ──
+  // Near-black purple wall
+  ctx.fillStyle = '#080610';
+  ctx.fillRect(0, 0, GW * S, floorY * S);
 
-  // Stripe wallpaper
-  for (let wx = 0; wx < GW; wx += 8) {
-    ctx.fillStyle = 'rgba(180,160,130,0.3)';
-    ctx.fillRect(wx * S, 0, 2, Math.floor(GH * 0.65) * S);
+  // Dark floor
+  for (let fy = floorY; fy < GH; fy += 8) {
+    ctx.fillStyle = fy % 16 === 0 ? '#0d0a02' : '#0a0800';
+    ctx.fillRect(0, fy * S, GW * S, 8 * S);
+    // Floor grain lines
+    for (let fx = 0; fx < GW; fx += 20) {
+      gr(ctx, fx, fy, 1, 8, '#070500');
+    }
   }
 
-  // Doorways
+  // Baseboard
+  gr(ctx, 0, floorY - 3, GW, 3, '#100c14');
+  gr(ctx, 0, floorY - 4, GW, 1, '#181220');
+
+  // Ceiling line
+  gr(ctx, 0, 0, GW, 4, '#040308');
+  gr(ctx, 0, 4, GW, 2, '#080612');
+
+  // ── Three doors ──
   const doors = [
-    { x: 10, label: "MOM'S ROOM", color: '#8B7355' },
-    { x: Math.floor(GW / 2) - 14, label: 'YOUR ROOM', color: '#5a7a9a' },
-    { x: GW - 44, label: 'BATHROOM', color: '#8B7355' },
+    { x: 14, label: "MOM'S ROOM", frameColor: '#1a0a10', glow: '#ff3366', open: false },
+    { x: Math.floor(GW / 2) - 16, label: 'YOUR ROOM', frameColor: '#0a1020', glow: '#4488ff', open: false },
+    { x: GW - 46, label: 'BATHROOM', frameColor: '#141010', glow: '#333333', open: false },
   ];
 
-  const floorY = Math.floor(GH * 0.65);
+  const glowPulse = (Math.sin(t * 2) + 1) / 2;
+
   for (const door of doors) {
-    // Frame
-    gr(ctx, door.x, floorY - 40, 28, 42, door.color);
-    // Door opening
-    gr(ctx, door.x + 2, floorY - 38, 24, 38, '#111');
-    // Label
-    drawPixelText(ctx, door.label, door.x, floorY - 50, '#ffffff', 1);
+    const dh = 44;
+    const dw = 26;
+    // Frame outer (dark wood)
+    gr(ctx, door.x - 2, floorY - dh - 2, dw + 4, dh + 2, door.frameColor);
+    gr(ctx, door.x - 1, floorY - dh - 1, dw + 2, 1, '#201828'); // frame top highlight
+    // Door panel (near-black)
+    gr(ctx, door.x, floorY - dh, dw, dh, '#050408');
+    gr(ctx, door.x + 1, floorY - dh, dw - 2, 1, '#0a0810'); // panel highlight
+    // Center divider
+    gr(ctx, door.x + Math.floor(dw / 2) - 1, floorY - dh + 2, 2, dh - 2, '#030206');
+    // Handle
+    gr(ctx, door.x + Math.floor(dw * 0.7), floorY - Math.floor(dh * 0.5), 3, 5, '#2a2030');
+    gr(ctx, door.x + Math.floor(dw * 0.7), floorY - Math.floor(dh * 0.5), 3, 1, '#3a3040');
+    // Color glow seeping under door
+    ctx.fillStyle = `rgba(${parseInt(door.glow.slice(1,3),16)},${parseInt(door.glow.slice(3,5),16)},${parseInt(door.glow.slice(5,7),16)},${0.06 + glowPulse * 0.08})`;
+    ctx.fillRect((door.x) * S, (floorY - 3) * S, dw * S, 3 * S);
+    // Label above door
+    drawPixelText(ctx, door.label, door.x - 2, floorY - dh - 12, '#554466', 1);
   }
 
-  // Lock on bathroom
-  const bathX = GW - 44;
-  gr(ctx, bathX + 10, floorY - 25, 6, 5, '#ffd700');
-  gr(ctx, bathX + 11, floorY - 28, 4, 3, '#ffd700');
-  gr(ctx, bathX + 12, floorY - 27, 2, 2, '#333');
+  // Lock on bathroom (padlock)
+  const bathX = GW - 46;
+  gr(ctx, bathX + 8, floorY - 26, 8, 6, '#332200');
+  gr(ctx, bathX + 9, floorY - 29, 6, 3, '#221a00');
+  gr(ctx, bathX + 11, floorY - 28, 2, 2, '#080600');
+  gr(ctx, bathX + 9, floorY - 26, 2, 3, '#221a00');  // shackle left
+  gr(ctx, bathX + 15, floorY - 26, 2, 3, '#221a00'); // shackle right
 
-  // Photo frames on wall
-  const photos = [Math.floor(GW * 0.2), Math.floor(GW * 0.5), Math.floor(GW * 0.75)];
-  for (const px of photos) {
-    gr(ctx, px, 10, 16, 14, '#8B7355');
-    gr(ctx, px + 1, 11, 14, 12, '#ccc');
-    // Silhouettes
-    gr(ctx, px + 3, 14, 3, 8, '#555');
-    gr(ctx, px + 8, 13, 3, 9, '#555');
-    gr(ctx, px + 3, 13, 3, 2, '#666');
-    gr(ctx, px + 8, 12, 3, 2, '#666');
+  // Wall art / photo frames
+  const photos = [Math.floor(GW * 0.22), Math.floor(GW * 0.5), Math.floor(GW * 0.77)];
+  for (const pfx of photos) {
+    gr(ctx, pfx - 1, 7, 18, 16, '#12101a');  // frame
+    gr(ctx, pfx, 8, 16, 14, '#0a0814');       // inner
+    // Abstract shapes in frame (like family photo silhouettes)
+    gr(ctx, pfx + 3, 11, 3, 8, '#1a1628');
+    gr(ctx, pfx + 8, 10, 3, 9, '#1e1a2c');
+    gr(ctx, pfx + 3, 10, 3, 2, '#201c30');
+    gr(ctx, pfx + 8, 9, 3, 2, '#241e34');
   }
 
-  // Overhead light
-  gr(ctx, Math.floor(GW / 2) - 4, 0, 8, 4, '#ccc');
-  const glow = (Math.sin(t * 1.5) + 1) / 2;
-  ctx.fillStyle = `rgba(255,220,150,${0.15 + glow * 0.05})`;
-  ctx.fillRect(0, 4 * S, GW * S, 30 * S);
+  // Overhead lamp
+  const lx = Math.floor(GW / 2);
+  gr(ctx, lx - 4, 0, 8, 5, '#14121e');
+  gr(ctx, lx - 2, 5, 4, 4, '#1c1828');
+  const glowA = 0.06 + glowPulse * 0.03;
+  ctx.fillStyle = `rgba(180,160,255,${glowA})`;
+  ctx.fillRect((lx - 40) * S, 9 * S, 80 * S, 30 * S);
+  gr(ctx, lx - 2, 5, 4, 2, '#302850'); // bulb tint
 }
 
 function drawBedroom(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: number) {
   const floorY = Math.floor(GH * 0.62);
 
-  // Floor
-  ctx.fillStyle = '#8B6914';
-  ctx.fillRect(0, floorY * S, GW * S, GH * S);
-
-  // Wall
-  ctx.fillStyle = '#c8d4e8';
+  // ── Dark bedroom (Undertale-style) ──
+  // Wall: very dark blue-grey
+  ctx.fillStyle = '#07090e';
   ctx.fillRect(0, 0, GW * S, floorY * S);
+
+  // Floor: dark wood
+  for (let fy = floorY; fy < GH; fy += 7) {
+    ctx.fillStyle = fy % 14 === 0 ? '#0e0b02' : '#0b0800';
+    ctx.fillRect(0, fy * S, GW * S, 7 * S);
+    for (let fx = 0; fx < GW; fx += 22) gr(ctx, fx, fy, 1, 7, '#080600');
+  }
+  gr(ctx, 0, floorY - 3, GW, 3, '#0e0c18');
+  gr(ctx, 0, floorY - 4, GW, 1, '#141220');
 
   // Bookshelf (left wall)
   const shelfX = 4;
@@ -731,10 +820,16 @@ function drawBedroom(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: n
 function drawMomsRoom(ctx: CanvasRenderingContext2D, GW: number, GH: number) {
   const floorY = Math.floor(GH * 0.62);
 
-  ctx.fillStyle = '#c8b8a0';
+  // ── Mom's room: dark warm walls ──
+  ctx.fillStyle = '#0e0906';
   ctx.fillRect(0, 0, GW * S, floorY * S);
-  ctx.fillStyle = '#7a5530';
-  ctx.fillRect(0, floorY * S, GW * S, GH * S);
+  // Dark floor
+  for (let fy = floorY; fy < GH; fy += 7) {
+    ctx.fillStyle = fy % 14 === 0 ? '#120e04' : '#0e0b02';
+    ctx.fillRect(0, fy * S, GW * S, 7 * S);
+  }
+  gr(ctx, 0, floorY - 3, GW, 3, '#1a1006');
+  gr(ctx, 0, floorY - 4, GW, 1, '#221408');
 
   // Bed
   const bedX = Math.floor(GW * 0.3);
@@ -1624,8 +1719,8 @@ export default function IntroEngine({ onComplete }: Props) {
           s.walkTimer += 0; // handled above
         }
 
-        // Check exits
-        const kitchenStairX = GW - 14;
+        // Check exits — stair trigger must be within movement bound (GW-20)
+        const kitchenStairX = GW - 26;
         if (s.playerX > kitchenStairX) {
           // Stairs exit
           s.freeRoam = false;

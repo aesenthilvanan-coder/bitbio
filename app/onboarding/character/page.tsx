@@ -84,6 +84,37 @@ function Cycle({ value, labels, onChange }: { value: number; labels: string[]; o
   );
 }
 
+// ─── Color picker with preview swatch + native input ─────────────────────────
+const PRESET_COLORS = [
+  "#1f2937","#7f1d1d","#14532d","#1e3a5f","#3b0764","#431407",
+  "#374151","#991b1b","#166534","#1e40af","#6d28d9","#92400e",
+  "#6b7280","#dc2626","#16a34a","#2563eb","#7c3aed","#d97706",
+  "#f59e0b","#ef4444","#22c55e","#3b82f6","#a855f7","#f97316",
+  "#000000","#1a1a1a","#ffffff","#cccccc","#888888","#444444",
+];
+
+function ColorPick({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+  return (
+    <div>
+      {/* Preset swatches */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 }}>
+        {PRESET_COLORS.map((c) => (
+          <button key={c} onClick={() => onChange(c)} style={{ width: 22, height: 22, background: c, border: `2px solid ${value === c ? "#00ffcc" : "#222"}`, cursor: "pointer", flexShrink: 0, boxShadow: value === c ? `0 0 6px ${c}` : "none" }} />
+        ))}
+      </div>
+      {/* Custom color row: big visible swatch + native input */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 40, height: 40, background: value, border: "2px solid #333", flexShrink: 0 }} />
+        <span style={{ color: "#555", fontSize: 10, fontFamily: "monospace", flex: 1 }}>{value}</span>
+        <label style={{ background: "#1a1a2a", border: "1px solid #00ffcc44", color: "#00ffcc", fontFamily: "'Press Start 2P', monospace", fontSize: 8, padding: "8px 12px", cursor: "pointer", position: "relative" }}>
+          PICK COLOR
+          <input type="color" value={value} onChange={(e) => onChange(e.target.value)} style={{ position: "absolute", opacity: 0, width: "100%", height: "100%", top: 0, left: 0, cursor: "pointer" }} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
 // ─── Label wrapper ────────────────────────────────────────────────────────────
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -223,7 +254,7 @@ export default function CharacterCreator() {
                 <Swatches colors={HAIR_COLORS.slice(10)} value={cfg.hairColor} onChange={(v) => upd({ hairColor: v })} />
               </Row>
               <Row label="CUSTOM COLOR">
-                <input type="color" value={cfg.hairColor} onChange={(e) => upd({ hairColor: e.target.value })} style={{ width: "100%", height: 40, border: "1px solid #333", background: "transparent", cursor: "pointer" }} />
+                <ColorPick value={cfg.hairColor} onChange={(v) => upd({ hairColor: v })} />
               </Row>
             </>
           )}
@@ -234,16 +265,16 @@ export default function CharacterCreator() {
                 <Cycle value={cfg.clothing} labels={CLOTHING_NAMES} onChange={(v) => upd({ clothing: v })} />
               </Row>
               <Row label="PRIMARY COLOR">
-                <input type="color" value={cfg.clothingColorPrimary} onChange={(e) => upd({ clothingColorPrimary: e.target.value })} style={{ width: "100%", height: 40, border: "1px solid #333", background: "transparent", cursor: "pointer" }} />
+                <ColorPick value={cfg.clothingColorPrimary} onChange={(v) => upd({ clothingColorPrimary: v })} />
               </Row>
               <Row label="SECONDARY COLOR">
-                <input type="color" value={cfg.clothingColorSecondary} onChange={(e) => upd({ clothingColorSecondary: e.target.value })} style={{ width: "100%", height: 40, border: "1px solid #333", background: "transparent", cursor: "pointer" }} />
+                <ColorPick value={cfg.clothingColorSecondary} onChange={(v) => upd({ clothingColorSecondary: v })} />
               </Row>
               <Row label="SHOES">
                 <Cycle value={cfg.shoes} labels={SHOES_NAMES} onChange={(v) => upd({ shoes: v })} />
               </Row>
               <Row label="SHOES COLOR">
-                <input type="color" value={cfg.shoesColor} onChange={(e) => upd({ shoesColor: e.target.value })} style={{ width: "100%", height: 40, border: "1px solid #333", background: "transparent", cursor: "pointer" }} />
+                <ColorPick value={cfg.shoesColor} onChange={(v) => upd({ shoesColor: v })} />
               </Row>
               <Row label="BODY TYPE">
                 <div style={{ display: "flex", gap: 8 }}>
@@ -261,13 +292,13 @@ export default function CharacterCreator() {
                 <Cycle value={cfg.headwear ?? 0} labels={HEADWEAR_NAMES} onChange={(v) => upd({ headwear: v })} />
               </Row>
               <Row label="HEADWEAR COLOR">
-                <input type="color" value={cfg.headwearColor ?? "#333"} onChange={(e) => upd({ headwearColor: e.target.value })} style={{ width: "100%", height: 40, border: "1px solid #333", background: "transparent", cursor: "pointer" }} />
+                <ColorPick value={cfg.headwearColor ?? "#333333"} onChange={(v) => upd({ headwearColor: v })} />
               </Row>
               <Row label="BAG / BACKPACK">
                 <Cycle value={cfg.backpackType ?? 0} labels={BACKPACK_NAMES} onChange={(v) => upd({ backpackType: v })} />
               </Row>
               <Row label="BAG COLOR">
-                <input type="color" value={cfg.backpackColor ?? "#1a1a2e"} onChange={(e) => upd({ backpackColor: e.target.value })} style={{ width: "100%", height: 40, border: "1px solid #333", background: "transparent", cursor: "pointer" }} />
+                <ColorPick value={cfg.backpackColor ?? "#1a1a2e"} onChange={(v) => upd({ backpackColor: v })} />
               </Row>
               <Row label="AURA EFFECT">
                 <Cycle value={cfg.auraEffect ?? 0} labels={AURA_NAMES} onChange={(v) => upd({ auraEffect: v })} />
