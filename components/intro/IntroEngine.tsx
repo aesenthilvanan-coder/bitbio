@@ -1264,7 +1264,7 @@ export default function IntroEngine({ onComplete }: Props) {
     const GH = Math.floor(canvas.height / S);
 
     if (phase === 'darkness') {
-      s.fadeAlpha = 1;
+      s.fadeAlpha = 0;
       startDialogue(DARKNESS_LINES[0].text);
       s.dialogueTyping = true;
     } else if (phase === 'kitchen') {
@@ -1953,7 +1953,7 @@ export default function IntroEngine({ onComplete }: Props) {
   return (
     <canvas
       ref={canvasRef}
-      style={{ display: 'block', imageRendering: 'pixelated', cursor: 'none' }}
+      style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', display: 'block', imageRendering: 'pixelated', cursor: 'none', zIndex: 100 }}
     />
   );
 }
