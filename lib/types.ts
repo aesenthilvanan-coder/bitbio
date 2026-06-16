@@ -108,31 +108,31 @@ export interface AvatarConfig {
 }
 
 export const DEFAULT_AVATAR: AvatarConfig = {
-  skinTone: "#c68642",
-  eyeShape: 0,
-  eyeColor: "#3b82f6",
-  eyebrow: 0,
-  nose: 0,
-  mouth: 0,
-  hairStyle: 0,
-  hairColor: "#1a1a1a",
-  glasses: 0,
-  facialHair: 0,
-  bodyType: 1,
-  clothing: 0,
-  clothingColorPrimary: "#1f2937",
-  clothingColorSecondary: "#374151",
-  accessories: { backpack: false, headphones: false, badge: false, earrings: false },
+  skinTone: "#c68642",          // medium warm brown
+  eyeShape: 1,                   // almond eyes
+  eyeColor: "#3b82f6",           // blue
+  eyebrow: 0,                    // thick
+  nose: 1,                       // button
+  mouth: 1,                      // smirk
+  hairStyle: 1,                  // short neat (dark, like reference)
+  hairColor: "#1a1a1a",          // near-black
+  glasses: 0,                    // none
+  facialHair: 0,                 // none
+  bodyType: 1,                   // average
+  clothing: 0,                   // Lab Coat (matching reference)
+  clothingColorPrimary: "#e8e8f4",   // white lab coat
+  clothingColorSecondary: "#d0d0e8", // slightly blue-white for depth
+  accessories: { backpack: true, headphones: false, badge: true, earrings: false },
   characterName: "Explorer",
-  headwear: 0,
+  headwear: 0,                   // none
   headwearColor: "#333333",
-  shoes: 1,
-  shoesColor: "#333333",
-  backpackType: 1,
-  backpackColor: "#1a1a2e",
-  auraEffect: 0,
+  shoes: 1,                      // high tops
+  shoesColor: "#1a1a1a",         // black shoes
+  backpackType: 1,               // Lab Pack (DNA backpack from reference)
+  backpackColor: "#1a1a2e",      // dark navy
+  auraEffect: 0,                 // none (starts plain)
   skinMarkings: 0,
-  expression: 1,
+  expression: 1,                 // smile
 };
 
 // ─── Player Progress ───────────────────────────────────────────────────────────
