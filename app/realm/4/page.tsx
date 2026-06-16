@@ -4,19 +4,38 @@ import { useState, useEffect } from 'react';
 import PixelWorldEngine from '@/components/world/PixelWorldEngine';
 import WorldEntryAnimation from '@/components/world/WorldEntryAnimation';
 import GameHUD from '@/components/layout/GameHUD';
+import HenryReveal from '@/components/effects/HenryReveal';
 import { useGameStore } from '@/lib/store';
 import Link from 'next/link';
 
 export default function Realm4Page() {
   const router = useRouter();
-  const { progress } = useGameStore();
+  const { progress, userName } = useGameStore();
   const [showEntry, setShowEntry] = useState(false);
+  const [showHenryReveal, setShowHenryReveal] = useState(false);
 
   useEffect(() => {
-    if (progress.unlockedRealms.includes(4) && !localStorage.getItem('visitedRealm4')) {
+    if (!progress.unlockedRealms.includes(4)) return;
+
+    // Check world entry first
+    if (!localStorage.getItem('visitedRealm4')) {
       setShowEntry(true);
+      return;
     }
-  }, [progress.unlockedRealms]);
+
+    // Henry Lacks reveal: show if not seen AND player has completed at least 1 Realm 4 node
+    if (!localStorage.getItem('henryRevealSeen')) {
+      const realm4NodeIds = Object.keys(progress.completedNodes).filter((id) =>
+        id.startsWith('l4-')
+      );
+      const hasCompletedRealm4Node = realm4NodeIds.some(
+        (id) => progress.completedNodes[id]?.completed
+      );
+      if (hasCompletedRealm4Node) {
+        setShowHenryReveal(true);
+      }
+    }
+  }, [progress.unlockedRealms, progress.completedNodes]);
 
   if (!progress.unlockedRealms.includes(4)) {
     return (
@@ -39,6 +58,18 @@ export default function Realm4Page() {
         onComplete={() => {
           localStorage.setItem('visitedRealm4', '1');
           setShowEntry(false);
+        }}
+      />
+    );
+  }
+
+  if (showHenryReveal) {
+    return (
+      <HenryReveal
+        playerName={userName || 'Explorer'}
+        onComplete={() => {
+          localStorage.setItem('henryRevealSeen', '1');
+          setShowHenryReveal(false);
         }}
       />
     );
