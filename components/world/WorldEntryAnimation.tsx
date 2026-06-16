@@ -1133,51 +1133,74 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
     // ── Per-realm animation timelines ─────────────────────────────────────────
 
     if (realm === 1) {
-      // Cytoplasm: Enzyme walks by awkwardly, barely acknowledges player
-      if (t < 0.8) {
-        s.fadeAlpha = Math.max(0, 1 - t / 0.8);
-      } else {
-        s.fadeAlpha = 0;
-      }
+      // Cytoplasm: Player JUST got thrown through the portal by Enzyme.
+      // They already know each other from the void — Enzyme is smug, player is NOT pleased.
+      // Timeline: Player tumbles in → stumbles upright → Enzyme bounces in behind → smug sit
+      //           → two-line dialogue exchange → welcome sign + terminal
 
-      // Player walks in from left (0.8–2.5s)
-      if (t >= 0.8 && t < 2.5) {
-        const prog = (t - 0.8) / 1.7;
-        s.playerX = -60 + prog * (CW * 0.38 + 60);
-        s.playerPhase = t * 7;
+      if (t < 0.5) s.fadeAlpha = Math.max(0, 1 - t / 0.5);
+      else s.fadeAlpha = 0;
+
+      // Player TUMBLES in from the left — momentum of being thrown (0.5–1.8s)
+      if (t >= 0.5 && t < 1.8) {
+        const prog = (t - 0.5) / 1.3;
+        const bounce = Math.abs(Math.sin(prog * Math.PI * 2.5)) * (1 - prog) * 40;
+        s.playerX = -40 + prog * (CW * 0.38 + 40);
+        s.playerY = -bounce;
+        s.playerPhase = t * 12; // fast stumble phase
         s.playerPose = 'walk';
       }
-      // Player settles (2.5s+)
-      if (t >= 2.5) { s.playerX = CW * 0.38; s.playerPose = 'stand'; s.playerPhase = 0; }
-
-      // Enzyme walks in from RIGHT (2.0–3.8s) — going LEFT, almost bumps player
-      if (t >= 2.0 && t < 3.8) {
-        const prog = (t - 2.0) / 1.8;
-        s.enzymeX = CW + 60 - prog * (CW * 0.38 + 60);
-        s.enzymePhase = t * 7;
-        s.enzymePose = 'walk';
-        s.enzymeFacing = 'left';
+      // Player plants feet, clearly annoyed (1.8s+)
+      if (t >= 1.8) {
+        s.playerX = CW * 0.38;
+        s.playerY = 0;
+        s.playerPose = 'stand';
+        s.playerPhase = 0;
       }
-      // Near-collision (3.8s) — enzyme stops just next to player
-      if (t >= 3.8) {
-        s.enzymeX = CW * 0.5;
+
+      // Enzyme hops through portal behind player, bouncy and proud (1.4–2.5s)
+      if (t >= 1.4 && t < 2.5) {
+        const prog = (t - 1.4) / 1.1;
+        const hop = Math.abs(Math.sin(prog * Math.PI * 3)) * (1 - prog) * 30;
+        s.enzymeX = -30 + prog * (CW * 0.52 + 30);
+        s.enzymeY = -hop;
+        s.enzymePhase = t * 10;
+        s.enzymePose = 'excited';
+        s.enzymeFacing = 'right';
+      }
+      // Enzyme settles in a proud sit next to player (2.5s+)
+      if (t >= 2.5) {
+        s.enzymeX = CW * 0.52;
+        s.enzymeY = 0;
         s.enzymePose = 'sit';
         s.enzymePhase = t;
-        s.enzymeFacing = 'left';
+        s.enzymeFacing = 'right'; // facing player's direction, smug
       }
 
-      // Awkward pause with dialogue (4.2–7.5s)
-      if (t >= 4.2) {
+      // Enzyme speaks first — proud of himself (2.8–4.8s)
+      if (t >= 2.8 && t < 4.8) {
         s.dialogueVisible = true;
         s.dialogueSpeaker = 'enzyme';
-        s.dialogueText = '...oh. You\'re here too.';
-        s.dialogueChar = Math.min(s.dialogueText.length, (t - 4.2) * 18);
+        s.dialogueText = 'See?! That was a GREAT entrance. You\'re welcome, by the way.';
+        s.dialogueChar = Math.min(s.dialogueText.length, (t - 2.8) * 22);
+      }
+      // Player responds — not amused (4.8–7.2s)
+      if (t >= 4.8 && t < 7.2) {
+        s.dialogueSpeaker = 'player';
+        s.dialogueText = '...you threw me through a portal.';
+        s.dialogueChar = Math.min(s.dialogueText.length, (t - 4.8) * 18);
+      }
+      // Enzyme's final word (7.2s+)
+      if (t >= 7.2 && t < 8.8) {
+        s.dialogueSpeaker = 'enzyme';
+        s.dialogueText = '...Yes. Anyway! Welcome to the Cytoplasm!';
+        s.dialogueChar = Math.min(s.dialogueText.length, (t - 7.2) * 20);
       }
 
       // Sign + terminal
-      if (t >= 5.5) s.signAlpha = Math.min(1, (t - 5.5) / 1.2);
-      if (t >= 6.5) s.terminalLines = Math.floor((t - 6.5) / 0.3) + 1;
-      if (t >= 8.5 && !s.done) { s.done = true; onCompleteRef.current(); return; }
+      if (t >= 7.0) s.signAlpha = Math.min(1, (t - 7.0) / 1.2);
+      if (t >= 8.0) s.terminalLines = Math.floor((t - 8.0) / 0.3) + 1;
+      if (t >= 10.5 && !s.done) { s.done = true; onCompleteRef.current(); return; }
     }
 
     else if (realm === 2) {
