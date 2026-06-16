@@ -249,7 +249,323 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🎓",
     color: "#39ff14",
     xpReward: 10000,
-    condition: (p) => p.unlockedRealms.includes(4) && Object.keys(p.completedNodes).filter((id) => id.startsWith("l4-m6")).length > 0,
+    condition: (p) =>
+      p.unlockedRealms.includes(4) &&
+      Object.keys(p.completedNodes).filter((id) => id.startsWith("l4-m6")).length > 0,
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── Boss-Specific ─────────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    id: "lysosome-bane",
+    title: "Lysosome's Bane",
+    description: "Defeated LYSO without losing a single heart — immaculate autophagy",
+    icon: "🫧",
+    color: "#ef4444",
+    xpReward: 400,
+    condition: (_p) => false, // Triggered programmatically when LYSO boss is defeated with full hearts
+    secret: true,
+  },
+  {
+    id: "sequence-purified",
+    title: "Sequence Purified",
+    description: "Defeated VIRON by answering every genome question correctly on the first try",
+    icon: "🦠",
+    color: "#52b788",
+    xpReward: 450,
+    condition: (_p) => false, // Triggered programmatically on perfect VIRON run
+    secret: true,
+  },
+  {
+    id: "generalize-this",
+    title: "Generalize This",
+    description: "Defeated OVERFIT by exploiting the dropout mechanic — regularization wins",
+    icon: "🎯",
+    color: "#a855f7",
+    xpReward: 350,
+    condition: (_p) => false, // Triggered programmatically when dropout ability is used to defeat OVERFIT
+  },
+  {
+    id: "fibril-crusher",
+    title: "Fibril Crusher",
+    description: "Defeated the Amyloid Tyrant in under 5 minutes — no time for aggregation",
+    icon: "⚔️",
+    color: "#00ffff",
+    xpReward: 500,
+    condition: (_p) => false, // Triggered programmatically: boss defeated with elapsed < 300s
+    secret: true,
+  },
+  {
+    id: "one-last-lesson",
+    title: "One Last Lesson",
+    description: "Answered all 5 of Henry's synthesis questions correctly — he almost sneezed in joy",
+    icon: "📖",
+    color: "#00ffff",
+    xpReward: 600,
+    condition: (_p) => false, // Triggered programmatically on perfect Henry final sequence
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── NPC Relationship ──────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    id: "elliots-favorite",
+    title: "Elliot's Favorite",
+    description: "Triggered all of Elliot's unique dialogue lines — he denies having favorites",
+    icon: "🐢",
+    color: "#39ff14",
+    xpReward: 150,
+    condition: (_p) => false, // Triggered programmatically when all Elliot dialogue IDs have fired
+  },
+  {
+    id: "bens-lunch",
+    title: "Ben's Lunch",
+    description: "Found Ben's Sandwich weapon and used it — he was NOT happy about this",
+    icon: "🥪",
+    color: "#f59e0b",
+    xpReward: 200,
+    condition: (_p) => false, // Triggered programmatically when sandwich item is equipped and used
+    secret: true,
+  },
+  {
+    id: "alexs-protege",
+    title: "Alex's Protégé",
+    description: "Cleared every node in the Neural Nebula — Alex logged it at p < 0.001",
+    icon: "📊",
+    color: "#a855f7",
+    xpReward: 350,
+    condition: (p) => {
+      const nebulaNodes = Object.keys(p.completedNodes).filter((id) =>
+        id.startsWith("l3-")
+      );
+      return (
+        nebulaNodes.length >= 10 &&
+        nebulaNodes.every((id) => p.completedNodes[id]?.completed)
+      );
+    },
+  },
+  {
+    id: "henrys-student",
+    title: "Henry's Student",
+    description: "Completed the full Henry boss conversation and synthesis sequence",
+    icon: "🏛️",
+    color: "#00ffff",
+    xpReward: 300,
+    condition: (_p) => false, // Triggered programmatically after Henry final sequence completes
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── Explorer / Secrets ────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    id: "moms-room",
+    title: "Moms Room",
+    description: "Read every one of Mom's hidden diary entries — this was a private folder",
+    icon: "📔",
+    color: "#f472b6",
+    xpReward: 175,
+    condition: (_p) => false, // Triggered programmatically when all diary entry IDs are read
+    secret: true,
+  },
+  {
+    id: "jefferys-shadow",
+    title: "Jeffery's Shadow",
+    description: "The name Jeffery appears 5 times in this game. You found all of them.",
+    icon: "👤",
+    color: "#6b7280",
+    xpReward: 100,
+    condition: (_p) => false, // Triggered programmatically: jeffery_sighting_count >= 5
+    secret: true,
+  },
+  {
+    id: "closet-survivor",
+    title: "Closet Survivor",
+    description: "Witnessed the full textbook zoom cutscene without skipping — respect",
+    icon: "📚",
+    color: "#f59e0b",
+    xpReward: 75,
+    condition: (_p) => false, // Triggered programmatically when textbook cutscene completes naturally
+    secret: true,
+  },
+  {
+    id: "stubborn",
+    title: "Stubborn",
+    description: "Chose NO at the DNA portal — so Enzyme threw you in anyway",
+    icon: "🚪",
+    color: "#ef4444",
+    xpReward: 50,
+    condition: (_p) => false, // Triggered programmatically on portal_choice === "no"
+    secret: true,
+  },
+  {
+    id: "willing",
+    title: "Willing",
+    description: "Chose YES at the DNA portal — bravery acknowledged",
+    icon: "✅",
+    color: "#39ff14",
+    xpReward: 50,
+    condition: (_p) => false, // Triggered programmatically on portal_choice === "yes"
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── Combat ────────────────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    id: "pest-control",
+    title: "Pest Control",
+    description: "Defeated all 20 enemy types at least once — a complete bestiary",
+    icon: "🪲",
+    color: "#52b788",
+    xpReward: 750,
+    condition: (_p) => false, // Triggered programmatically: defeatedEnemyTypes.size >= 20
+  },
+  {
+    id: "snip-prevention",
+    title: "Snip Prevention",
+    description: "Defeated the Nuclease Specter without getting cut once",
+    icon: "✂️",
+    color: "#3b82f6",
+    xpReward: 300,
+    condition: (_p) => false, // Triggered programmatically: nuclease fight ended with 0 cut events
+    secret: true,
+  },
+  {
+    id: "answer-is-7",
+    title: "Answer is 7",
+    description: "Defeated the Overfitted Minion on the very first try",
+    icon: "7️⃣",
+    color: "#f59e0b",
+    xpReward: 200,
+    condition: (_p) => false, // Triggered programmatically: overfitted_minion_attempts === 1
+    secret: true,
+  },
+  {
+    id: "undefined-behavior",
+    title: "Undefined Behavior",
+    description: "Encountered the NaN Entity — most players never see it",
+    icon: "👾",
+    color: "#6b7280",
+    xpReward: 100,
+    condition: (_p) => false, // Triggered programmatically on nan_entity spawn
+    secret: true,
+  },
+  {
+    id: "infinity-loop",
+    title: "Infinity Loop",
+    description: "Caused the Attention Head Hydra to sprout 20 heads — it's a feature",
+    icon: "♾️",
+    color: "#a855f7",
+    xpReward: 150,
+    condition: (_p) => false, // Triggered programmatically: hydra_head_count >= 20
+    secret: true,
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── Learning ─────────────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    id: "speed-runner",
+    title: "Speed Runner",
+    description: "Completed any lesson in under 30 seconds — did you even read the questions?",
+    icon: "🏃",
+    color: "#39ff14",
+    xpReward: 125,
+    condition: (_p) => false, // Triggered programmatically: lesson elapsed_ms < 30000
+    secret: true,
+  },
+  {
+    id: "no-hints-needed",
+    title: "No Hints Needed",
+    description: "Completed all exercises in a module without using a single hint",
+    icon: "🧠",
+    color: "#3b82f6",
+    xpReward: 250,
+    condition: (_p) => false, // Triggered programmatically: module completed with hints_used === 0
+  },
+  {
+    id: "deep-reader",
+    title: "Deep Reader",
+    description: "Read the lore entry for every enemy encountered — you are the lore",
+    icon: "📜",
+    color: "#f59e0b",
+    xpReward: 200,
+    condition: (_p) => false, // Triggered programmatically: lore_entries_read.size >= total_enemies
+  },
+  {
+    id: "polyglot",
+    title: "Polyglot",
+    description: "Completed exercises of 3 different types in a single session",
+    icon: "🗣️",
+    color: "#52b788",
+    xpReward: 175,
+    condition: (_p) => false, // Triggered programmatically: session exercise_types_seen.size >= 3
+  },
+  {
+    id: "consistent",
+    title: "Consistent",
+    description: "Submitted correct first answers 5 exercises in a row — no backtracking",
+    icon: "✔️",
+    color: "#39ff14",
+    xpReward: 150,
+    condition: (_p) => false, // Triggered programmatically: consecutive_correct_first_tries >= 5
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── Cosmetic ─────────────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    id: "fashion-icon",
+    title: "Fashion Icon",
+    description: "Visited the character creator 5 times — the fit matters",
+    icon: "👗",
+    color: "#f472b6",
+    xpReward: 100,
+    condition: (_p) => false, // Triggered programmatically: character_creator_visits >= 5
+  },
+  {
+    id: "random-walk",
+    title: "Random Walk",
+    description: "Hit the Random button in the character creator 3 times in a row",
+    icon: "🎲",
+    color: "#a855f7",
+    xpReward: 50,
+    condition: (_p) => false, // Triggered programmatically: consecutive_random_clicks >= 3
+    secret: true,
+  },
+  {
+    id: "this-is-me",
+    title: "This Is Me",
+    description: "Kept the default appearance and still completed Realm 1 — brave",
+    icon: "🪞",
+    color: "#06b6d4",
+    xpReward: 100,
+    condition: (_p) => false, // Triggered programmatically: realm 1 complete + avatar unchanged from defaults
+    secret: true,
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── Meta ─────────────────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    id: "skip-everything",
+    title: "Skip Everything",
+    description: "Skipped every single cutscene in the game — the plot found you anyway",
+    icon: "⏭️",
+    color: "#6b7280",
+    xpReward: 75,
+    condition: (_p) => false, // Triggered programmatically: all_cutscene_ids are in skipped_cutscenes set
+    secret: true,
+  },
+  {
+    id: "night-owl",
+    title: "Night Owl",
+    description: "Played between 12 AM and 4 AM — the lab is quieter at this hour",
+    icon: "🦉",
+    color: "#3b82f6",
+    xpReward: 100,
+    condition: (_p) => false, // Triggered programmatically: new Date().getHours() < 4 on any action
+    secret: true,
   },
 ];
 
