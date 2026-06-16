@@ -1,0 +1,152 @@
+{
+  "division": "Environment Division",
+  "sprint": 1,
+  "goal": "All 4 realm tilesets score 7.0+ on quality rubric. Kitchen and Upstairs scenes score 7.5+.",
+
+  "backlog": [
+    {
+      "id": "ENV-001",
+      "title": "Cytoplasm biome floor tile — hue-shifted ramp variant",
+      "priority": "P0",
+      "status": "TODO",
+      "acceptance": ["Shadow pixel shifts toward blue-purple vs base color","2 variants alternating via (tx+ty)%2","Seamless 3x3 tile test passes","Lightness < 10 for dark base"],
+      "designNotes": "Current floor is decent. Needs hue-shifted shadow variant. Base: #050d10, Shadow: #030a15 (slightly more blue), Alt: #060e14",
+      "referencesGames": ["undertale-ruins-floor","pokemon-bw-indoor"],
+      "estimatedHours": 1
+    },
+    {
+      "id": "ENV-002",
+      "title": "Cytoplasm biome wall tile — protein channel detail",
+      "priority": "P0",
+      "status": "TODO",
+      "acceptance": ["Top edge bright (light from above)","Left edge 1 shade lighter than right","Protein channel motif (circular detail)","Accent color accent used sparingly (1-2px per tile)"],
+      "designNotes": "Current wall has glowing crack. Replace with protein channel: 4x4 dark circle with 2 teal dots at cardinal points. More Undertale-appropriate than random cracks.",
+      "referencesGames": ["undertale-ruins-wall","hyper-light-drifter"],
+      "estimatedHours": 2
+    },
+    {
+      "id": "ENV-003",
+      "title": "Cytoplasm mitochondria tile — upgrade to 40+ fillRect",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": ["Bean/oval shape (not rectangle)","Cristae visible (3+ inner folds)","ATP synthase dots at membrane","Outer double membrane clear","Shadow beneath sprite"],
+      "designNotes": "Current mitochondria is too boxy. Real mitochondria: elongated oval, inner membrane folds (cristae) zigzag pattern. Use 8-12 more fillRect calls for inner detail.",
+      "referencesGames": ["undertale-papyrus-detail","earthbound-enemy-sprites"],
+      "estimatedHours": 3
+    },
+    {
+      "id": "ENV-004",
+      "title": "Genome Forest floor — root system pattern",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": ["Dark forest floor base (#050f04)","Root system lines visible (thin darker lines branching)","Leaf litter dots (1px in brown-green)","2 variants"],
+      "referencesGames": ["stardew-valley-forest","chrono-trigger-forest"],
+      "estimatedHours": 2
+    },
+    {
+      "id": "ENV-005",
+      "title": "Genome Forest wall — bark texture with moss",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": ["Dark bark base (#0a1a05)","Horizontal grain lines (3 per tile)","Moss dots at tile bottom (green)","Top-left light edge"],
+      "estimatedHours": 2
+    },
+    {
+      "id": "ENV-006",
+      "title": "Genome Forest DNA helix tree — animated rotation",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": ["Two backbone strands visible","4 base pairs (AT=red/blue, GC=green/yellow)","Animation: helix appears to rotate each frame","Trunk visible beneath helix"],
+      "designNotes": "Use animFrame to offset the zigzag lX/rX arrays — simulates rotation without complex math",
+      "estimatedHours": 3
+    },
+    {
+      "id": "ENV-007",
+      "title": "Neural Nebula void floor — deep star field",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": ["Pure black base (#030008)","9-12 star positions (1px dots)","Stars twinkle at different phase offsets (not in sync)","Occasional 2x2 brighter star"],
+      "referencesGames": ["hyper-light-drifter","undertale-void"],
+      "estimatedHours": 1
+    },
+    {
+      "id": "ENV-008",
+      "title": "Neural Nebula crystal spire — multi-faceted with glow",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": ["Tapered hexagonal shape","Left highlight edge (light source)","Top glowing node pulses","3 connection tendrils extend outward","Shadow beneath"],
+      "estimatedHours": 2
+    },
+    {
+      "id": "ENV-009",
+      "title": "Protein Cathedral stone floor — cross grout pattern",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": ["Near-black stone base (#0a080f)","Cross-shaped grout lines (1px dark)","Every 4th tile: worn chip detail","Subtle warmth in lighter areas"],
+      "referencesGames": ["castlevania-aria","final-fantasy-vi-castle"],
+      "estimatedHours": 2
+    },
+    {
+      "id": "ENV-010",
+      "title": "Protein Cathedral gothic pillar — ornate carved detail",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": ["Column with capital (decorative top)","Stone course lines (horizontal seams)","Amber gold accent on highlight edge","Deep shadow on right edge","Base with flare"],
+      "referencesGames": ["castlevania-aria-pillars","golden-sun-temples"],
+      "estimatedHours": 3
+    },
+    {
+      "id": "ENV-011",
+      "title": "Kitchen scene — full dark Undertale redesign",
+      "priority": "P0",
+      "status": "DONE",
+      "acceptance": ["Wall #0e0a06 near-black","Floor dark wood planks","Night window with stars","Dark fridge (#1a1a1a)","Animated stove steam","All furniture dark with subtle highlights"],
+      "completionNote": "Implemented in IntroEngine.tsx drawKitchen(). Scores approximately 7.5/10."
+    },
+    {
+      "id": "ENV-012",
+      "title": "Upstairs hallway scene — three doors with colored glow",
+      "priority": "P0",
+      "status": "DONE",
+      "acceptance": ["Wall #080610 near-black purple","Dark wood floor","3 distinct doors with subtle colored glow seeping under","Padlock on bathroom","Photo frames on wall","Overhead purple lamp glow"],
+      "completionNote": "Implemented in IntroEngine.tsx drawUpstairs(). Scores approximately 7.0/10."
+    },
+    {
+      "id": "ENV-013",
+      "title": "Bedroom scene dark redesign",
+      "priority": "P1",
+      "status": "DONE",
+      "acceptance": ["Wall #07090e near-black blue","Floor dark planks","Desk with glowing monitor","Bed with dark covers","Posters with accent glow"],
+      "completionNote": "Implemented. Good foundation, could use more desk detail."
+    },
+    {
+      "id": "ENV-014",
+      "title": "Mom's room scene dark redesign",
+      "priority": "P1",
+      "status": "DONE",
+      "acceptanceNote": "Implemented. Warm dark tones. Consider adding more personal items."
+    },
+    {
+      "id": "ENV-015",
+      "title": "Boss gate tile — gothic archway with cracked red glow",
+      "priority": "P2",
+      "status": "DONE",
+      "completionNote": "Implemented with pulsing red glow and warning exclamation."
+    },
+    {
+      "id": "ENV-016",
+      "title": "Path tiles — animated motor protein for Realm 1",
+      "priority": "P2",
+      "status": "DONE",
+      "completionNote": "Microtubule highway with animated motor protein implemented."
+    }
+  ],
+
+  "currentSprint": {
+    "sprint": 1,
+    "focus": "ENV-001 through ENV-010 (active realm tileset improvements)",
+    "blockedBy": [],
+    "dependencies": ["Requires MASTER-KNOWLEDGE.json for palette references"],
+    "definitionOfDone": "All tile functions in PixelWorldEngine.tsx pass QA rubric 7.0+ score"
+  }
+}

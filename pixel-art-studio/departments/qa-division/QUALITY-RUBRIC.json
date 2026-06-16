@@ -1,0 +1,153 @@
+{
+  "version": "1.0",
+  "description": "BitBio Pixel Art Quality Rubric. Each asset must be scored before shipping. Minimum 7.0 to ship. Target 8.5.",
+
+  "rubric": {
+    "silhouetteReadability": {
+      "weight": 0.20,
+      "description": "Can you identify the sprite/tile at blur, grayscale, or 25% scale?",
+      "scores": {
+        "0": "Completely unreadable at any reduction. Looks like abstract noise.",
+        "3": "Barely readable. Requires full-color full-size to identify.",
+        "5": "Readable at full size, loses identity when blurred or scaled down.",
+        "7": "Readable at 50% scale. Identity clear in grayscale.",
+        "9": "Readable at 25% scale. Iconic silhouette. Could be a logo.",
+        "10": "Frisk, Papyrus, Samus tier — instantly iconic at any resolution."
+      },
+      "testMethod": "Apply 5px Gaussian blur + convert to grayscale. If character is identifiable: 7+. If character AND emotion readable: 9+."
+    },
+    "colorHarmony": {
+      "weight": 0.15,
+      "description": "Does the palette use hue-shifting? Are colors intentionally related?",
+      "scores": {
+        "0": "Random colors, no visible palette discipline.",
+        "3": "Flat darkening only. Shadows are just darker versions of base with no hue shift.",
+        "5": "Some palette discipline but colors clash or feel unrelated.",
+        "7": "Clear hue-shifted ramps. Shadows cool-shifted, highlights warm-shifted.",
+        "9": "Palette tells a story. Every color feels inevitable, not accidental.",
+        "10": "Sea of Stars / Eastward quality — professional color artist level."
+      },
+      "testMethod": "Check: does shadow shift toward blue/purple? Does highlight shift toward yellow/orange? If yes to both: 7+."
+    },
+    "realmConsistency": {
+      "weight": 0.15,
+      "description": "Does the asset use only its realm's canonical palette from BITBIO-PALETTE.json?",
+      "scores": {
+        "0": "Uses colors from 3+ different realms. Looks like it belongs to a different game.",
+        "3": "Has some realm colors but several out-of-realm additions.",
+        "5": "Mostly realm-correct but has 2-3 off-palette colors.",
+        "7": "All colors within realm palette ± tolerance of 30 color distance.",
+        "9": "Perfect realm compliance AND contributes to realm identity.",
+        "10": "Asset that defines the realm's visual identity going forward."
+      },
+      "testMethod": "Run validateRealmAsset() from style-checker.ts. Score < 80% compliance = max score 5."
+    },
+    "readabilityAtGameScale": {
+      "weight": 0.20,
+      "description": "At S=3 scale on a 1512px-wide screen, does the asset serve its gameplay role clearly?",
+      "scores": {
+        "0": "Asset is invisible or indistinguishable from background at game scale.",
+        "3": "Barely visible. Color shape only, no recognizable details.",
+        "5": "Recognizable category (character, wall, floor) but not specific identity.",
+        "7": "Identity clear. Player can tell NPC from player, floor from wall.",
+        "9": "Identity + state readable (which NPC, which lesson node, interactive vs non-interactive).",
+        "10": "Every pixel visible at game scale serves a purpose."
+      },
+      "testMethod": "Screenshot the actual game. Zoom to 100% actual CSS pixels. Is the asset serving its role?"
+    },
+    "animationPolish": {
+      "weight": 0.15,
+      "description": "For animated assets: does motion feel weighted, alive, and game-appropriate?",
+      "scores": {
+        "0": "Static or broken animation.",
+        "3": "2-frame toggle with no weight or personality.",
+        "5": "Functional 2-4 frame animation. Movement is conveyed but feels mechanical.",
+        "7": "Natural-feeling animation. Character identity maintained across frames.",
+        "9": "Anticipation, follow-through, or sub-pixel polish visible.",
+        "10": "Stardew Valley / OMORI walk cycle quality — every frame delightful."
+      },
+      "testMethod": "Run scoreWalkCycle() from animation-scorer.ts. Overall score < 75 = rubric score ≤ 6."
+    },
+    "styleConsistency": {
+      "weight": 0.15,
+      "description": "Does the asset match the established BitBio visual style? Would it look at home in the game?",
+      "scores": {
+        "0": "Completely different style — looks like it came from another game.",
+        "3": "Some style elements match, but feels like a different artist's work.",
+        "5": "Matches the general dark aesthetic but has inconsistencies.",
+        "7": "Fits naturally into existing game scenes. Indistinguishable from existing assets.",
+        "9": "Elevates the visual style of assets around it.",
+        "10": "Sets the new standard for the game's visual style."
+      },
+      "testMethod": "Place asset in a screenshot next to existing game assets. Does it look like it belongs?"
+    }
+  },
+
+  "scoring": {
+    "formula": "sum(category_score * weight) for all categories",
+    "minimumShipScore": 7.0,
+    "targetScore": 8.5,
+    "blockingMinimums": {
+      "silhouetteReadability": 5.0,
+      "readabilityAtGameScale": 5.0
+    }
+  },
+
+  "benchmarkScores": {
+    "undertale": {
+      "silhouetteReadability": 9.5,
+      "colorHarmony": 8.0,
+      "realmConsistency": 9.5,
+      "readabilityAtGameScale": 10.0,
+      "animationPolish": 7.5,
+      "styleConsistency": 10.0,
+      "overall": 9.2
+    },
+    "omori": {
+      "silhouetteReadability": 9.0,
+      "colorHarmony": 9.5,
+      "realmConsistency": 9.0,
+      "readabilityAtGameScale": 9.5,
+      "animationPolish": 8.0,
+      "styleConsistency": 9.5,
+      "overall": 9.1
+    },
+    "pokemonBW": {
+      "silhouetteReadability": 9.0,
+      "colorHarmony": 8.5,
+      "realmConsistency": 9.0,
+      "readabilityAtGameScale": 9.5,
+      "animationPolish": 8.5,
+      "styleConsistency": 9.0,
+      "overall": 8.9
+    },
+    "currentBitBio": {
+      "silhouetteReadability": 6.0,
+      "colorHarmony": 5.5,
+      "realmConsistency": 8.5,
+      "readabilityAtGameScale": 6.5,
+      "animationPolish": 5.5,
+      "styleConsistency": 7.0,
+      "overall": 6.5,
+      "note": "Assessed June 2026. Zone identity excellent. Sprite size and color ramps need most work."
+    }
+  },
+
+  "decisionTree": {
+    "score_below_5": "REJECT — Do not ship. Return to design phase. Document what failed.",
+    "score_5_to_7": "REVISE — Ship temporarily to unblock other work. Create backlog ticket to improve.",
+    "score_7_to_8_5": "SHIP — Meets standard. Document for future improvement but not blocking.",
+    "score_above_8_5": "FEATURE — This asset sets the quality bar. Reference it in DESIGN-RULES.md.",
+    "below_blocking_minimum": "CRITICAL BLOCK — Even if overall score is 7+, asset cannot ship if silhouette or readability is below 5.0."
+  },
+
+  "reviewProcess": [
+    "1. Run automated tools: validateRealmAsset() + scoreWalkCycle() if animated",
+    "2. Score each rubric category manually using the testMethod",
+    "3. Calculate weighted overall score",
+    "4. Apply blocking minimums check",
+    "5. Apply decision tree",
+    "6. Document score in asset's commit message: [QA: 7.8/10]",
+    "7. If shipping with score < 8.5, create GitHub issue for improvement"
+  ]
+}

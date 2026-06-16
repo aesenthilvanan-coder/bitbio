@@ -1,0 +1,348 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-06-15",
+  "description": "Exact documented palettes from landmark pixel art games. Hex values sourced from sprite rips and community documentation. Usage context included for direct application.",
+  "palettes": {
+    "undertale_core": {
+      "gameName": "Undertale",
+      "year": 2015,
+      "engine": "GameMaker Studio",
+      "description": "The universal palette used across all zones of Undertale. Toby Fox used a deliberately limited and slightly desaturated set to evoke retro SNES aesthetics while remaining readable.",
+      "resolution": "320x240 native, scaled up",
+      "colors": [
+        { "hex": "#000000", "name": "True Black", "usage": "outlines, deep shadows, text background" },
+        { "hex": "#FFFFFF", "name": "True White", "usage": "text, UI elements, Frisk soul, snow" },
+        { "hex": "#FF0000", "name": "Pure Red", "usage": "HP bar, damage indicators, Undyne's spears, danger" },
+        { "hex": "#FFFF00", "name": "Pure Yellow", "usage": "SOUL types, Mettaton EX highlights, gold" },
+        { "hex": "#00FFFF", "name": "Pure Cyan", "usage": "blue attacks (move only), Undyne dialogue" },
+        { "hex": "#808080", "name": "Mid Gray", "usage": "inactive menu items, stone textures, shadows on white" },
+        { "hex": "#C0C0C0", "name": "Light Gray", "usage": "walls, menu boxes, Ruins stone" },
+        { "hex": "#404040", "name": "Dark Gray", "usage": "floor tiles, ambient fill, cave areas" },
+        { "hex": "#FF8000", "name": "Orange", "usage": "Hotland environment, neutral attacks (dodge or take)" },
+        { "hex": "#8000FF", "name": "Purple", "usage": "gravitational attacks, Muffet's accents" },
+        { "hex": "#008000", "name": "Dark Green", "usage": "Waterfall vegetation, healing items" },
+        { "hex": "#804000", "name": "Brown", "usage": "Ruins dirt paths, wooden elements, Snowdin tree trunks" }
+      ],
+      "notes": "Undertale intentionally uses near-primary colors at full saturation for game-mechanic colors (red = harm, yellow = SOUL, cyan = blue attacks) to make the game rules readable at a glance. Environmental colors are more muted. This separation between mechanical color and aesthetic color is a key design lesson."
+    },
+    "undertale_ruins": {
+      "gameName": "Undertale - Ruins Zone",
+      "colors": [
+        { "hex": "#000000", "name": "Void Black", "usage": "outlines and dark area fill" },
+        { "hex": "#4A2000", "name": "Ruin Brown", "usage": "wall base color, aged stone" },
+        { "hex": "#6B3A1F", "name": "Mid Brown", "usage": "wall highlights, warm stone midtone" },
+        { "hex": "#8B5E3C", "name": "Light Stone", "usage": "floor highlights, crumbling edges" },
+        { "hex": "#2A1500", "name": "Shadow Brown", "usage": "wall shadow and crevice depth" },
+        { "hex": "#1A0A00", "name": "Near Black Brown", "usage": "deepest shadow, wall recesses" },
+        { "hex": "#D4A56A", "name": "Pale Stone", "usage": "lit floor tiles, puzzle pedestals" },
+        { "hex": "#FF8040", "name": "Amber Torch", "usage": "torchlight color, warm accent" }
+      ],
+      "mood": "Warm, cramped, ancient. Brown tones with amber warmth convey age and abandonment."
+    },
+    "undertale_snowdin": {
+      "gameName": "Undertale - Snowdin Zone",
+      "colors": [
+        { "hex": "#000000", "name": "Outline Black" },
+        { "hex": "#FFFFFF", "name": "Snow White", "usage": "snow ground fill, snowflakes" },
+        { "hex": "#C8D8E8", "name": "Ice Blue White", "usage": "snow shadow side, icy surfaces" },
+        { "hex": "#6890A0", "name": "Cold Blue", "usage": "background sky, ice blocks" },
+        { "hex": "#4A3000", "name": "Pine Brown", "usage": "tree trunks" },
+        { "hex": "#204020", "name": "Dark Pine", "usage": "pine tree needles, deep green" },
+        { "hex": "#306030", "name": "Mid Pine", "usage": "pine needle highlight" },
+        { "hex": "#F08040", "name": "Warm Lamp", "usage": "lamppost light, Snowdin town warmth" },
+        { "hex": "#2040A0", "name": "Night Blue", "usage": "deep background, starless sky" }
+      ],
+      "mood": "Cold, lonely, but with pockets of warmth. Blue-white palette with warm orange lamps creates the classic cold-night-with-light-inside feeling."
+    },
+    "undertale_waterfall": {
+      "gameName": "Undertale - Waterfall Zone",
+      "colors": [
+        { "hex": "#000020", "name": "Deep Cave", "usage": "background void" },
+        { "hex": "#001040", "name": "Dark Cavern Blue", "usage": "ambient fill" },
+        { "hex": "#003060", "name": "Cave Blue", "usage": "wall base" },
+        { "hex": "#0060A0", "name": "Water Blue", "usage": "water and waterfall" },
+        { "hex": "#40A0FF", "name": "Glowing Water", "usage": "water highlights, bioluminescent puddles" },
+        { "hex": "#80FFFF", "name": "Echo Flower Glow", "usage": "echo flower blooms, crystal glow" },
+        { "hex": "#004020", "name": "Deep Moss", "usage": "vegetation, dark patches" },
+        { "hex": "#008040", "name": "Moss Green", "usage": "vegetation highlight" },
+        { "hex": "#FFFFFF", "name": "Water Spray", "usage": "waterfall foam and star glints" }
+      ],
+      "mood": "Mysterious, serene, otherworldly. The zone uses a near-monochromatic blue palette with glowing cyan accents to suggest deep underground magic."
+    },
+    "omori_white_space": {
+      "gameName": "OMORI - White Space",
+      "year": 2020,
+      "engine": "RPG Maker MV",
+      "description": "White Space is OMORI's psychological safe room — a featureless void with near-pure white walls and minimal objects. The palette is extremely restricted to amplify the emptiness.",
+      "colors": [
+        { "hex": "#FFFFFF", "name": "White Space White", "usage": "walls, floor, everything — the dominant 'nothing' color" },
+        { "hex": "#000000", "name": "Outline Black", "usage": "OMORI's silhouette, meow meow, objects, text" },
+        { "hex": "#F0F0F0", "name": "Near White", "usage": "floor shadow suggestion, very subtle depth" },
+        { "hex": "#D0D0D0", "name": "Light Gray", "usage": "OMORI's room objects, laptop, light shadow" },
+        { "hex": "#888888", "name": "Mid Gray", "usage": "OMORI's shirt, subtle shadows on light objects" },
+        { "hex": "#FF6666", "name": "Danger Red", "usage": "BLACK SPACE intrusions, warning color" },
+        { "hex": "#CC0000", "name": "Deep Red", "usage": "deep BLACK SPACE horror elements" }
+      ],
+      "notes": "White Space's power comes from its near-total absence of color. OMORI's design in black-and-white is deliberate — he is the only defined element in the void. The red intrusions feel violently wrong specifically because the palette is otherwise colorless.",
+      "colorCount": 7,
+      "dominantColor": "#FFFFFF"
+    },
+    "omori_headspace": {
+      "gameName": "OMORI - Headspace (Dream World)",
+      "description": "The dream world uses a saturated, storybook palette deliberately at odds with realism. Colors are bright and slightly desaturated at the edges to create a painted-book feel.",
+      "colors": [
+        { "hex": "#000000", "name": "Thick Outline", "usage": "all character outlines, environmental edges" },
+        { "hex": "#FFFFFF", "name": "Highlight White", "usage": "sky, brightest highlights" },
+        { "hex": "#87CEEB", "name": "Sky Blue", "usage": "outdoor sky, ambient fill" },
+        { "hex": "#4CAF50", "name": "Grass Green", "usage": "main grass tile" },
+        { "hex": "#2E7D32", "name": "Dark Grass", "usage": "grass shadow, hedge shadows" },
+        { "hex": "#8BC34A", "name": "Light Grass", "usage": "grass highlight, meadow variation" },
+        { "hex": "#FF7043", "name": "Sunny Orange", "usage": "flower accents, Aubrey's bow" },
+        { "hex": "#FDD835", "name": "Sunflower Yellow", "usage": "sunflowers, Mari's ribbon" },
+        { "hex": "#E91E63", "name": "Pink Rose", "usage": "flowers, Mari's dress" },
+        { "hex": "#9C27B0", "name": "Lavender Purple", "usage": "Sprout Mole color, magic accents" },
+        { "hex": "#F48FB1", "name": "Soft Pink", "usage": "Basil's flowers, soft highlights" },
+        { "hex": "#795548", "name": "Wood Brown", "usage": "tree trunks, dirt paths" },
+        { "hex": "#FF8A65", "name": "Warm Skin", "usage": "character skin base tone" },
+        { "hex": "#D4A0A0", "name": "Blush Skin Shadow", "usage": "character skin shadow" },
+        { "hex": "#A0522D", "name": "Earth Brown", "usage": "dirt ground, path tiles" }
+      ],
+      "notes": "Headspace uses a children's picture book palette — deliberate, childlike, and overly safe-feeling. The saturation is high but the hues are slightly shifted toward pastels to avoid looking garish. This deliberate 'too perfect' quality is part of the psychological horror — it's a constructed reality.",
+      "colorCount": 15
+    },
+    "pokemon_bw_indoor": {
+      "gameName": "Pokemon Black/White - Indoor Environments",
+      "year": 2010,
+      "platform": "Nintendo DS",
+      "resolution": "256x192 per screen",
+      "tileSize": 16,
+      "colors": [
+        { "hex": "#F8F8F8", "name": "Floor White", "usage": "dominant indoor floor tile base" },
+        { "hex": "#D8D8D8", "name": "Floor Grid", "usage": "tile grid lines on white floor" },
+        { "hex": "#B8B8B8", "name": "Floor Shadow", "usage": "floor tile shadow edge" },
+        { "hex": "#886644", "name": "Wood Brown", "usage": "wooden floor, furniture" },
+        { "hex": "#664422", "name": "Dark Wood", "usage": "wood shadow, furniture edges" },
+        { "hex": "#AA8866", "name": "Light Wood", "usage": "wood highlight" },
+        { "hex": "#E8E0D0", "name": "Wall Cream", "usage": "interior wall base" },
+        { "hex": "#C8C0B0", "name": "Wall Shadow", "usage": "interior wall shadow, corner depth" },
+        { "hex": "#4488CC", "name": "Window Blue", "usage": "window glass, sky seen through window" },
+        { "hex": "#FF4444", "name": "Pokecenter Red", "usage": "Pokemon Center distinctive roof and accents" },
+        { "hex": "#44AA44", "name": "Pokemart Green", "usage": "Poke Mart signage" },
+        { "hex": "#222244", "name": "Shadow Dark", "usage": "deep shadow under furniture, doorway recesses" }
+      ],
+      "notes": "Pokemon B/W indoor tiles are clean and high-contrast because the DS screen was small and bright. The floor grid (white + gray lines) creates infinite scalability — the same tile reads at any scale. Rooms feel furnished but not cluttered due to the 16x16 constraint forcing deliberate object placement."
+    },
+    "pokemon_bw_outdoor": {
+      "gameName": "Pokemon Black/White - Outdoor Environments",
+      "colors": [
+        { "hex": "#78C840", "name": "Grass Green", "usage": "tall grass, lawn fill" },
+        { "hex": "#50A020", "name": "Dark Grass", "usage": "grass shadow, patches under trees" },
+        { "hex": "#A0E060", "name": "Light Grass", "usage": "grass highlight, open field" },
+        { "hex": "#F0E8B0", "name": "Path Sand", "usage": "dirt routes, sandy pathways" },
+        { "hex": "#D0C880", "name": "Path Shadow", "usage": "path shadow and edge lines" },
+        { "hex": "#80C0F0", "name": "Sky Blue", "usage": "sky tile, water surface" },
+        { "hex": "#4090D0", "name": "Deep Water", "usage": "river and ocean depth" },
+        { "hex": "#C0E8FF", "name": "Water Highlight", "usage": "water sparkle, wave crests" },
+        { "hex": "#886644", "name": "Rock Brown", "usage": "boulders, mountain faces" },
+        { "hex": "#604020", "name": "Tree Trunk", "usage": "tree bases, fence posts" },
+        { "hex": "#208040", "name": "Tree Canopy", "usage": "tree tops, bush fill" },
+        { "hex": "#185030", "name": "Canopy Shadow", "usage": "tree canopy shadow side" },
+        { "hex": "#F8F8F8", "name": "Snow White", "usage": "Icirrus City snow coverage" },
+        { "hex": "#806040", "name": "Autumn Brown", "usage": "Twist Mountain earthen paths" }
+      ],
+      "notes": "B/W outdoor palettes use higher saturation than indoor to convey natural vibrancy. The grass tiles use a 3-tone ramp (dark/mid/light) on a neutral ground to suggest height variation without actual 3D. Routes feel spacious because paths and tall grass have high contrast."
+    },
+    "chrono_trigger": {
+      "gameName": "Chrono Trigger",
+      "year": 1995,
+      "platform": "SNES",
+      "resolution": "256x224",
+      "tileSize": 16,
+      "paletteConstraint": "SNES: 15 colors per background layer + transparency per palette set",
+      "description": "Chrono Trigger by Akira Toriyama and Square's A-Team used the SNES color system to its absolute maximum. Each era (600 AD, 1000 AD, 2300 AD, 65000000 BC) has a distinct palette that signals time period instantly.",
+      "colors": [
+        { "hex": "#000000", "name": "Outline Black" },
+        { "hex": "#FFFFFF", "name": "Highlight White" },
+        { "hex": "#F8D058", "name": "Warm Gold", "usage": "1000 AD medieval highlights, treasure" },
+        { "hex": "#C04000", "name": "Medieval Red", "usage": "1000 AD roofs, guard armor" },
+        { "hex": "#4080C0", "name": "Sky Blue", "usage": "1000 AD daytime sky" },
+        { "hex": "#206000", "name": "Forest Deep", "usage": "600 AD dark forest, ground shadow" },
+        { "hex": "#408020", "name": "Forest Mid", "usage": "600 AD grass and bush" },
+        { "hex": "#80C040", "name": "Forest Light", "usage": "600 AD sunny highlights" },
+        { "hex": "#202040", "name": "Future Dark", "usage": "2300 AD ruin background" },
+        { "hex": "#4060A0", "name": "Future Blue", "usage": "2300 AD tech glow, machine surfaces" },
+        { "hex": "#C00000", "name": "Apocalypse Red", "usage": "2300 AD danger, Lavos energy" },
+        { "hex": "#804000", "name": "Prehistoric Brown", "usage": "65M BC ground, cave walls" },
+        { "hex": "#A06020", "name": "Stone Age Tan", "usage": "prehistoric path tiles" },
+        { "hex": "#FF8040", "name": "Fire Orange", "usage": "Magma Keep lava, fire attacks" },
+        { "hex": "#8000C0", "name": "Magic Purple", "usage": "magic effects, Ocean Palace" }
+      ],
+      "notes": "Chrono Trigger's era-based palette system is a masterclass in environmental storytelling. Players learn to read time period from color alone within minutes. The SNES 15-color-per-layer constraint forced creative solutions — complex scenes use multiple background layers with separate palettes blended together."
+    },
+    "earthbound": {
+      "gameName": "EarthBound (Mother 2)",
+      "year": 1994,
+      "platform": "SNES",
+      "description": "EarthBound uses one of the most psychedelic and rule-breaking palettes in SNES history. The game's 'Hypno flash' battle backgrounds and its use of dithering for backgrounds created its unique visual fingerprint.",
+      "colors": [
+        { "hex": "#000000", "name": "Outline Black" },
+        { "hex": "#FFFFFF", "name": "Pure White" },
+        { "hex": "#F8B800", "name": "Ness Yellow", "usage": "Ness cap stripe, golden accents, sunny tones" },
+        { "hex": "#E80000", "name": "Ness Red", "usage": "Ness hat and shirt dominant color" },
+        { "hex": "#0060D0", "name": "Ness Blue", "usage": "Ness overalls, sky" },
+        { "hex": "#00A000", "name": "Suburb Green", "usage": "suburban grass, Onett environment" },
+        { "hex": "#804000", "name": "Earth Brown", "usage": "dirt roads, tree trunks" },
+        { "hex": "#C08000", "name": "Golden Brown", "usage": "autumn Twoson environment, wooden buildings" },
+        { "hex": "#FF8080", "name": "Pastel Pink", "usage": "Happy Happy Village psychedelic use" },
+        { "hex": "#80FF80", "name": "Psychedelic Green", "usage": "Milky Well psychedelic sky" },
+        { "hex": "#8080FF", "name": "Psychedelic Blue", "usage": "Summers night sky, Saturn Valley" },
+        { "hex": "#C0C0C0", "name": "Concrete Gray", "usage": "Fourside city buildings, urban surfaces" }
+      ],
+      "battleBackgrounds": {
+        "description": "EarthBound's battle backgrounds are scrolling swirling color fields — not static images. They use palette-cycling and sine-wave movement to create hypnotic backgrounds without any additional memory cost.",
+        "colors": ["cycling through environment palette at high speed"],
+        "technique": "Palette cycling with scroll registers — 0 actual background art used"
+      },
+      "notes": "EarthBound's palette choices are intentionally suburban-American, in sharp contrast to the medieval/fantasy settings typical of SNES RPGs. The 'normal' palette is a deliberate design choice to make the psychedelic/horror elements hit harder by contrast."
+    },
+    "stardew_valley": {
+      "gameName": "Stardew Valley",
+      "year": 2016,
+      "engine": "Custom (ConcernedApe)",
+      "resolution": "16x16 tiles, 16x32 characters (roughly)",
+      "description": "ConcernedApe created an extraordinarily rich palette to simulate the seasonal, time-of-day, and weather variety of farm life. The palette has hundreds of colors across all assets but individual sprites stay within 8-16 colors.",
+      "seasonPalettes": {
+        "spring": [
+          { "hex": "#6CBE45", "name": "Spring Grass", "usage": "farmland grass" },
+          { "hex": "#4A9B25", "name": "Spring Grass Shadow", "usage": "grass shadow" },
+          { "hex": "#F5D7A8", "name": "Spring Path", "usage": "dirt paths" },
+          { "hex": "#E8C08A", "name": "Spring Path Shadow", "usage": "path edge shadows" },
+          { "hex": "#FFB6C1", "name": "Cherry Blossom", "usage": "spring trees" },
+          { "hex": "#C8E6C9", "name": "Spring Sky", "usage": "bright spring sky" }
+        ],
+        "summer": [
+          { "hex": "#5BA833", "name": "Summer Grass", "usage": "slightly darker/richer than spring" },
+          { "hex": "#87CEEB", "name": "Summer Sky", "usage": "deep summer blue" },
+          { "hex": "#FFD700", "name": "Sunflower", "usage": "sunflower crop, sun accents" }
+        ],
+        "fall": [
+          { "hex": "#C67C3C", "name": "Autumn Grass", "usage": "grass turns brown-orange" },
+          { "hex": "#E8A020", "name": "Autumn Tree", "usage": "fall foliage" },
+          { "hex": "#8B4513", "name": "Autumn Earth", "usage": "tilled soil darker in fall" }
+        ],
+        "winter": [
+          { "hex": "#FFFFFF", "name": "Snow Cover", "usage": "ground turns white" },
+          { "hex": "#B0C8E0", "name": "Ice Blue", "usage": "snow shadow, frozen water" },
+          { "hex": "#607090", "name": "Winter Sky", "usage": "overcast winter sky" }
+        ]
+      },
+      "characterColors": [
+        { "hex": "#F2C27A", "name": "Farmer Skin Base", "usage": "default player skin" },
+        { "hex": "#C89050", "name": "Farmer Skin Shadow", "usage": "skin shadow side" },
+        { "hex": "#E8E8E8", "name": "Default Shirt", "usage": "starting shirt" }
+      ],
+      "notes": "Stardew Valley's visual variety despite small sprites comes from its seasonal palette system — the same tile art takes on completely different moods by shifting the environment palette. The game also uses transparency-based fog/rain overlays that shift perceived saturation without changing underlying sprite data."
+    },
+    "celeste_mountain": {
+      "gameName": "Celeste",
+      "year": 2018,
+      "engine": "Custom (Noel Berry)",
+      "description": "Celeste uses a zone-based palette system where each chapter has its own dominant color mood. The mountain progression from Chapter 1 to Summit is also a lightness progression — darker and colder as you go up.",
+      "chapter1_forsaken_city": [
+        { "hex": "#1A1A2E", "name": "Night Purple-Black", "usage": "background void" },
+        { "hex": "#16213E", "name": "Deep Night Blue", "usage": "background fill" },
+        { "hex": "#0F3460", "name": "Dark Blue", "usage": "background buildings" },
+        { "hex": "#E94560", "name": "Abandoned Red", "usage": "accent, ruined building details" },
+        { "hex": "#4A4E69", "name": "Stone Gray", "usage": "platform base color" },
+        { "hex": "#9A8C98", "name": "Worn Stone", "usage": "platform highlight" },
+        { "hex": "#F2E9E4", "name": "Snow White", "usage": "snow on platforms, Madeline hair highlight" }
+      ],
+      "chapter2_old_site": [
+        { "hex": "#2D2B55", "name": "Haunted Purple", "usage": "base background" },
+        { "hex": "#7B2FBE", "name": "Ghost Purple", "usage": "ghost enemy color, purple light" },
+        { "hex": "#E5E5E5", "name": "Abandoned White", "usage": "dusty building surfaces" }
+      ],
+      "chapter6_reflection": [
+        { "hex": "#0D1B2A", "name": "Mirror Black", "usage": "reflection void" },
+        { "hex": "#1B4332", "name": "Mirror Dark Green", "usage": "reflected trees" },
+        { "hex": "#40916C", "name": "Mirror Green", "usage": "reflected forest" }
+      ],
+      "madelineColors": [
+        { "hex": "#D0293A", "name": "Madeline Hair", "usage": "iconic red hair" },
+        { "hex": "#3A1E3E", "name": "Madeline Shirt", "usage": "dark purple-maroon top" },
+        { "hex": "#F5D0B5", "name": "Madeline Skin", "usage": "skin base tone" },
+        { "hex": "#D4A088", "name": "Madeline Skin Shadow", "usage": "skin shadow" }
+      ],
+      "notes": "Celeste's palette philosophy is that each world state (normal Madeline vs Badeline vs Theo) should be readable from color alone. Madeline = red-purple, Badeline = deep purple with red glow, Theo = warm blue-teal. The chapter backgrounds follow an emotional temperature progression from cold-purple (depression/anxiety metaphor) to warm-gold (acceptance) at the summit."
+    },
+    "final_fantasy_vi": {
+      "gameName": "Final Fantasy VI",
+      "year": 1994,
+      "platform": "SNES",
+      "paletteConstraint": "SNES Mode 7 for world map, Mode 1 for standard play",
+      "description": "FF6's character sprites are 16x24 pixels in battle (larger than overworld). The game is renowned for its use of the SNES palette to suggest complex lighting and emotional states.",
+      "characterBaseColors": [
+        { "hex": "#484860", "name": "Shadow Character Dark", "usage": "Shadow's core dark tone" },
+        { "hex": "#C84040", "name": "Terra Hair", "usage": "Terra's distinctive green-later-red hair" },
+        { "hex": "#40C840", "name": "Terra Esper Green", "usage": "Magitek/Esper Terra magical glow" },
+        { "hex": "#C0A048", "name": "Edgar Blonde", "usage": "Edgar's hair" },
+        { "hex": "#A0A0C0", "name": "Steel Blue", "usage": "armor highlights across multiple characters" }
+      ],
+      "environmentColors": [
+        { "hex": "#202030", "name": "World Shadow", "usage": "vector city ruins, night scenes" },
+        { "hex": "#804000", "name": "Imperial Brown", "usage": "Imperial troop armor, Vector buildings" },
+        { "hex": "#C0C0D0", "name": "Narshe Snow", "usage": "opening sequence snowfield" },
+        { "hex": "#4060A0", "name": "Opera House Blue", "usage": "opera house stage lighting" },
+        { "hex": "#FF4000", "name": "Kefka Orange", "usage": "Kefka's warped god form, apocalypse sky" }
+      ],
+      "notes": "FF6's palette is distinctive for using the SNES's sprite-layer transparency to create layered lighting effects, particularly in the Opera scene and the final dungeon. The World of Ruin intentionally shifts to more desaturated, darker tones to signal the apocalyptic shift — the same engine and art assets look fundamentally different by changing the palette."
+    },
+    "aria_of_sorrow": {
+      "gameName": "Castlevania: Aria of Sorrow",
+      "year": 2003,
+      "platform": "Game Boy Advance",
+      "resolution": "240x160",
+      "description": "Aria of Sorrow pushed GBA hardware to its visual limit. The castle environments use careful use of the GBA's limited backlight brightness and palette system to create atmosphere.",
+      "colors": [
+        { "hex": "#000000", "name": "Void Black", "usage": "screen fill, deep shadow" },
+        { "hex": "#080818", "name": "Near Black Blue", "usage": "castle ambient, deep architecture" },
+        { "hex": "#181838", "name": "Dark Navy", "usage": "castle wall base" },
+        { "hex": "#303068", "name": "Mid Navy", "usage": "stone wall midtone" },
+        { "hex": "#6060A0", "name": "Gothic Blue", "usage": "lit stone, decorative archways" },
+        { "hex": "#A0A0D0", "name": "Stone Highlight", "usage": "brightest stone, moonlit edges" },
+        { "hex": "#F0F0FF", "name": "Moonlight White", "usage": "window light shafts, soul essences" },
+        { "hex": "#C04000", "name": "Crimson", "usage": "blood, enemy accents, Soma's outfit" },
+        { "hex": "#FFA000", "name": "Candle Gold", "usage": "candlelight, treasure" },
+        { "hex": "#008040", "name": "Crypt Green", "usage": "underground vegetation, slime enemies" },
+        { "hex": "#800080", "name": "Magic Purple", "usage": "soul power effects, cursed areas" },
+        { "hex": "#8B4513", "name": "Wood Brown", "usage": "furniture, wooden architecture sections" }
+      ],
+      "somaColors": [
+        { "hex": "#F0D0B0", "name": "Soma Skin", "usage": "Soma Cruz skin base" },
+        { "hex": "#202060", "name": "Soma Shirt", "usage": "dark school uniform" },
+        { "hex": "#C0C0D0", "name": "Soma Silver", "usage": "uniform trim, silver hair" }
+      ],
+      "notes": "Aria of Sorrow uses one of the GBA's most sophisticated palette systems. Because the GBA screen had poor contrast without backlight, the game compensates with extremely high contrast ratios between lit and shadowed areas. The castle reads because bright lit elements (whites, golds) are placed against very dark backgrounds — minimal midtones on architectural elements, saving midtones for character sprites."
+    }
+  },
+  "paletteConstructionRules": {
+    "rampConstruction": {
+      "minimumSteps": 3,
+      "idealSteps": 4,
+      "description": "Each color used in a sprite needs a ramp: shadow, base, highlight. 4-step ramps add a second shadow or second highlight.",
+      "hueShifting": "Shadows should shift slightly toward blue/purple. Highlights should shift slightly toward yellow/orange. Pure grayscale ramps look flat."
+    },
+    "colorCount": {
+      "16x16_tile": "4-8 colors including transparency",
+      "16x32_character": "8-12 colors including transparency",
+      "32x32_character": "12-16 colors",
+      "boss_sprite": "16-24 colors, sometimes more for large multi-part bosses",
+      "background_layer": "8-15 colors per layer (hardware constraint on retro, convention on modern)"
+    },
+    "contrast": {
+      "minimumContrastRatio": 4.5,
+      "betweenCharacterAndBackground": "Characters should be at least 3:1 contrast with the environments they appear in most",
+      "outlineVsBackground": "Outlines should be the darkest color in the sprite, minimum 2:1 contrast with background"
+    }
+  }
+}

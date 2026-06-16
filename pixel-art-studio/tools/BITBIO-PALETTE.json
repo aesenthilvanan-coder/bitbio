@@ -1,0 +1,106 @@
+{
+  "global": {
+    "background": "#030008",
+    "dialogueBg": "#000000",
+    "dialogueBorder": "#ffffff",
+    "text": "#ffffff",
+    "textShadow": "#333333"
+  },
+  "realm1_cytoplasm": {
+    "bg": "#020609",
+    "floor": "#050d10",
+    "wall": "#0a1a22",
+    "accent": "#00ffcc",
+    "secondary": "#00aaff",
+    "floor2": "#060e12",
+    "highlight": "#00ffcc44",
+    "fullPalette": [
+      "#030008", "#020609", "#050d10", "#0a1a22",
+      "#00ffcc", "#00aaff", "#00ff88", "#004466",
+      "#002233", "#80ffee", "#40ddcc", "#00cc99"
+    ]
+  },
+  "realm2_genome": {
+    "bg": "#020a04",
+    "floor": "#051408",
+    "wall": "#0a2810",
+    "accent": "#00ff44",
+    "secondary": "#44ff00",
+    "floor2": "#060e08",
+    "highlight": "#00ff4444",
+    "fullPalette": [
+      "#030008", "#020a04", "#051408", "#0a2810",
+      "#00ff44", "#44ff00", "#00dd22", "#004422",
+      "#002211", "#80ff99", "#40dd66", "#00aa33"
+    ]
+  },
+  "realm3_neural": {
+    "bg": "#060409",
+    "floor": "#0d0814",
+    "wall": "#1a1228",
+    "accent": "#aa44ff",
+    "secondary": "#6644ff",
+    "floor2": "#080612",
+    "highlight": "#aa44ff44",
+    "fullPalette": [
+      "#030008", "#060409", "#0d0814", "#1a1228",
+      "#aa44ff", "#6644ff", "#cc88ff", "#440066",
+      "#220033", "#dd99ff", "#9966dd", "#7733bb"
+    ]
+  },
+  "realm4_cathedral": {
+    "bg": "#090601",
+    "floor": "#150e02",
+    "wall": "#281c04",
+    "accent": "#ffcc00",
+    "secondary": "#ff8800",
+    "floor2": "#0f0a01",
+    "highlight": "#ffcc0044",
+    "fullPalette": [
+      "#030008", "#090601", "#150e02", "#281c04",
+      "#ffcc00", "#ff8800", "#ffee44", "#664400",
+      "#332200", "#ffee99", "#ddbb44", "#aa8800"
+    ]
+  },
+  "characters": {
+    "playerSkin": ["#f5c89a", "#e8a070", "#c47840", "#8b5a2b"],
+    "momSkin": ["#f5c89a", "#e8a070", "#c47840", "#8b5a2b"],
+    "enzymeWhite": ["#ffffff", "#e8e8e8", "#cccccc", "#aaaaaa", "#ffb3c1"],
+    "labCoat": ["#e8e8ff", "#c0c0dd", "#a0a0bb", "#808099"],
+    "playerHairDefault": ["#1a0a00", "#2a1400", "#3a1e00"],
+    "darkOutline": "#0d0808",
+    "shadowOutline": "#1a1010",
+    "enemyRealm1": ["#004455", "#007799", "#00aabb", "#00ffcc", "#80ffee"],
+    "enemyRealm2": ["#003311", "#006622", "#00aa44", "#00ff66", "#88ffaa"],
+    "enemyRealm3": ["#220044", "#440088", "#7733bb", "#aa44ff", "#dd99ff"],
+    "enemyRealm4": ["#331100", "#662200", "#aa6600", "#ffcc00", "#ffee88"]
+  },
+  "ui": {
+    "healthBarFull": "#00ff88",
+    "healthBarLow": "#ff4444",
+    "healthBarBg": "#1a0000",
+    "xpBar": "#4488ff",
+    "xpBarBg": "#001133",
+    "gemColor": "#00ffee",
+    "starActive": "#ffcc00",
+    "starInactive": "#333344",
+    "buttonPrimary": "#00ffcc",
+    "buttonPrimaryText": "#000000",
+    "buttonSecondary": "#1a2a3a",
+    "buttonSecondaryText": "#00ffcc",
+    "panelBg": "#0a0a14",
+    "panelBorder": "#2a2a44",
+    "tooltipBg": "#050510",
+    "tooltipBorder": "#00ffcc"
+  },
+  "effects": {
+    "glowCytoplasm": "#00ffcc88",
+    "glowGenome": "#00ff4488",
+    "glowNeural": "#aa44ff88",
+    "glowCathedral": "#ffcc0088",
+    "sparkle": "#ffffff",
+    "shadow": "#00000088",
+    "hitFlash": "#ffffff",
+    "deathFade": "#ff000044"
+  }
+}

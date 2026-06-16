@@ -1,0 +1,503 @@
+{
+  "division": "Sprite Division",
+  "owner": "sprite-agent",
+  "sprint": 1,
+  "lastUpdated": "2026-06-15",
+  "description": "All character sprites: player, NPCs, and boss sprites. Drawn with ctx.fillRect in PixelWorldEngine.tsx and BossBattle.tsx.",
+  "referencePaths": [
+    "/Users/TheAES/Desktop/bitbio/components/world/PixelWorldEngine.tsx (drawPlayer, drawElliot, drawBen, drawAlex, drawHenry)",
+    "/Users/TheAES/Desktop/bitbio/components/world/BossBattle.tsx (drawLyso, drawViron, drawOverfit, drawAmyloid)"
+  ],
+  "backlog": [
+    {
+      "id": "SPR-001",
+      "title": "LYSO boss sprite redesign — 3-phase HP states",
+      "priority": "P0",
+      "status": "TODO",
+      "sprint": 1,
+      "function": "drawLyso() in BossBattle.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "Phase 1 (100-67% HP): bright purple oval with visible double membrane, 8 spiked appendages in circular orbit, single glowing red eye center, acid drip from base",
+        "Phase 2 (66-33% HP): cracks visible as dark diagonal lines across membrane body, eye becomes split/jagged, 2 of 8 spikes visibly broken off (shortened), acid leaks through cracks as green pixels",
+        "Phase 3 (<33% HP): membrane mostly broken — only 4-5 top-row rects remain, 3 red eyes visible through gaps, spikes jagged/asymmetric, continuous acid drip animation",
+        "All phases: top-left lighting convention applied (top rows brighter than bottom rows)",
+        "At SCALE=3 on 720x540 canvas, boss reads as threatening at 3 meters viewing distance",
+        "Score >= 8.0 on QUALITY-RUBRIC.json silhouetteScore criterion"
+      ],
+      "estimatedComplexity": "HIGH",
+      "referencesGames": ["undertale-omega-flowey", "undertale-amalgamates", "omori-space-boyfriend"],
+      "biologicalBasis": "Lysosome: spherical membrane-bound organelle, acidic interior (pH 4.5-5), contains hydrolytic enzymes. Rogue lysosome concept: membrane integrity loss = acid release = danger.",
+      "colorBudget": 10,
+      "baseColors": {
+        "membraneBase": "#aa44cc",
+        "membraneHighlight": "#cc66ee",
+        "membraneShadow": "#661188",
+        "eye": "#cc0000",
+        "eyeGlow": "#ff0000",
+        "acidGreen": "#33ff33",
+        "acidDark": "#006600",
+        "crackDark": "#1a0033",
+        "spikePurple": "#cc66ee",
+        "innerCore": "#000011"
+      },
+      "notes": "Current implementation (rows of width data producing oval) is correct approach. Needs: (1) wider max width for stronger silhouette, (2) membrane detail via alternating light/dark rows, (3) geometry changes per HP phase, not just tint changes, (4) base acid pool as 3-pixel spread beneath."
+    },
+    {
+      "id": "SPR-002",
+      "title": "VIRON boss sprite redesign — icosahedral virus 3-phase",
+      "priority": "P0",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "drawViron() in BossBattle.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "Phase 1: clear icosahedron silhouette — 5 visible triangular face planes constructed from rects, each face differently shaded using shiftColor()",
+        "6 spike proteins protruding from vertices (3px long rects at 6 cardinal+diagonal angles)",
+        "3 orbiting nucleocapsid rings: each ring is 8 dots at different radii, animated via Math.cos/sin",
+        "Single green glowing eye (receptor-binding site metaphor) at front face center",
+        "Phase 2: two spike proteins visibly broken (shorter), one face plane cracked (dark diagonal pixels)",
+        "Phase 3: half the icosahedron geometry missing, core exposed as dark green sphere, all remaining spikes glitching (alternating between long/short every 2 frames)",
+        "Score >= 8.0 on silhouetteScore criterion"
+      ],
+      "estimatedComplexity": "HIGH",
+      "referencesGames": ["undertale-undyne-armored", "omori-sweetheart", "undertale-mettaton"],
+      "biologicalBasis": "Bacteriophage / icosahedral capsid virus. T4 phage is the visual inspiration: hexagonal head, tail fiber proteins as spikes. DNA injection mechanism = the attack animation.",
+      "colorBudget": 10,
+      "baseColors": {
+        "capsidLight": "#557733",
+        "capsidMid": "#334422",
+        "capsidDark": "#223311",
+        "spikeColor": "#88ff33",
+        "nucleocapsidOuter": "#6633cc",
+        "nucleocapsidInner": "#3355ff",
+        "eyeGreen": "#88ff33",
+        "eyeCore": "#003300",
+        "crackColor": "#111a08",
+        "coreExposed": "#003300"
+      },
+      "notes": "Current implementation: overlapping rectangles produce rough icosahedron shape. Problem: at SCALE=3 the overlapping creates muddy visual. Solution: explicitly draw 5 face planes as colored rect clusters, then add spike rects at fixed angles. The orbital rings are the strongest current element — keep but increase radius and particle count."
+    },
+    {
+      "id": "SPR-003",
+      "title": "OVERFIT boss sprite redesign — neural network skull 3-phase",
+      "priority": "P0",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "drawOverfit() in BossBattle.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "Phase 1: large skull shape (wider than current, 32px wide at jaw) with neural network circuitry visible as glowing lines ON the skull surface",
+        "Left eye socket: purple (overfitted data), Right eye socket: cyan (validation data — 'ERROR')",
+        "Mouth: binary code 010101 in alternating lit/unlit pixel rows, flashes open/shut every 30 frames",
+        "8 neural connection nodes visible: pulsing dots at skull exterior, connected by thin 1px lines",
+        "Phase 2: validation eye goes dark (ERROR state), skull starts showing static (alternating dark/light 1x1 pixels in 20% of skull area), one node disconnects and falls",
+        "Phase 3: heavy static on 50% of skull, only 3 nodes remain, mouth shows only '0000' (total overfit failure), purple eye is HUGE (obsessively overfit), cyan eye is gone",
+        "Score >= 8.0 on silhouetteScore criterion"
+      ],
+      "estimatedComplexity": "HIGH",
+      "referencesGames": ["undertale-asgore", "omori-aubrey", "undertale-chara"],
+      "biologicalBasis": "Overfitted neural network: memorizes training data perfectly, fails on validation. Visual metaphor: a neural network that has 'become' the data — its skull IS the training set. The more it knows, the more rigid and broken it becomes.",
+      "colorBudget": 10,
+      "baseColors": {
+        "skullBase": "#1a1040",
+        "skullHighlight": "#2a2060",
+        "nodeColorPurple": "#aa44ff",
+        "nodeColorCyan": "#00ccff",
+        "connectionLine": "#330066",
+        "mouthBitActive": "#ffffff",
+        "mouthBitOff": "#0a0008",
+        "staticPixel": "#ffffff",
+        "eyePurpleLarge": "#cc44ff",
+        "errorGlow": "#ff00ff"
+      },
+      "notes": "This is the most conceptually interesting boss. The current implementation has the right ingredients but is too small. The skull should use the top 60% of the boss canvas area. Neural nodes should be 4x4 game pixels (vs current 8x8 canvas pixels). The 'ERROR ERROR ERROR' moment should be shown as pixel-text in the eye socket."
+    },
+    {
+      "id": "SPR-004",
+      "title": "AMYLOID TYRANT boss sprite redesign — fibril accumulation 3-phase",
+      "priority": "P0",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "drawAmyloid() in BossBattle.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "Phase 1: clear beta-sheet stack silhouette — 6 horizontal sheets of increasing width toward base (top: 8px, base: 26px), each sheet separated by 2px dark gap, alternating light/dark sheet colors",
+        "12 fibril tendrils growing upward from top sheet — each tendril is 2px wide, height 8-16px, animated to grow/shrink via sin(t + fibrilIndex)",
+        "Two amber eye rectangles on front face (6x4 game pixels each) with dark pupils",
+        "Phase 2: 3 of 6 sheets visibly cracked (dark diagonal crack rects), fibrils now 16-24px and some droop sideways, eyes glow brighter",
+        "Phase 3: sheets fragment into individual 2x2 blocks arranged roughly in sheet positions, fibrils are 24-32px and completely cover the upper canvas area, eyes become 8x6 (engorged)",
+        "PERSONALITY SIGNAL: the accumulation. Everything gets more fibril-covered over time. Score >= 8.0 silhouetteScore."
+      ],
+      "estimatedComplexity": "HIGH",
+      "referencesGames": ["undertale-asgore", "omori-mari", "undertale-true-lab-amalgamates"],
+      "biologicalBasis": "Amyloid fibrils: beta-sheet stacked protein aggregates. Alzheimer's, Parkinson's, prion diseases. The tyranny is the accumulation — once started, it cannot be stopped. Beta sheets stack horizontally in parallel.",
+      "colorBudget": 9,
+      "baseColors": {
+        "sheetLight": "#dddddd",
+        "sheetMid": "#cccccc",
+        "sheetDark": "#aaaaaa",
+        "sheetShadow": "#888888",
+        "fibrilColor": "#eeeeee",
+        "gapColor": "#1a0800",
+        "eyeAmber": "#ff8800",
+        "eyePupil": "#1a0800",
+        "crackDark": "#333333"
+      },
+      "notes": "Current implementation gets the beta-sheet stack right but the gray color reads as stone/rock, not protein. Proteins are more ivory/warm-white. The fibril animation (sin wave per fibril) is the saving grace — increase fibril count from 12 to 16 and vary heights more dramatically."
+    },
+    {
+      "id": "SPR-005",
+      "title": "Player character redesign — 32x20 game pixels, 4-frame walk cycle",
+      "priority": "P1",
+      "status": "TODO",
+      "sprint": 3,
+      "function": "drawPlayer() in PixelWorldEngine.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "Dimensions: 10 wide x 20 tall game pixels (current is ~10x20, acceptable but needs stronger silhouette)",
+        "Silhouette: visible head-to-body taper (head wider than shoulders), no floating rectangle look",
+        "Walk cycle: 4 frames. Frame 0: neutral stance. Frame 1: left foot forward, right arm forward. Frame 2: neutral (crossed). Frame 3: right foot forward, left arm forward.",
+        "Direction: down (face visible), up (back visible — NOT just hair shift), left (side profile with one eye), right (side profile mirrored)",
+        "Avatar customization maintained: skinColor, clothColor, hairColor params unchanged",
+        "Hair: drawn as a proper hat/cap shape, not just a thin bar above head",
+        "Shoes: dark-colored 3x2 game pixel blocks visible beneath legs",
+        "Score >= 7.5 on QUALITY-RUBRIC.json (Sprint 3 target, not Sprint 1)"
+      ],
+      "estimatedComplexity": "HIGH",
+      "referencesGames": ["undertale-frisk", "omori-omori", "pokemon-red-player"],
+      "biologicalBasis": "N/A — player character is a human student entering the biological world",
+      "notes": "Current 2-frame walk cycle (bob up/down) is a vertical head-bob only. True 4-frame RPG walk cycle: feet alternate left/right with torso counter-rotation. The legShift mechanic is the right idea but currently creates a uniform 1px vertical shift. Need: left leg forward + right arm forward as linked movement."
+    },
+    {
+      "id": "SPR-006",
+      "title": "Elliot NPC in-world sprite — match mascot personality",
+      "priority": "P1",
+      "status": "TODO",
+      "sprint": 3,
+      "function": "drawElliot() in PixelWorldEngine.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "Curly hair: implemented as multiple small rect clusters, not just a wide rectangle at top",
+        "Glasses: two 3x2 white-ish rectangles with 1px black border drawn inside head area",
+        "Mismatched socks: left sock red (#ff4444), right sock yellow (#ffee44) — must be visible at SCALE=3",
+        "Lab coat: white/light gray body, visible lapel lines (2 dark diagonal rects)",
+        "Idle animation: alternating between frame 0 (looking forward) and frame 1 (slight glasses-push gesture — arm moves up 1px)",
+        "Score >= 7.5 on styleConsistency criterion (must match SVG mascot aesthetic)"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-sans", "omori-aubrey"],
+      "notes": "Current implementation is good — mismatched socks are present, lab coat is readable. Main gap: hair is drawn as `gr2(ox, oy, 1, 0, 10, 4, '#2a1a0a')` which is a solid rectangle. Should use 3-4 small overlapping rects to suggest curls."
+    },
+    {
+      "id": "SPR-007",
+      "title": "Ben NPC in-world sprite — sandwich and cargo pocket detail",
+      "priority": "P1",
+      "status": "TODO",
+      "sprint": 3,
+      "function": "drawBen() in PixelWorldEngine.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "Sandwich: 3-layer stack (bread top, green lettuce, bread bottom) in right hand, sways with walk cycle using armSwing variable",
+        "Cargo pants: 2 visible pocket rects per leg, slightly darker than main pants color",
+        "Hair: short, dark, tousled — 3 small rect clumps slightly offset from each other",
+        "Build: slightly wider than Elliot — 12px wide vs 10px (the 'well-fed bioinformatician')",
+        "Idle animation: sandwich moves up/down 1px with breathing animation (every 2 animFrame ticks)",
+        "Score >= 7.5 on styleConsistency criterion"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-papyrus", "omori-hero"],
+      "notes": "Current implementation already has the sandwich. Main gap: body width is same as Elliot — Ben should be visually bulkier to differentiate the characters at a glance."
+    },
+    {
+      "id": "SPR-008",
+      "title": "Alex NPC in-world sprite — turtleneck and coffee precision",
+      "priority": "P1",
+      "status": "TODO",
+      "sprint": 3,
+      "function": "drawAlex() in PixelWorldEngine.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "Turtleneck collar: 3px tall rect at neck, same dark color as body, collar must visually bridge head and body",
+        "Coffee cup: 3x5 game pixel rect in left hand, two-tone (paper beige exterior, dark coffee top), handle as 1x2 rect protruding right",
+        "Hair: slick — a flat cap shape (rectangle perfectly aligned), no texture. Communicates 'precise person.'",
+        "Build: slightly taller and thinner than others — 10px wide, 22px tall",
+        "Idle: coffee cup tilts 1px down every 4 animFrames (drinking action)",
+        "Score >= 7.5 on styleConsistency criterion"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-alphys", "omori-basil"],
+      "notes": "Alex is the most visually understated character — all black, precise. The in-world sprite should lean into this with straight lines and no organic curves. The coffee detail is the only 'warm' element."
+    },
+    {
+      "id": "SPR-009",
+      "title": "Henry NPC in-world sprite — holographic CRT effect",
+      "priority": "P1",
+      "status": "TODO",
+      "sprint": 3,
+      "function": "drawHenry() in PixelWorldEngine.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "CRT scanline effect: every other row of Henry's body is drawn at 70% opacity (globalAlpha), creating visible horizontal gaps that simulate a holographic projection",
+        "Geometric grid lines: horizontal and vertical 1px rects drawn at 30% opacity across body area",
+        "Eyes: bright white 2x2 rects (no iris — pure energy), slight glow created by surrounding 4x4 area filled at 20% opacity in cyan",
+        "Flicker system: THREE opacity states cycling: 0.4 / 0.65 / 0.55, toggled by `frame % 3`",
+        "Outer halo: 16x24 game pixel area (larger than sprite) at 5% opacity, giving aura",
+        "Score >= 8.0 on styleConsistency criterion — this is the most distinctive NPC, must excel"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-gaster", "omori-stranger"],
+      "notes": "Current implementation already does the globalAlpha flicker correctly. Main gap: the CRT scanline effect (alternating row opacity) is NOT currently implemented — the body is drawn as solid rects. Adding alternating row opacity would dramatically improve the holographic read."
+    },
+    {
+      "id": "SPR-010",
+      "title": "Player character — idle animation frames",
+      "priority": "P2",
+      "status": "TODO",
+      "sprint": 3,
+      "function": "drawPlayer() in PixelWorldEngine.tsx",
+      "dependencies": ["SPR-005"],
+      "acceptance": [
+        "Idle frame 0: neutral stance, arms at sides",
+        "Idle frame 1: weight shift — body moves 1px right, left foot 1px forward",
+        "Idle frame 2: look up — eyes move 1px up in head",
+        "Idle frame 3: return neutral",
+        "Triggered when: player is stationary for > 500ms",
+        "Uses animFrame clock (not walkFrame)"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-frisk", "pokemon-platinum-player"],
+      "notes": "Idle animation is a polish item for Sprint 3 only after the core walk cycle redesign (SPR-005) is complete."
+    },
+    {
+      "id": "SPR-011",
+      "title": "Boss projectile sprites — per-realm attack visuals",
+      "priority": "P2",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "BossBattle.tsx renderFrame() projectile section",
+      "dependencies": ["SPR-001", "SPR-002", "SPR-003", "SPR-004"],
+      "acceptance": [
+        "LYSO (realm 1): acid blob — irregular green shape, 3x3 game pixels with 1px drips from corners",
+        "VIRON (realm 2): DNA strand segment — 4x2 rect in blue/green alternating base-pair colors",
+        "OVERFIT (realm 3): binary stream — 4x4 rect showing '01' text in pixels, leaving a trailing streak",
+        "AMYLOID TYRANT (realm 4): fibril shard — 2x6 gray rect slightly rotated effect via rect stacking",
+        "Each projectile has a distinct silhouette readable at 6x6 canvas pixels"
+      ],
+      "estimatedComplexity": "LOW",
+      "referencesGames": ["undertale-genocide-sans-bones", "undertale-undyne-spears"],
+      "notes": "Current projectile for all realms is an orange 10x10 circle approximation (5x5 game pixels). This is the same for all four bosses which breaks realm identity."
+    },
+    {
+      "id": "SPR-012",
+      "title": "Boss hit particle effects — per-realm VFX",
+      "priority": "P2",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "BossBattle.tsx handleAnswerInternal() particle spawn section",
+      "dependencies": ["SPR-001"],
+      "acceptance": [
+        "LYSO hit: 16 green acid particles + 4 purple membrane shards",
+        "VIRON hit: 12 cyan particles + 4 spike fragments (elongated 1x3 rects)",
+        "OVERFIT hit: 20 particles cycling through purple/cyan/white (neural network colors)",
+        "AMYLOID hit: 8 gray fibril particles falling straight down (gravity-weighted)",
+        "Victory burst: 60 particles in realm accent colors, radial spread from boss center",
+        "All particles: 6x6 canvas pixel squares fading over 0.8s (current is correct)"
+      ],
+      "estimatedComplexity": "LOW",
+      "referencesGames": ["undertale-hit-sparks", "omori-battle-effects"],
+      "notes": "Current particle system is generic rainbow colors for all realms. The particle colors should match the realm palette. Only the victory burst rainbow is justified (celebration overrides palette)."
+    },
+    {
+      "id": "SPR-013",
+      "title": "Avatar customization preview — update AvatarRenderer.tsx",
+      "priority": "P2",
+      "status": "TODO",
+      "sprint": 3,
+      "function": "components/avatar/AvatarRenderer.tsx",
+      "dependencies": ["SPR-005"],
+      "acceptance": [
+        "Avatar preview updates in real-time as player selects skin/cloth/hair",
+        "Preview renders same drawPlayer() function used in-game (single source of truth)",
+        "Preview shows all 4 walk cycle frames as a sprite sheet for player to see",
+        "All 4 direction states shown in a 2x2 grid preview",
+        "Score >= 7.5 on readabilityAtSize criterion at the small preview size"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-mew-mew", "pokemon-customize"],
+      "notes": "AvatarRenderer.tsx exists but its implementation is unknown — needs audit before starting this task."
+    },
+    {
+      "id": "SPR-014",
+      "title": "Boss intro cutscene — boss entrance animation frame",
+      "priority": "P2",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "BossBattle.tsx renderFrame() intro phase section",
+      "dependencies": ["SPR-001", "SPR-002", "SPR-003", "SPR-004"],
+      "acceptance": [
+        "During 'intro' phase: boss descends from top of canvas over 2 seconds (y position animated)",
+        "Boss starts at y=-60, moves to y=CH*0.40 (its battle position)",
+        "Landing impact: 8 particles burst outward on landing",
+        "Screen flash on landing: 3-frame white flash",
+        "After landing: boss enters idle bob animation (sin wave ±4px over 2s period)"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-asgore-entrance", "omori-world-entrance"],
+      "notes": "Currently the boss appears immediately at the start of the intro phase. An entrance animation significantly increases player tension before the dialogue begins."
+    },
+    {
+      "id": "SPR-015",
+      "title": "Boss defeated state — death animation",
+      "priority": "P2",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "BossBattle.tsx renderFrame() defeat/victory sections",
+      "dependencies": ["SPR-001", "SPR-002", "SPR-003", "SPR-004"],
+      "acceptance": [
+        "On victory: boss explodes into 50+ particles over 0.5s",
+        "Boss sprite during explosion: pieces drift apart (4-5 independent rect groups, each moving with a different velocity vector)",
+        "After 0.5s of explosion: boss fully replaced by particles, no main sprite visible",
+        "During final 1s before victory transition: screen dims, particles decelerate",
+        "Each boss has realm-appropriate explosion colors"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-flowey-defeat", "undertale-asgore-defeat"],
+      "notes": "Currently victory just dims the screen and shows '★ VICTORY! ★' text while the boss sprite remains. The boss should visibly disintegrate."
+    },
+    {
+      "id": "SPR-016",
+      "title": "Player hurt animation — damage taken feedback",
+      "priority": "P2",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "BossBattle.tsx — player representation area",
+      "dependencies": [],
+      "acceptance": [
+        "On wrong answer: player sprite appears in bottom-left of battle canvas (small, 6x10 game pixels)",
+        "Player sprite flashes red for 0.5s when hit",
+        "Player sprite uses avatar skin/cloth/hair colors from store",
+        "At <50% HP: player sprite tilts 5px to one side (wounded posture)",
+        "At 1 HP remaining: player sprite flickers at 4Hz"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-battle-soul", "omori-player-hp"],
+      "notes": "Currently player damage is communicated only via heart icons and red flash overlay. Adding a small player sprite grounds the player in the battle visually. BitBio doesn't have an Undertale-style soul — the player IS in the battle."
+    },
+    {
+      "id": "SPR-017",
+      "title": "NPC 'surprise' animation — approach indicator",
+      "priority": "P3",
+      "status": "TODO",
+      "sprint": 4,
+      "function": "PixelWorldEngine.tsx render() — NPC drawing section",
+      "dependencies": ["SPR-006", "SPR-007", "SPR-008", "SPR-009"],
+      "acceptance": [
+        "When player is within 2 tiles of an NPC: NPC frame switches to 'notice' pose",
+        "Notice pose: character head turns toward player (direction-aware), eyebrows raise",
+        "Small '!' exclamation above NPC head (3x5 game pixels in white, 1px dark border)",
+        "NPC returns to idle after player moves away or starts dialogue"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-npc-interaction", "pokemon-trainer-exclamation"],
+      "notes": "Currently there is only the `▲ E` text prompt near NPCs. A visual 'notice' pose makes the world feel more alive."
+    },
+    {
+      "id": "SPR-018",
+      "title": "Boss phase transition animation — visual damage staging",
+      "priority": "P2",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "BossBattle.tsx drawXxx() functions",
+      "dependencies": ["SPR-001", "SPR-002", "SPR-003", "SPR-004"],
+      "acceptance": [
+        "At HP crossing 66%: 0.3s stagger animation — boss shakes 10px left/right rapidly",
+        "At HP crossing 33%: 0.5s stagger + 20 particles burst from boss center",
+        "Phase transition tracked in BossState (new field: lastPhaseTransition)",
+        "During stagger: boss sprite shows phase N+1 (damaged state) flickering in at 50% opacity",
+        "After stagger: full transition to damaged sprite"
+      ],
+      "estimatedComplexity": "MEDIUM",
+      "referencesGames": ["undertale-asgore-phase", "omori-world-boss"],
+      "notes": "Phase transitions currently happen silently — HP changes and the color tint changes, but there is no visual punctuation. Phase transitions should FEEL impactful."
+    },
+    {
+      "id": "SPR-019",
+      "title": "Mascot SVG sprite sheet — high-resolution export specs",
+      "priority": "P3",
+      "status": "TODO",
+      "sprint": 4,
+      "function": "components/mascots/MascotDisplay.tsx",
+      "dependencies": [],
+      "acceptance": [
+        "Document the exact SVG spec for each mascot in assets/sprites/",
+        "Spec includes: viewBox, all rect/path/ellipse elements with exact coordinates",
+        "Note discrepancies between SVG mascots and canvas NPC sprites",
+        "Determine which version (SVG or canvas) should be considered canonical",
+        "Recommendation: SVG for UI/mascot panels, canvas for in-world NPCs — document this clearly"
+      ],
+      "estimatedComplexity": "LOW",
+      "referencesGames": [],
+      "notes": "The SVG mascots (MascotDisplay.tsx) are significantly more detailed than the canvas in-world NPCs. This is intentional (different rendering contexts) but must be explicitly documented to prevent confusion."
+    },
+    {
+      "id": "SPR-020",
+      "title": "Boss HP bar — segment markers and skull icon",
+      "priority": "P1",
+      "status": "TODO",
+      "sprint": 1,
+      "function": "BossBattle.tsx drawBossHPBar()",
+      "dependencies": [],
+      "acceptance": [
+        "HP bar has 10 segment dividers (thin 1px dark vertical lines at each 10% interval)",
+        "Segment at 66%: double-width divider marking phase 1/2 transition",
+        "Segment at 33%: double-width divider marking phase 2/3 transition",
+        "Skull icon (5x5 game pixels) at left end of HP bar",
+        "Skull icon: 3 rects wide oval, 2 dark rects for eye sockets, 3 rect 'teeth' row below",
+        "Score >= 7.5 on readabilityAtSize criterion"
+      ],
+      "estimatedComplexity": "LOW",
+      "referencesGames": ["undertale-hp-display", "omori-juice-bar"],
+      "notes": "Current HP bar is clean but generic. Segment markers communicate the phase system visually, preparing the player for the phase transition moments."
+    },
+    {
+      "id": "SPR-021",
+      "title": "Player heart display redesign — pixel-art heart shape",
+      "priority": "P1",
+      "status": "TODO",
+      "sprint": 1,
+      "function": "BossBattle.tsx drawHearts()",
+      "dependencies": [],
+      "acceptance": [
+        "Heart shape using fillRect approximation: 3 rects per heart forming recognizable heart silhouette",
+        "Layout: top-left: 2x2, top-right: 2x2 (separated by 1px gap), below: 4x2 center, tapering to point",
+        "Full heart: bright red (#ff2244), with 1px highlight at top-left (#ff6666)",
+        "Empty heart: dark red (#441122), no highlight",
+        "Hearts pulse (scale ±0.5px) when player takes damage",
+        "Score >= 8.0 on readabilityAtSize criterion — hearts are critical UI"
+      ],
+      "estimatedComplexity": "LOW",
+      "referencesGames": ["undertale-soul-heart", "zelda-heart-containers"],
+      "notes": "Current hearts are pure filled rectangles (20x18px canvas). At SCALE=3 this is approximately 7x6 game pixels — enough room for a proper heart silhouette using 5-6 rects."
+    },
+    {
+      "id": "SPR-022",
+      "title": "Boss name plate — proper pixel-art banner",
+      "priority": "P2",
+      "status": "TODO",
+      "sprint": 2,
+      "function": "BossBattle.tsx HTML overlay section",
+      "dependencies": [],
+      "acceptance": [
+        "Current CSS text-based name plate replaced with canvas-drawn version",
+        "Dark red banner (12x4 game pixels) with double-border (1px bright red outside, 1px dark red inside)",
+        "Boss name rendered as pixel text using custom 5x7 pixel font or current monospace",
+        "Banner position: top-center of boss canvas area",
+        "Phase indicators: small dot for each remaining HP phase, dims as phases are defeated"
+      ],
+      "estimatedComplexity": "LOW",
+      "referencesGames": ["undertale-boss-name", "omori-enemy-name"],
+      "notes": "Current name plate is HTML div with CSS border — works fine for now but canvas-drawn version would be more visually consistent with the pixel art aesthetic."
+    }
+  ]
+}

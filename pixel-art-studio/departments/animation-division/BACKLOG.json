@@ -1,0 +1,207 @@
+{
+  "division": "Animation Division",
+  "sprint": 1,
+  "goal": "All character walk cycles reach 75+ score in animation-scorer.ts. Enzyme idle animation feels alive.",
+
+  "backlog": [
+    {
+      "id": "ANI-001",
+      "title": "Player walk cycle — 4 frame down/up/left/right",
+      "priority": "P0",
+      "status": "IN-PROGRESS",
+      "acceptance": [
+        "4 frames per direction (16 total)",
+        "Same palette across all frames",
+        "Left and right frames NOT perfect mirrors",
+        "Head bob: 1px up on stride frames",
+        "Foot swing visible even at S=3 scale"
+      ],
+      "currentState": "2-frame walk implemented in drawPlayer(). Needs upgrade to 4 frames.",
+      "technique": "walkFrame alternates between leg positions. Frame 0: right foot forward. Frame 1: neutral. Frame 2: left foot forward. Frame 3: neutral.",
+      "referencesGames": ["pokemon-bw-walk","stardew-walk"],
+      "estimatedHours": 3
+    },
+    {
+      "id": "ANI-002",
+      "title": "Player idle animation — 2-frame breathe with blink",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": [
+        "Neutral and breathe-in frames",
+        "Breathe: torso moves up 1px",
+        "Blink frame: eyes closed (dark rectangle) every 6 seconds (36 idle frames at 6fps)"
+      ],
+      "technique": "If walkFrame === 0 and player.idle for 5000ms, trigger blink sequence",
+      "estimatedHours": 2
+    },
+    {
+      "id": "ANI-003",
+      "title": "Enzyme floating idle — bob up/down with blinking",
+      "priority": "P0",
+      "status": "IN-PROGRESS",
+      "acceptance": [
+        "Float bob: 2px sinusoidal vertical movement",
+        "Blink every 4-8 seconds",
+        "Different mood expressions per game state",
+        "Happy by default, annoyed during hints, excited on correct answer"
+      ],
+      "currentState": "Enzyme rendered in game, but float animation needs timing tuning",
+      "estimatedHours": 2
+    },
+    {
+      "id": "ANI-004",
+      "title": "Elliot walk cycle — mismatched sock swing",
+      "priority": "P1",
+      "status": "DONE",
+      "completionNote": "2-frame walk with mismatched sock color shift implemented in drawElliot(). Score ~6.5/10."
+    },
+    {
+      "id": "ANI-005",
+      "title": "Ben walk cycle — sandwich sway",
+      "priority": "P1",
+      "status": "DONE",
+      "completionNote": "2-frame walk with sandwich armSwing implemented in drawBen(). Score ~6.5/10."
+    },
+    {
+      "id": "ANI-006",
+      "title": "Alex walk cycle — coffee slosh",
+      "priority": "P1",
+      "status": "DONE",
+      "completionNote": "2-frame walk with coffeeSlosh implemented in drawAlex(). Score ~6.5/10."
+    },
+    {
+      "id": "ANI-007",
+      "title": "Henry flicker animation — holographic glitch",
+      "priority": "P1",
+      "status": "DONE",
+      "completionNote": "3-frame flicker with opacity variation implemented in drawHenry(). Score ~7.0/10."
+    },
+    {
+      "id": "ANI-008",
+      "title": "Lesson node pulse animation — per realm",
+      "priority": "P0",
+      "status": "DONE",
+      "completionNote": "2-frame on/off pulse for all 4 realms. Add staggered phase offset per node position — TODO."
+    },
+    {
+      "id": "ANI-009",
+      "title": "Stagger node animation phase by tile position",
+      "priority": "P1",
+      "status": "TODO",
+      "acceptance": ["Use (tx*7+ty*3) % animTotal for phase offset","Adjacent nodes should never blink in sync"],
+      "technique": "In drawTile for lesson nodes: const nodePhase = (tx*7+ty*3) % 2; replace animFrame with (animFrame + nodePhase) % 2",
+      "estimatedHours": 0.5
+    },
+    {
+      "id": "ANI-010",
+      "title": "Water tile animations — smooth wave motion",
+      "priority": "P1",
+      "status": "DONE",
+      "completionNote": "Sin-wave animated for all 4 realm water types. Realm 3 has star twinkling."
+    },
+    {
+      "id": "ANI-011",
+      "title": "Dialogue box typewriter effect — current character flash",
+      "priority": "P2",
+      "status": "TODO",
+      "acceptance": ["Last typed character blinks while typing","Cursor block appears after last char","Blinking cursor stops when text complete"],
+      "estimatedHours": 1
+    },
+    {
+      "id": "ANI-012",
+      "title": "Screen transitions — zone-accent-colored wipe",
+      "priority": "P2",
+      "status": "TODO",
+      "acceptance": [
+        "Entering new zone: fade to realm accent color then fade in",
+        "Kitchen to upstairs: dark fade",
+        "Lesson node entry: bright flash then fade to lesson UI"
+      ],
+      "referencesGames": ["undertale-transitions","omori-transitions"],
+      "estimatedHours": 3
+    },
+    {
+      "id": "ANI-013",
+      "title": "Player interaction animation — 2-frame exclamation",
+      "priority": "P2",
+      "status": "TODO",
+      "acceptance": ["! symbol appears above player on NPC approach","Bounces 2px up then down over 4 frames","Uses white on black bubble (Undertale style)"],
+      "estimatedHours": 1
+    },
+    {
+      "id": "ANI-014",
+      "title": "NPC idle animations — all 4 NPCs",
+      "priority": "P2",
+      "status": "TODO",
+      "acceptance": [
+        "Elliot: adjust glasses every 8 seconds (arm moves to face)",
+        "Ben: eating animation (sandwich raises to mouth) every 10 seconds",
+        "Alex: coffee sip every 6 seconds",
+        "Henry: glitch-flicker burst every 12 seconds (full body glitch for 4 frames)"
+      ],
+      "estimatedHours": 4
+    },
+    {
+      "id": "ANI-015",
+      "title": "Mitochondria T-tile animation — ATP production glow",
+      "priority": "P2",
+      "status": "TODO",
+      "acceptance": ["ATP synthase dots glow in sequence (left → center → right)","Inner matrix breathes (subtle brightness cycle)","Outer membrane pulses with teal accent"],
+      "estimatedHours": 2
+    },
+    {
+      "id": "ANI-016",
+      "title": "Path tiles animated motor protein — staggered by tile X",
+      "priority": "P2",
+      "status": "DONE",
+      "completionNote": "Motor protein animated in Realm 1 path tiles. Speed: 35 game-pixels/second."
+    },
+    {
+      "id": "ANI-017",
+      "title": "Boss gate animation — horror buildup",
+      "priority": "P3",
+      "status": "TODO",
+      "acceptance": [
+        "Normal: slow red pulse",
+        "Player within 5 tiles: faster pulse + crack glow increases",
+        "Player within 2 tiles: screen shakes 1px",
+        "Player touches: flash white then lesson UI"
+      ],
+      "estimatedHours": 3
+    },
+    {
+      "id": "ANI-018",
+      "title": "Enzyme talking animation — mouth moves with dialogue",
+      "priority": "P3",
+      "status": "TODO",
+      "acceptance": ["Mouth alternates open/closed every 100ms while dialogue is playing","Stops moving when player is reading"],
+      "estimatedHours": 2
+    },
+    {
+      "id": "ANI-019",
+      "title": "Lesson complete celebration animation",
+      "priority": "P2",
+      "status": "TODO",
+      "acceptance": [
+        "Lesson node changes to gold/completed appearance",
+        "Particle burst from node (8 particles scatter in circle)",
+        "Particles are realm-accent colored",
+        "Enzyme does excited animation for 1 second"
+      ],
+      "estimatedHours": 4
+    },
+    {
+      "id": "ANI-020",
+      "title": "Opening cutscene timing refinement",
+      "priority": "P0",
+      "status": "TODO",
+      "acceptance": [
+        "Dialogue pacing: 30ms per character",
+        "Scene transitions: 800ms dark fade",
+        "Mom walk animation uses 4-frame cycle not 2-frame",
+        "Player sleep animation: eyes close, slight body settle"
+      ],
+      "estimatedHours": 3
+    }
+  ]
+}

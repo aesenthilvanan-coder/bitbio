@@ -1,0 +1,373 @@
+{
+  "version": "1.0",
+  "description": "BitBio Pixel Art Studio master knowledge base. Compiled from analysis of 20+ landmark pixel art games. Used directly by tooling agents to validate and generate art assets.",
+
+  "games": {
+    "undertale": {
+      "palette": ["#000000","#0a0a0a","#4a2000","#6b3a1f","#8b5e3c","#d4a56a","#ff8040","#8040a0","#ffffff","#c8d8e8"],
+      "spriteSize": "10x14",
+      "keyPrinciples": ["strong silhouette over detail","near-black voids create depth","2-3 color tiles maximum","functional > decorative","emotion via tiny faces"],
+      "colorCount": 10,
+      "style": "crude-intentional",
+      "tileSize": 20,
+      "bgColor": "#000000",
+      "uiStyle": "white-box-black-text",
+      "characterHeight": 14,
+      "characterWidth": 10,
+      "zones": {
+        "ruins":    { "wall": "#4a2000", "floor": "#2a1000", "accent": "#8040a0", "bg": "#000000" },
+        "snowdin":  { "wall": "#204020", "floor": "#ffffff", "accent": "#f08040", "bg": "#2040a0" },
+        "waterfall":{ "wall": "#003060", "floor": "#000020", "accent": "#00a0ff", "bg": "#000020" },
+        "hotland":  { "wall": "#602000", "floor": "#401000", "accent": "#ff4000", "bg": "#200000" },
+        "core":     { "wall": "#404040", "floor": "#202020", "accent": "#ffffff", "bg": "#000000" }
+      }
+    },
+    "deltarune": {
+      "palette": ["#000000","#101010","#202020","#aaaaaa","#ffffff","#0040ff","#8000ff","#ff8000","#00ff80"],
+      "spriteSize": "14x18",
+      "keyPrinciples": ["more detailed than Undertale but same philosophy","zone identity through palette","thick black outlines","walk animation = 4 frames","consistent head-to-body ratio 1:1.3"],
+      "colorCount": 12,
+      "style": "refined-undertale",
+      "tileSize": 20,
+      "bgColor": "#000000",
+      "uiStyle": "white-box-black-text"
+    },
+    "omori": {
+      "palette": ["#000000","#ffffff","#e8e8e8","#cccccc","#aaaaaa","#888888","#444444","#ff4444","#ffaa00","#0088ff"],
+      "spriteSize": "16x20",
+      "keyPrinciples": ["thick 4px outlines define everything","grayscale white world vs vibrant headspace","emotion conveyed by eye shape alone","rooms are minimalist — negative space is design","color saturation signals psychological state"],
+      "colorCount": 16,
+      "style": "drawn-minimalist",
+      "tileSize": 16,
+      "bgColor": "#000000",
+      "uiStyle": "omori-white-panel",
+      "whiteSpace": {
+        "bg": "#ffffff",
+        "fg": "#000000",
+        "accent": "#cccccc"
+      },
+      "headspace": {
+        "bg": "#87ceeb",
+        "grass": "#7ec850",
+        "accent": "#ff6b6b"
+      }
+    },
+    "pokemonBlackWhite": {
+      "palette": ["#f8f8f8","#d0d0d0","#a8a8a8","#000000","#383838","#c8a44c","#8b6913","#2040c8","#0028a0","#50c850"],
+      "spriteSize": "16x24",
+      "keyPrinciples": ["16x16 tiles create rooms","overworld sprites taller than earlier gens","indoor/outdoor palette separation","NPC variety through recolors","clean diagonal shading on sprites"],
+      "colorCount": 16,
+      "style": "clean-jrpg",
+      "tileSize": 16,
+      "bgColor": "#c0e090",
+      "uiStyle": "clean-white-panels",
+      "indoorPalette": {
+        "floor": "#c8a44c",
+        "floorAlt": "#b89038",
+        "wall": "#d8c870",
+        "wallDark": "#a88840",
+        "trim": "#806000"
+      },
+      "outdoorPalette": {
+        "grass": "#50c850",
+        "path": "#d8b860",
+        "water": "#2870f8",
+        "tree": "#285020"
+      }
+    },
+    "chronoTrigger": {
+      "palette": ["#000000","#101010","#c88048","#78400c","#8898d8","#5060c8","#40b040","#208020","#d85020","#f8c018"],
+      "spriteSize": "16x24",
+      "keyPrinciples": ["era-specific palettes create time period identity","limited SNES palette used brilliantly","2.5D perspective on overworld","boss battles use full-screen sprites","consistent color ramps: 3 values per hue"],
+      "colorCount": 16,
+      "style": "snes-pinnacle",
+      "tileSize": 16,
+      "bgColor": "#000000",
+      "uiStyle": "snes-window"
+    },
+    "earthbound": {
+      "palette": ["#000000","#f8f8f8","#f8d030","#f05858","#3878f8","#58c848","#f8b818","#784040","#888888","#f8f8e8"],
+      "spriteSize": "14x18",
+      "keyPrinciples": ["PSI effects: rainbow color cycling","enemy sprites = everyday objects distorted","walking animation = 2 frames only","deliberately crude art = charm","backgrounds scroll at different speeds to fake parallax"],
+      "colorCount": 8,
+      "style": "deliberately-crude",
+      "tileSize": 16,
+      "bgColor": "#f8f8f8",
+      "uiStyle": "earthbound-windows"
+    },
+    "stardewValley": {
+      "palette": ["#2a1a0a","#4a3020","#6a5040","#b08060","#d4a870","#f8dca0","#506820","#789040","#a0b860","#c8d880"],
+      "spriteSize": "16x32",
+      "keyPrinciples": ["warm earthy palette conveys comfort","16x16 tiles but characters taller","seasonal palette shifts (same world, different mood)","day/night = hue shift + darkening","variety through 8 character frames per direction"],
+      "colorCount": 16,
+      "style": "warm-indie",
+      "tileSize": 16,
+      "bgColor": "#2a4a0a",
+      "uiStyle": "brown-wood-panels"
+    },
+    "celeste": {
+      "palette": ["#000000","#1b1b1b","#2b2b2b","#ff6b97","#ff99c8","#7ec8e3","#0d0d1a","#c8b8e8","#ffffff","#ffff80"],
+      "spriteSize": "8x12",
+      "keyPrinciples": ["tiny 8px character reads at full clarity due to silhouette","each biome = 2 accent colors max on dark bg","hair color = player state indicator","trail effects communicate movement feeling","screen-shake + particle juice over detailed sprites"],
+      "colorCount": 10,
+      "style": "minimalist-precise",
+      "tileSize": 8,
+      "bgColor": "#1b1b1b",
+      "uiStyle": "celeste-clean"
+    },
+    "hyperLightDrifter": {
+      "palette": ["#050510","#0a0a20","#1a1a40","#2a2080","#4040c0","#8060ff","#ff4040","#ff8040","#ffc040","#40ffc0"],
+      "spriteSize": "16x16",
+      "keyPrinciples": ["neon-on-dark: saturated colors POP against near-black","glow effects via transparent colored squares","particle density creates richness","limited animation frames but very readable","each zone = 1 dominant hue"],
+      "colorCount": 12,
+      "style": "neon-dark",
+      "tileSize": 16,
+      "bgColor": "#050510",
+      "uiStyle": "hld-minimal"
+    },
+    "eastward": {
+      "palette": ["#1a1008","#2a2010","#4a3820","#7a6040","#b09060","#e0c090","#405820","#608038","#90b850","#c0e078"],
+      "spriteSize": "16x20",
+      "keyPrinciples": ["richest pixel art palette in modern games (500+ colors used)","every tile has 5+ shades","character sprites have 12+ colors each","ambient occlusion faked via dark corners on every tile","lighting changes hue not just brightness"],
+      "colorCount": 32,
+      "style": "modern-lush",
+      "tileSize": 16,
+      "bgColor": "#1a1008",
+      "uiStyle": "eastward-warm"
+    },
+    "crosscode": {
+      "palette": ["#0a0815","#1a1830","#2a2845","#4a4070","#7a60a8","#b090e0","#00d0ff","#0090c0","#ff6000","#ffc000"],
+      "spriteSize": "12x20",
+      "keyPrinciples": ["pseudo-3D isometric with pixel art sprites","extremely tight color discipline across hundreds of assets","enemies communicate danger level via color temperature","terrain reading: warm = safe, cool = dangerous","consistent 3/4 view perspective"],
+      "colorCount": 16,
+      "style": "iso-precise",
+      "tileSize": 16,
+      "bgColor": "#0a0815",
+      "uiStyle": "sci-fi-panels"
+    },
+    "seaOfStars": {
+      "palette": ["#080818","#181838","#283060","#4058a0","#6080d0","#90b0f8","#20a040","#40c060","#70e090","#f8e030"],
+      "spriteSize": "16x24",
+      "keyPrinciples": ["modern SNES homage with more colors","time of day via palette cycling (same tiles, different hue/brightness)","extremely detailed tile work (60+ fillRect equivalent per tile)","hero sprites have consistent palette across all outfits","boss sprites fill entire battle screen"],
+      "colorCount": 20,
+      "style": "hd-retro",
+      "tileSize": 16,
+      "bgColor": "#080818",
+      "uiStyle": "snes-modern"
+    },
+    "finalFantasyVI": {
+      "palette": ["#000000","#101010","#303030","#606060","#a0a0a0","#d0d0d0","#8a4028","#c0783c","#204880","#4888c8"],
+      "spriteSize": "16x24",
+      "keyPrinciples": ["mode 7 + sprites creates dramatic scale","characters identifiable in 16x24","color coding: Terra=teal, Locke=red, Shadow=dark","steampunk industrial palette (browns+grays with one bright color)","menu system uses full SNES color depth"],
+      "colorCount": 16,
+      "style": "snes-epic",
+      "tileSize": 16,
+      "bgColor": "#000000",
+      "uiStyle": "ff6-menu"
+    },
+    "goldenSun": {
+      "palette": ["#000000","#202828","#405060","#709090","#a0c0d0","#e0f0f8","#804020","#c08040","#ffcc60","#ff8820"],
+      "spriteSize": "16x16",
+      "keyPrinciples": ["GBA palette constraints used creatively (32 colors per sprite)","djinn sprites are instantly iconic despite 16x16","town tiles are lush for GBA hardware","battle backgrounds use Mode 7 equivalent","elemental colors: Venus=brown, Mercury=blue, Mars=red, Jupiter=purple"],
+      "colorCount": 16,
+      "style": "gba-lush",
+      "tileSize": 16,
+      "bgColor": "#202828",
+      "uiStyle": "golden-sun-menu"
+    },
+    "fireEmblemGBA": {
+      "palette": ["#000000","#181820","#303840","#586878","#8898a8","#b8c8d8","#502010","#a04020","#e08030","#ffc060"],
+      "spriteSize": "16x16",
+      "keyPrinciples": ["faction identity via palette (Hector=blue, Eliwood=red, Lyn=green)","map sprites extremely readable at 16x16","portrait art style vs overworld style (deliberate contrast)","class identity through silhouette","terrain tiles communicate gameplay: forest=cover, water=no movement"],
+      "colorCount": 16,
+      "style": "strategic-clear",
+      "tileSize": 16,
+      "bgColor": "#181820",
+      "uiStyle": "fe-menu"
+    },
+    "castlevaniaAriaOfSorrow": {
+      "palette": ["#000000","#181010","#302020","#503030","#804040","#c07060","#0030a0","#0060d0","#40a0ff","#ffe080"],
+      "spriteSize": "24x36",
+      "keyPrinciples": ["large enemy sprites create threat scale","Gothic architecture conveyed with 3 dark tile shades","player sprite is recognizable despite GBA tiny screen","soul orbs use warm yellow against dark backgrounds","boss sprites often fill half the screen"],
+      "colorCount": 16,
+      "style": "gothic-dramatic",
+      "tileSize": 16,
+      "bgColor": "#000000",
+      "uiStyle": "gothic-menu"
+    },
+    "metroidFusion": {
+      "palette": ["#000000","#080818","#181828","#283840","#405868","#608898","#602820","#a04838","#e08060","#ffc090"],
+      "spriteSize": "24x32",
+      "keyPrinciples": ["atmosphere via color temperature (warm = safe, cool-blue = infected/dangerous)","Samus silhouette readable at any size","parasite infected areas: desaturated blue-gray","SA-X encounters: dread via familiar-but-wrong silhouette","rooms communicate threat before enemies appear"],
+      "colorCount": 16,
+      "style": "atmospheric-sci-fi",
+      "tileSize": 16,
+      "bgColor": "#000000",
+      "uiStyle": "metroid-hud"
+    }
+  },
+
+  "universalPrinciples": {
+    "silhouetteTheory": {
+      "rule": "A sprite's outline shape alone must communicate character identity, class, and emotional state.",
+      "why": "Players read silhouettes before details — in fast gameplay, the shape IS the character.",
+      "test": "Blur the sprite to 1/4 resolution. Can you still tell who it is?",
+      "howToBreak": "Only when a character's confusion/disguise is the point (e.g. SA-X in Metroid Fusion).",
+      "bitbioApplication": "Player sprite needs distinct hair silhouette per customization. Each NPC needs unique head shape + distinguishing silhouette element."
+    },
+    "paletteConstruction": {
+      "rule": "Build color ramps with hue shift: shadows shift cool, highlights shift warm. Never just darken/lighten.",
+      "why": "Flat darkening looks muddy. Hue-shifted ramps feel alive and are easier to distinguish.",
+      "test": "Convert sprite to grayscale — do the colors still feel intentional?",
+      "exampleGood": "Undertale Ruins: shadow #4a2000 (red-orange) → highlight #d4a56a (shifts toward yellow)",
+      "exampleBad": "#4a2000 → #7a5030 → #aa8060 (same hue, different brightness = muddy)",
+      "bitbioApplication": "All 4 realms need proper hue-shifted ramps, not just lightened versions of the base color."
+    },
+    "colorCount": {
+      "rule": "Maximum 8 colors per sprite, 16 per tile set, 32 per scene.",
+      "why": "Fewer colors = more cohesion, easier to make harmonious, lower cognitive load.",
+      "exceptions": ["Eastward uses 500+ but has dedicated artist per asset","Sea of Stars uses 20+ per scene but strict zone discipline"],
+      "bitbioApplication": "Each realm palette: 1 dark bg + 3 floor shades + 2 wall shades + 1 accent + 1 bright accent = 8 colors max"
+    },
+    "tileSeamlessness": {
+      "rule": "A tile must look correct when placed adjacent to itself in all 4 directions.",
+      "why": "Maps repeat tiles. Visible seams break immersion instantly.",
+      "test": "Place 9 copies in a 3x3 grid. Do seams disappear?",
+      "technique": "Edges must be 1px lighter or darker than 1px inside — not the same as the adjacent tiles' opposite edge.",
+      "bitbioApplication": "All floor tiles need seam-hiding edge treatment."
+    },
+    "valueContrast": {
+      "rule": "Characters must have higher contrast against backgrounds than anything else on screen.",
+      "why": "Player can't control what they can't see. Character readability is gameplay.",
+      "minimumContrastRatio": 4.5,
+      "undertaleApproach": "Dark backgrounds (#000000-#0a0a0a) + white/light character outlines = instant readability",
+      "bitbioApplication": "All realms use near-black floors. Characters use lighter base colors. NPC outline colors must be darker than floor."
+    },
+    "animationPrinciples": {
+      "walkCycle": {
+        "frames": 4,
+        "description": "Neutral → forward-lean → neutral → back-lean. Or simpler: right-foot-forward → neutral → left-foot-forward → neutral.",
+        "undertaleApproach": "2-frame walk: legs alternate, whole body bobs slightly",
+        "pokemonApproach": "2-frame walk: feet visible, body steady",
+        "stardewApproach": "4 frames: full arm swing + leg movement"
+      },
+      "idleAnimation": {
+        "frames": 2,
+        "description": "Subtle breathing or eye blink. 1-2 pixels of movement maximum.",
+        "notes": "Long idle loops feel more alive than short ones. Undertale NPCs have 4-8 frame idles."
+      },
+      "anticipation": {
+        "description": "Brief backward motion before a forward action. 1-2 frames.",
+        "importance": "Makes actions feel weighty rather than instantaneous."
+      },
+      "smearFrames": {
+        "description": "Intentionally blurred/stretched single frames during fast motion.",
+        "usage": "Attack animations, dashes, impacts."
+      }
+    },
+    "characterDesign": {
+      "headBodyRatio": "1:1 to 1:1.5 for chibi/RPG styles. Larger heads = more expressive faces.",
+      "eyeDesign": "Eyes communicate personality. Large round eyes = friendly/young. Narrow = serious. Abstract dots = uncanny/horror.",
+      "colorCoding": "Use consistent color association: fire=red, nature=green, tech=cyan/blue, magic=purple.",
+      "silhouetteVariety": "Each NPC should have a unique silhouette element: unusual hair, held object, body proportion difference."
+    },
+    "environmentDesign": {
+      "readability": "Walkable areas should be visually distinct from walls. Floor = flat, Wall = raised/textured.",
+      "depthLayers": "Background (parallax) → Middleground (tiles) → Foreground (objects) → Character layer → UI",
+      "lightingFake": "Place colored semi-transparent tiles under light sources. No actual lighting calculation needed.",
+      "atmosphericPerspective": "Distant elements = more desaturated, slightly blue-shifted. Near = vivid.",
+      "interestPoints": "Never more than 16 tiles between visual interest points (decorative tiles, objects, NPCs)."
+    }
+  },
+
+  "colorTheory": {
+    "hueShifting": "As value decreases (shadows), shift hue toward cool (blue/purple). As value increases (highlights), shift toward warm (yellow/orange).",
+    "saturationManagement": "Mid-tones have highest saturation. Shadows and highlights both desaturate slightly. Exception: neon-on-dark like Hyper Light Drifter.",
+    "contrastControl": "80% of pixel art mistakes are contrast problems. Check in grayscale. Your darkest dark should be <20 lightness, brightest bright >80 lightness.",
+    "colorTemperature": "Warm (red/orange/yellow) = safe, inviting, alive. Cool (blue/purple/green) = dangerous, alien, dead. This is used universally across all games.",
+    "paletteHarmony": {
+      "analogous": "Colors next to each other on color wheel. Safe, cohesive. Used for zone palettes.",
+      "complementary": "Opposite colors. High contrast. Use for accents only (e.g., teal accent on red-brown Ruins).",
+      "triad": "Three equidistant colors. Used when you need multiple distinct elements to read separately."
+    }
+  },
+
+  "technicalConstraints": {
+    "commonSizes": [
+      { "name": "tiny", "size": "8x8", "use": "small items, tiles, bullets" },
+      { "name": "small", "size": "16x16", "use": "tiles, small NPCs, GBA sprites" },
+      { "name": "medium", "size": "16x24", "use": "RPG overworld characters (Pokemon, FF6)" },
+      { "name": "large", "size": "24x32", "use": "detailed characters (Metroid Fusion)" },
+      { "name": "portrait", "size": "32x48", "use": "BitBio target sprite size" },
+      { "name": "boss", "size": "48x64+", "use": "boss sprites, cutscene characters" }
+    ],
+    "scaleFactors": [1, 2, 3, 4],
+    "bitbioSettings": {
+      "SCALE": 3,
+      "TILE": 16,
+      "targetSpriteWidth": 10,
+      "targetSpriteHeight": 20,
+      "helperFunction": "gr(ctx, cx, cy, gx, gy, gw, gh, color)"
+    },
+    "animationFrameRates": {
+      "idle": "4-8 fps (250ms per frame)",
+      "walk": "6-8 fps (150ms per frame)",
+      "run": "10-12 fps (90ms per frame)",
+      "attack": "12-24 fps for smear frames"
+    }
+  },
+
+  "bitbioSpecific": {
+    "realmPalettes": {
+      "cytoplasm": {
+        "description": "Ocean of life — teal/cyan on near-black",
+        "bg": "#020609",
+        "floor": "#050d10",
+        "floorAlt": "#060e12",
+        "wall": "#0a1a22",
+        "accent": "#00ffcc",
+        "secondary": "#00aaff",
+        "highlight": "#80ffee",
+        "shadow": "#001a15"
+      },
+      "genomeForest": {
+        "description": "Ancient DNA wilderness — deep green on near-black",
+        "bg": "#030804",
+        "floor": "#050f04",
+        "floorAlt": "#040c03",
+        "wall": "#0a1a05",
+        "accent": "#00ff44",
+        "secondary": "#44cc00",
+        "highlight": "#88ff88",
+        "shadow": "#001500"
+      },
+      "neuralNebula": {
+        "description": "Consciousness space — electric purple on void black",
+        "bg": "#030008",
+        "floor": "#080510",
+        "floorAlt": "#060410",
+        "wall": "#100820",
+        "accent": "#aa44ff",
+        "secondary": "#ff44aa",
+        "highlight": "#dd99ff",
+        "shadow": "#200040"
+      },
+      "proteinCathedral": {
+        "description": "Ancient molecular temple — gold on near-black stone",
+        "bg": "#080608",
+        "floor": "#0a080f",
+        "floorAlt": "#0c0a10",
+        "wall": "#18121f",
+        "accent": "#ffaa00",
+        "secondary": "#ff6600",
+        "highlight": "#ffdd88",
+        "shadow": "#1a0800"
+      }
+    },
+    "qualityTargets": {
+      "minimumShipScore": 7.0,
+      "targetScore": 8.5,
+      "benchmarks": { "undertale": 9.2, "pokemonBW": 8.8, "celeste": 8.5, "currentBitBio": 5.5 }
+    }
+  }
+}
