@@ -41,6 +41,9 @@ interface BossState {
   victoryTimer: number;  // timestamp when victory started
   defeatTimer: number;
   lastFrameTime: number;
+  bossPhase: 1 | 2 | 3;   // HP phase: 1=full, 2=<66%, 3=<33%
+  phaseTaunt: string | null;
+  phaseTauntTimer: number; // timestamp when taunt expires
 }
 
 // ─── Dialogue data ────────────────────────────────────────────────────────────
@@ -85,6 +88,26 @@ const BOSS_NAMES: Record<1 | 2 | 3 | 4, string> = {
 
 const BOSS_BG: Record<1 | 2 | 3 | 4, string> = {
   1: '#0a0414', 2: '#040f06', 3: '#07040f', 4: '#060810',
+};
+
+// Phase taunts: index 0 = phase 2 taunt, index 1 = phase 3 taunt
+const BOSS_PHASE_TAUNTS: Record<1 | 2 | 3 | 4, [string, string]> = {
+  1: [
+    'My hunger... INTENSIFIES!',
+    'You cannot escape DIGESTION!',
+  ],
+  2: [
+    'MUTATION DETECTED. ADAPTING.',
+    'REPLICATION ACCELERATING. YOU CANNOT STOP THIS.',
+  ],
+  3: [
+    '...wait. My training accuracy was 100%. Why am I losing?',
+    'THE DISTRIBUTION HAS SHIFTED. I DON\'T KNOW WHAT TO DO.',
+  ],
+  4: [
+    'Join... us... Every protein will misfold eventually.',
+    'AGGREGATION... CASCADE... INEVITABLE.',
+  ],
 };
 
 // ─── Boss sprite drawing ──────────────────────────────────────────────────────
@@ -132,85 +155,221 @@ function drawLyso(ctx: CanvasRenderingContext2D, cx: number, cy: number, hp: num
 
 function drawViron(ctx: CanvasRenderingContext2D, cx: number, cy: number, hp: number, t: number, sx: number) {
   const x = cx + sx;
-  const bodyColor = hp > 50 ? '#334422' : hp > 25 ? '#223311' : '#111a08';
-  const pieces: [number, number, number, number][] = [[0,0,60,60],[8,8,44,44],[-8,8,44,44],[8,-8,44,44]];
-  pieces.forEach(([ox, oy, w, h]) => {
-    ctx.fillStyle = bodyColor;
-    ctx.fillRect(x + (ox * SCALE) / 2 - (w * SCALE) / 4, cy + (oy * SCALE) / 2 - (h * SCALE) / 4, (w * SCALE) / 2, (h * SCALE) / 2);
+  const phase2 = hp <= 66;
+  const phase3 = hp <= 33;
+
+  // Phase 3: body pulses between teal and near-black every 8 frames
+  const frame = Math.floor(t * 60);
+  const pulseDark = phase3 && (frame % 8 < 4);
+  const bodyMain = pulseDark ? '#071a0d' : (phase3 ? '#1a4a2e' : (phase2 ? '#2d7a5a' : '#52b788'));
+  const bodyAlt  = pulseDark ? '#030d06' : (phase3 ? '#0d2e1c' : (phase2 ? '#1a5c40' : '#3d9b6a'));
+
+  // Hexagonal body: 7 rows of fillRect approximating a hex, ~80x56px
+  const hexRows: [number, number][] = [
+    [28, 8], [52, 8], [72, 8], [80, 8],
+    [72, 8], [52, 8], [28, 8],
+  ];
+  const hexH = hexRows.length * 8; // 56px total height
+  hexRows.forEach(([w, h], i) => {
+    ctx.fillStyle = i % 2 === 0 ? bodyMain : bodyAlt;
+    ctx.fillRect(x - w / 2, cy - hexH / 2 + i * h, w, h);
   });
-  ctx.fillStyle = '#557733';
-  ctx.fillRect(x - 8 * SCALE, cy - 12 * SCALE, 6 * SCALE, 6 * SCALE);
-  ctx.fillRect(x + 2 * SCALE, cy - 8 * SCALE, 5 * SCALE, 5 * SCALE);
-  ctx.fillStyle = '#88ff33';
-  ctx.fillRect(x - 6, cy - 6, 12, 12);
-  for (let i = 0; i < 3; i++) {
-    const angle = (i / 3) * Math.PI * 2 + t * 0.3;
-    for (let j = 0; j < 8; j++) {
-      const r = ((16 + j * 4) * SCALE) / 2;
-      const wave = Math.sin(t * 2 + j * 0.5 + i) * 4;
-      ctx.fillStyle = j % 2 === 0 ? '#6633cc' : '#3355ff';
-      ctx.fillRect(x + Math.cos(angle) * r + wave - 2, cy + Math.sin(angle) * r - 2, 4, 4);
+
+  // Genetic material (RNA): waving alternating orange/dark-orange 2x2 dots inside body
+  for (let j = 0; j < 14; j++) {
+    const rx = x - 20 + j * 3;
+    const ry = cy + Math.sin(t * 4 + j * 0.6) * 6;
+    ctx.fillStyle = j % 2 === 0 ? '#ff8c00' : '#ff6600';
+    ctx.fillRect(rx, ry - 1, 2, 2);
+  }
+
+  // Spike proteins: 8 spikes radiating outward
+  const baseR  = 44;
+  const spikeLen = phase2 ? 28 : 20; // phase 2 extends 4+ extra px
+  const spikeColor = phase3 ? '#cc0000' : '#52b788';
+  for (let i = 0; i < 8; i++) {
+    const baseAngle = (i / 8) * Math.PI * 2;
+    const animAngle = baseAngle + Math.sin(t * 0.4 + i * 0.3) * 0.06;
+    for (let s = 0; s <= spikeLen; s += 2) {
+      const r = baseR + s;
+      ctx.fillStyle = spikeColor;
+      ctx.fillRect(
+        x + Math.cos(animAngle) * r - 1,
+        cy + Math.sin(animAngle) * r - 1,
+        2, 2,
+      );
     }
   }
-  ctx.fillStyle = '#cc0000';
-  ctx.fillRect(x - 12, cy - 6, 8, 6);
-  ctx.fillRect(x + 4, cy - 6, 8, 6);
+
+  // Phase 2: second ring of 8 shorter spikes at offset angles
+  if (phase2) {
+    const ring2Color = phase3 ? '#880000' : '#3d9b6a';
+    for (let i = 0; i < 8; i++) {
+      const baseAngle = (i / 8) * Math.PI * 2 + Math.PI / 8;
+      const animAngle = baseAngle + Math.sin(t * 0.5 + i * 0.4) * 0.08;
+      for (let s = 0; s <= 14; s += 2) {
+        const r = 36 + s;
+        ctx.fillStyle = ring2Color;
+        ctx.fillRect(
+          x + Math.cos(animAngle) * r - 1,
+          cy + Math.sin(animAngle) * r - 1,
+          2, 2,
+        );
+      }
+    }
+  }
+
+  // Eyes: 6x6 rectangles; red >60% HP, yellow >25%, white (enraged) ≤25%
+  const eyeColor = hp > 60 ? '#cc0000' : (hp > 25 ? '#cccc00' : '#ffffff');
+  ctx.fillStyle = eyeColor;
+  ctx.fillRect(x - 14, cy - 6, 6, 6);
+  ctx.fillRect(x + 8,  cy - 6, 6, 6);
 }
 
-function drawOverfit(ctx: CanvasRenderingContext2D, cx: number, cy: number, _hp: number, t: number, sx: number) {
+function drawOverfit(ctx: CanvasRenderingContext2D, cx: number, cy: number, hp: number, t: number, sx: number) {
   const x = cx + sx;
-  ctx.fillStyle = '#1a1040';
-  const skull: [number, number, number, number][] = [[0,-20,40,35],[0,10,30,20],[-5,25,20,10],[5,25,20,10]];
-  skull.forEach(([ox, oy, w, h]) => {
-    ctx.fillRect(x + (ox * SCALE) / 2 - (w * SCALE) / 4, cy + (oy * SCALE) / 2, (w * SCALE) / 2, (h * SCALE) / 2);
-  });
-  const nodes: [number, number][] = [[-8,-12],[0,-16],[8,-12],[12,0],[8,10],[-8,10],[-12,0],[0,2]];
-  nodes.forEach(([nx, ny], i) => {
-    const pulse = 0.7 + 0.3 * Math.sin(t * 2 + i * 0.7);
-    ctx.fillStyle = i % 2 === 0 ? `rgba(170,68,255,${pulse})` : `rgba(0,204,255,${pulse})`;
-    ctx.fillRect(x + (nx * SCALE) / 2 - 4, cy + (ny * SCALE) / 2 - 4, 8, 8);
-  });
-  ctx.fillStyle = '#aa44ff';
-  ctx.fillRect(x - 16, cy - 10, 12, 12);
-  ctx.fillStyle = '#00ccff';
-  ctx.fillRect(x + 4, cy - 10, 12, 12);
-  ctx.fillStyle = '#1a1040';
-  ctx.fillRect(x - 18, cy - 14, 14, 3);
-  ctx.fillRect(x + 4, cy - 14, 14, 3);
-  if (Math.sin(t * 10) > 0.5) {
-    ctx.fillStyle = '#ff00ff';
-    ctx.fillRect(x - 10, cy + 14, 20, 4);
+  const phase2 = hp <= 66;
+  const phase3 = hp <= 33;
+
+  // Data-matrix body: 6 cols × 8 rows of 7×7 squares with 1px gap = 8px step
+  const COLS = 6, ROWS = 8, SQ = 7, STEP = 8;
+  const matW = COLS * STEP - 1; // 47px
+  const matH = ROWS * STEP - 1; // 63px
+  const startX = x - matW / 2;
+  const startY = cy - matH / 2;
+
+  const BRIGHT = '#a855f7';
+  const MID    = '#7c3aed';
+  const GRAY   = '#3a3050';
+  const BLACK  = '#1a1040';
+  const GLITCH = [BRIGHT, '#ff00ff', '#00ccff', GRAY, BLACK] as const;
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const idx = r * COLS + c;
+      const px  = startX + c * STEP;
+      const py  = startY + r * STEP;
+
+      let sqColor: string;
+      if (!phase2) {
+        // Phase 1: all lit bright purple — 100% training accuracy illusion
+        sqColor = idx % 5 === 0 ? BRIGHT : MID;
+      } else if (!phase3) {
+        // Phase 2: generalization failure — half squares go dark/gray
+        sqColor = (r + c) % 2 === 0 ? GRAY : MID;
+      } else {
+        // Phase 3: glitching — squares randomly flicker
+        const gi = Math.floor(t * 14 + idx * 0.9) % GLITCH.length;
+        sqColor = GLITCH[gi];
+      }
+
+      // Face overrides
+      if (r === 2 && (c === 1 || c === 4)) sqColor = phase3 ? '#ff00ff' : BRIGHT; // eyes
+      if (r === 6 && c >= 1 && c <= 4) {
+        // Wide grin row
+        sqColor = (phase3 && Math.floor(t * 10) % 2 === 0) ? '#ffffff' : BRIGHT;
+      }
+
+      ctx.fillStyle = sqColor;
+      ctx.fillRect(px, py, SQ, SQ);
+    }
+  }
+
+  // Arms: rectangle appendages, grow 50% longer at phase 3
+  const armH = phase3 ? 36 : 24;
+  ctx.fillStyle = MID;
+  ctx.fillRect(startX - 10, cy - armH / 2, 8, armH);
+  ctx.fillRect(startX + matW + 2, cy - armH / 2, 8, armH);
+  if (phase3) {
+    // Claw extensions
+    ctx.fillStyle = BRIGHT;
+    ctx.fillRect(startX - 14, cy + 10, 14, 4);
+    ctx.fillRect(startX + matW + 2, cy + 10, 14, 4);
+  }
+
+  // Training loss curve (right side): zigzag descending → perfect training fit
+  const crv = startX + matW + 14;
+  const crvTop = startY + 4;
+  const crvStep = matH / 8;
+  ctx.fillStyle = '#39ff14';
+  for (let s = 0; s < 8; s++) {
+    const sy = crvTop + s * crvStep;
+    const cx2 = crv + (s % 2) * 4;
+    ctx.fillRect(cx2, sy, 3, Math.max(2, crvStep * 0.7));
+  }
+
+  // Validation loss curve (further right): shoots upward — catastrophic overfit
+  const valX = crv + 12;
+  ctx.fillStyle = '#ff4444';
+  for (let s = 0; s < 8; s++) {
+    const sy = crvTop + (7 - s) * crvStep * 0.4 + s * s * 0.9;
+    const vx2 = valX + (s % 2) * 4;
+    ctx.fillRect(vx2, sy, 3, Math.max(2, crvStep * 0.7));
   }
 }
 
-function drawAmyloid(ctx: CanvasRenderingContext2D, cx: number, cy: number, _hp: number, t: number, sx: number) {
+function drawAmyloid(ctx: CanvasRenderingContext2D, cx: number, cy: number, hp: number, t: number, sx: number) {
   const x = cx + sx;
-  const sheets: [number, number, number, number, string][] = [
-    [-15,-8,30,8,'#cccccc'],[-10,0,25,8,'#aaaaaa'],[-12,8,28,8,'#cccccc'],
-    [-8,16,22,8,'#bbbbbb'],[-5,-16,20,8,'#dddddd'],
+  const phase2 = hp <= 66;
+  const phase3 = hp <= 33;
+
+  // Body: 9 stacked layers of misfolded protein, ~56×72px (cy-36 to cy+36)
+  const layers: [number, number, string][] = [
+    [56, 8, '#d4c5a9'], [52, 8, '#b8a899'], [56, 8, '#cabbaa'],
+    [50, 8, '#a09080'], [56, 8, '#b8aa98'], [52, 8, '#989088'],
+    [56, 8, '#c0b0a0'], [50, 8, '#888080'], [52, 8, '#b0a898'],
   ];
-  sheets.forEach(([ox, oy, w, h, c]) => {
+  layers.forEach(([w, h, c], i) => {
     ctx.fillStyle = c;
-    ctx.fillRect(x + (ox * SCALE) / 2, cy + (oy * SCALE) / 2, (w * SCALE) / 2, (h * SCALE) / 2);
+    ctx.fillRect(x - w / 2, cy - 36 + i * h, w, h);
+    // Beta-sheet stripe at bottom of each layer
+    ctx.fillStyle = '#6a6060';
+    ctx.fillRect(x - w / 2 + 2, cy - 36 + i * h + h - 1, w - 4, 1);
   });
-  ctx.fillStyle = '#888888';
-  for (let a = 0; a < 4; a++) {
-    const ay = cy + (a * 8 - 12) * SCALE / 2;
-    ctx.fillRect(x - (12 * SCALE) / 2, ay, (20 * SCALE) / 2, (4 * SCALE) / 2);
-    ctx.fillRect(x + (8 * SCALE) / 2, ay - 3, 6, 10);
+
+  // Phase 2: extra fibril side layers (body grows wider)
+  if (phase2) {
+    ctx.fillStyle = '#c0b0a0';
+    ctx.fillRect(x - 40, cy - 20, 14, 56);
+    ctx.fillRect(x + 26, cy - 20, 14, 56);
+    ctx.fillStyle = '#8a8080';
+    for (let i = 0; i < 7; i++) {
+      ctx.fillRect(x - 40, cy - 20 + i * 8 + 7, 14, 1);
+      ctx.fillRect(x + 26, cy - 20 + i * 8 + 7, 14, 1);
+    }
   }
-  for (let f = 0; f < 12; f++) {
-    const fx = x + (f - 6) * 10;
-    const fibLen = (10 + Math.sin(t * 5 + f) * 3) * SCALE / 2;
-    ctx.fillStyle = '#dddddd';
-    ctx.fillRect(fx, cy - 30 - fibLen, 2, fibLen);
-  }
-  ctx.fillStyle = '#ff8800';
-  ctx.fillRect(x - 15, cy - 6, 10, 8);
-  ctx.fillRect(x + 5, cy - 6, 10, 8);
-  ctx.fillStyle = '#1a0800';
-  ctx.fillRect(x - 12, cy - 4, 4, 4);
-  ctx.fillRect(x + 8, cy - 4, 4, 4);
+
+  // Crown: 5 amyloid fibril spikes of varying height
+  const fibrilPulse = phase3 && Math.floor(t * 15) % 4 < 2;
+  const fibrilColor = fibrilPulse ? '#ffffff' : '#c0a0ff';
+  const spikeData: [number, number][] = [[-20, 20], [-10, 28], [0, 32], [10, 24], [20, 18]];
+  spikeData.forEach(([ox, h]) => {
+    ctx.fillStyle = fibrilColor;
+    ctx.fillRect(x + ox - 1, cy - 36 - h, 2, h);
+    ctx.fillRect(x + ox - 3, cy - 36 - h, 6, 2);
+  });
+
+  // Eyes: 3×3 red squares, deeply set in dark sockets
+  ctx.fillStyle = '#1a0a0a';
+  ctx.fillRect(x - 18, cy - 20, 10, 10);
+  ctx.fillRect(x + 8,  cy - 20, 10, 10);
+  ctx.fillStyle = '#cc0000';
+  ctx.fillRect(x - 16, cy - 18, 6, 6);
+  ctx.fillRect(x + 10, cy - 18, 6, 6);
+  ctx.fillStyle = '#ff5555';
+  ctx.fillRect(x - 15, cy - 17, 2, 2);
+  ctx.fillRect(x + 11, cy - 17, 2, 2);
+
+  // Tendrils: 4 fibril strands, extend 50% longer at phase 3
+  const tendrilMult = phase3 ? 1.5 : 1.0;
+  const tendrilXs: number[] = [-14, -5, 5, 14];
+  tendrilXs.forEach((ox, i) => {
+    const tLen = (18 + Math.sin(t * 2.5 + i * 1.4) * 6) * tendrilMult;
+    ctx.fillStyle = '#b0a0c0';
+    ctx.fillRect(x + ox - 1, cy + 36, 2, tLen);
+    ctx.fillStyle = '#d0c0e0';
+    ctx.fillRect(x + ox - 2, cy + 36 + tLen - 2, 4, 2);
+  });
 }
 
 function drawBoss(ctx: CanvasRenderingContext2D, realm: 1|2|3|4, cx: number, cy: number, bs: BossState) {
@@ -354,6 +513,7 @@ interface UiState {
   optionSelected: number | null;
   resultType: 'correct' | 'wrong' | null;
   introLineIdx: number;
+  phaseTaunt: string | null;
 }
 
 export default function BossBattle({ realm, onVictory, onDefeat }: BossBattleProps) {
@@ -366,6 +526,7 @@ export default function BossBattle({ realm, onVictory, onDefeat }: BossBattlePro
 
   const lastSyncedPhase = useRef<BossState['phase']>('intro');
   const lastSyncedQ = useRef(0);
+  const lastSyncedTaunt = useRef<string | null>(null);
 
   const [ui, setUi] = useState<UiState>({
     phase: 'intro',
@@ -373,6 +534,7 @@ export default function BossBattle({ realm, onVictory, onDefeat }: BossBattlePro
     optionSelected: null,
     resultType: null,
     introLineIdx: 0,
+    phaseTaunt: null,
   });
 
   const questions = BOSS_QUESTIONS[realm];
@@ -397,6 +559,9 @@ export default function BossBattle({ realm, onVictory, onDefeat }: BossBattlePro
     victoryTimer: 0,
     defeatTimer: 0,
     lastFrameTime: 0,
+    bossPhase: 1,
+    phaseTaunt: null,
+    phaseTauntTimer: 0,
   }), []);
 
   // ── Keyboard handler ─────────────────────────────────────────────────────────
@@ -446,6 +611,19 @@ export default function BossBattle({ realm, onVictory, onDefeat }: BossBattlePro
     if (correct) {
       const dmg = 8 + Math.floor(Math.random() * 3);
       bs.bossHP = Math.max(0, bs.bossHP - dmg);
+
+      // Phase transition detection
+      if (bs.bossHP > 0) {
+        const prevPhase = bs.bossPhase;
+        const newPhase: 1 | 2 | 3 = bs.bossHP <= 33 ? 3 : (bs.bossHP <= 66 ? 2 : 1);
+        if (newPhase > prevPhase) {
+          bs.bossPhase = newPhase;
+          bs.phaseTaunt = BOSS_PHASE_TAUNTS[realm][newPhase - 2];
+          bs.phaseTauntTimer = performance.now() + 3000;
+          bs.flashTimer = Math.max(bs.flashTimer, 1.5);
+        }
+      }
+
       bs.phase = bs.bossHP <= 0 ? 'victory' : 'correct';
       bs.flashType = 'hit';
       bs.flashTimer = 1;
@@ -497,8 +675,9 @@ export default function BossBattle({ realm, onVictory, onDefeat }: BossBattlePro
       phase: bs.phase,
       optionSelected: selectedIdx,
       resultType: correct ? 'correct' : 'wrong',
+      phaseTaunt: bs.phaseTaunt,
     }));
-  }, [questions]);
+  }, [questions, realm]);
 
   const handleAnswer = useCallback((idx: number) => {
     const bs = bsRef.current;
@@ -512,7 +691,7 @@ export default function BossBattle({ realm, onVictory, onDefeat }: BossBattlePro
     bsRef.current = fresh;
     lastSyncedPhase.current = 'question';
     lastSyncedQ.current = 0;
-    setUi({ phase: 'question', questionIdx: 0, optionSelected: null, resultType: null, introLineIdx: 0 });
+    setUi({ phase: 'question', questionIdx: 0, optionSelected: null, resultType: null, introLineIdx: 0, phaseTaunt: null });
   }, [makeInitState]);
 
   // ── Game loop ─────────────────────────────────────────────────────────────────
@@ -554,6 +733,15 @@ export default function BossBattle({ realm, onVictory, onDefeat }: BossBattlePro
       // Update flash
       if (bs.flashTimer > 0) {
         bs.flashTimer = Math.max(0, bs.flashTimer - dt * 3);
+      }
+
+      // Expire phase taunt
+      if (bs.phaseTaunt && now >= bs.phaseTauntTimer) {
+        bs.phaseTaunt = null;
+      }
+      if (bs.phaseTaunt !== lastSyncedTaunt.current) {
+        lastSyncedTaunt.current = bs.phaseTaunt;
+        setUi(prev => ({ ...prev, phaseTaunt: bs.phaseTaunt }));
       }
 
       // Update projectile (moves toward bottom-center = player)
@@ -868,6 +1056,35 @@ export default function BossBattle({ realm, onVictory, onDefeat }: BossBattlePro
               color: '#444',
             }}>
               [1][2][3][4] to answer
+            </div>
+          </div>
+        )}
+
+        {/* ── PHASE TAUNT BANNER ── */}
+        {ui.phaseTaunt && (
+          <div style={{
+            position: 'absolute',
+            top: '26%',
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            zIndex: 28,
+          }}>
+            <div style={{
+              fontFamily: 'Space Mono, monospace',
+              fontSize: 12,
+              color: '#ff4444',
+              background: '#0a0000ee',
+              border: '2px solid #cc0000',
+              padding: '8px 20px',
+              letterSpacing: 2,
+              textAlign: 'center',
+              maxWidth: CW - 40,
+            }}>
+              <span style={{ color: '#ff8888', marginRight: 8 }}>{BOSS_NAMES[realm]}:</span>
+              {ui.phaseTaunt}
             </div>
           </div>
         )}
