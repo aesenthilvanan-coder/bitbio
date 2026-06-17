@@ -546,190 +546,311 @@ function drawTile(
 // ─── NPC Sprites ─────────────────────────────────────────────────────────────
 
 function drawElliot(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, globalFrame: number) {
-  // Elliot: lab coat (white/gray), dark curly hair, cyan glasses, mismatched socks
-  const ox = cx + 2 * SCALE; // offset to centre in 16-tile
-  const oy = cy - 4 * SCALE; // shift up so feet land in tile
+  // Elliot: Cell Biology Guide — 32×32 sprite, lab coat, curly dark hair, cyan glasses, mismatched socks
+  const ox = cx - 8 * SCALE;
+  const oy = cy - 16 * SCALE;
 
   const legShift = globalFrame % 2 === 1 ? 1 : 0;
-  // Idle: slow head bob every 90 frames
-  const headBob = (globalFrame % 90) < 45 ? 0 : -1;
-  // Blink: eye becomes 2x1 every 120 frames (for 6 frames)
-  const isBlinking = (globalFrame % 120) < 6;
-  const eyeH = isBlinking ? 1 : 2;
+  const headBob  = (globalFrame % 90) < 45 ? 0 : -1;
+  const eyeH     = (globalFrame % 120) < 6 ? 1 : 2; // blink
 
-  // Curly hair (dark brown, wider than head)
-  gr2(ctx, ox, oy, 1, 0 + headBob, 10, 4, '#2a1a0a');
-  gr2(ctx, ox, oy, 0, 1 + headBob,  2, 3, '#2a1a0a'); // left puff
-  gr2(ctx, ox, oy,10, 1 + headBob,  2, 3, '#2a1a0a'); // right puff
+  // HEAD (skin — draw first so hair can overlay top rows)
+  gr2(ctx, ox, oy, 10, 0 + headBob, 12, 12, '#c68642');
 
-  // Head (skin tone)
-  gr2(ctx, ox, oy, 2, 2 + headBob, 8, 6, '#c68642');
+  // HAIR — curly dark brown: base covers top of head, poofs extend beyond
+  gr2(ctx, ox, oy, 10,  0 + headBob, 12,  4, '#2a1a0a'); // hair base top
+  gr2(ctx, ox, oy,  8, -2 + headBob,  4,  2, '#2a1a0a'); // upper-left poof
+  gr2(ctx, ox, oy, 20, -2 + headBob,  4,  2, '#2a1a0a'); // upper-right poof
+  gr2(ctx, ox, oy,  6,  2 + headBob,  4,  2, '#2a1a0a'); // left-mid poof
+  gr2(ctx, ox, oy, 22,  2 + headBob,  4,  2, '#2a1a0a'); // right-mid poof
 
-  // Glasses (cyan frames)
-  gr2(ctx, ox, oy, 2, 5 + headBob, 3, 1, '#00cccc'); // left lens
-  gr2(ctx, ox, oy, 7, 5 + headBob, 3, 1, '#00cccc'); // right lens
-  gr2(ctx, ox, oy, 5, 5 + headBob, 2, 1, '#888888'); // bridge
+  // GLASSES (cyan lenses + gray bridge)
+  gr2(ctx, ox, oy, 11, 5 + headBob, 4, 2, '#00cccc'); // left lens
+  gr2(ctx, ox, oy, 17, 5 + headBob, 4, 2, '#00cccc'); // right lens
+  gr2(ctx, ox, oy, 15, 5 + headBob, 2, 1, '#888888'); // bridge
 
-  // Eyes (dark, with blink)
-  gr2(ctx, ox, oy, 3, 4 + headBob, 1, eyeH, '#1a1a1a');
-  gr2(ctx, ox, oy, 8, 4 + headBob, 1, eyeH, '#1a1a1a');
+  // EYES (inside lens area, one row above glasses)
+  gr2(ctx, ox, oy, 12, 4 + headBob, 2, eyeH, '#1a1a1a');
+  gr2(ctx, ox, oy, 18, 4 + headBob, 2, eyeH, '#1a1a1a');
 
-  // Lab coat (white/light gray body)
-  gr2(ctx, ox, oy, 1, 8, 10, 7, '#e0e0e0');
-  // Coat lapels
-  gr2(ctx, ox, oy, 4, 8, 1, 3, '#aaaaaa');
-  gr2(ctx, ox, oy, 7, 8, 1, 3, '#aaaaaa');
-  // Buttons (dark)
-  gr2(ctx, ox, oy, 5, 10, 2, 1, '#666666');
-  gr2(ctx, ox, oy, 5, 12, 2, 1, '#666666');
+  // NOSE & MOUTH
+  gr2(ctx, ox, oy, 15, 7 + headBob, 2, 1, '#b07050');
+  gr2(ctx, ox, oy, 14, 9 + headBob, 4, 1, '#8b4513');
 
-  // Arms (coat sleeves)
-  gr2(ctx, ox, oy, 0, 8, 1, 6, '#e0e0e0'); // left
-  gr2(ctx, ox, oy,11, 8, 1, 6, '#e0e0e0'); // right
-  // Hands
-  gr2(ctx, ox, oy, 0, 14, 1, 2, '#c68642');
-  gr2(ctx, ox, oy,11, 14, 1, 2, '#c68642');
+  // NECK (under-coat shirt visible in bright blue)
+  gr2(ctx, ox, oy, 14, 12, 4, 3, '#4488cc');
 
-  // Pants (dark)
-  gr2(ctx, ox, oy, 2, 15, 8, 3, '#333344');
+  // SHOULDERS (lab coat)
+  gr2(ctx, ox, oy, 6, 15, 20, 3, '#e8e8f0');
 
-  // Left leg/sock (mismatched: red)
-  gr2(ctx, ox, oy, 2, 17 + (legShift === 1 ? -1 : 0), 3, 2, '#ff4444');
-  gr2(ctx, ox, oy, 2, 19, 3, 1, '#222222'); // left shoe
+  // TORSO (lab coat)
+  gr2(ctx, ox, oy,  8, 17, 16, 10, '#e8e8f0');
+  // Lapels — 2×5 gray each side of center
+  gr2(ctx, ox, oy, 12, 17,  2,  5, '#aaaaaa');
+  gr2(ctx, ox, oy, 18, 17,  2,  5, '#aaaaaa');
+  // Buttons down center
+  gr2(ctx, ox, oy, 15, 19, 2, 1, '#666666');
+  gr2(ctx, ox, oy, 15, 22, 2, 1, '#666666');
+  gr2(ctx, ox, oy, 15, 25, 2, 1, '#666666');
+  // Chest pocket with pen
+  gr2(ctx, ox, oy, 10, 20, 4, 4, '#d8d8e4');
+  gr2(ctx, ox, oy, 11, 20, 1, 3, '#4466aa');
 
-  // Right leg/sock (mismatched: yellow)
-  gr2(ctx, ox, oy, 7, 17 + (legShift === 1 ? 1 : 0), 3, 2, '#ffee44');
-  gr2(ctx, ox, oy, 7, 19, 3, 1, '#222222'); // right shoe
+  // ARMS (coat sleeves)
+  gr2(ctx, ox, oy,  4, 15, 4, 13, '#e8e8f0');
+  gr2(ctx, ox, oy, 24, 15, 4, 13, '#e8e8f0');
+
+  // HANDS
+  gr2(ctx, ox, oy,  3, 28, 5, 3, '#c68642');
+  gr2(ctx, ox, oy, 24, 28, 5, 3, '#c68642');
+
+  // HIPS
+  gr2(ctx, ox, oy, 9, 27, 14, 3, '#2233aa');
+
+  // LEGS — mismatched socks (left=red, right=yellow)
+  gr2(ctx, ox, oy,  9, 30 - legShift, 6, 5, '#2233aa'); // left leg upper
+  gr2(ctx, ox, oy,  9, 35 - legShift, 6, 3, '#ff4444'); // left sock
+  gr2(ctx, ox, oy, 17, 30 + legShift, 6, 5, '#2233aa'); // right leg upper
+  gr2(ctx, ox, oy, 17, 35 + legShift, 6, 3, '#ffee44'); // right sock
+
+  // SHOES
+  gr2(ctx, ox, oy,  8, 38 - legShift, 7, 3, '#222222');
+  gr2(ctx, ox, oy, 16, 38 + legShift, 7, 3, '#222222');
 }
 
 function drawBen(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, frame: number) {
-  // Ben: dark green hoodie, cargo pants, sandwich in right hand
-  const ox = cx + 2 * SCALE;
-  const oy = cy - 4 * SCALE;
-  const legShift = frame === 1 ? 1 : 0;
-  const armSwing = frame === 1 ? -1 : 1; // sandwich sways
+  // Ben: Bioinformatics Guide — 32×32 sprite, dark green hoodie, cargo pants, sandwich
+  const ox = cx - 8 * SCALE;
+  const oy = cy - 16 * SCALE;
 
-  // Hair (light brown, short)
-  gr2(ctx, ox, oy, 2, 0, 8, 3, '#8b5e3c');
+  const legShift    = frame === 1 ? 1 : 0;
+  const sandwichBob = frame === 1 ? 1 : 0;
 
-  // Head
-  gr2(ctx, ox, oy, 2, 2, 8, 6, '#d4956a');
+  // HEAD
+  gr2(ctx, ox, oy, 10, 0, 12, 12, '#d4956a');
 
-  // Eyes
-  gr2(ctx, ox, oy, 3, 5, 2, 1, '#3a2a1a');
-  gr2(ctx, ox, oy, 7, 5, 2, 1, '#3a2a1a');
+  // HAIR (short flat-top, light brown, 14 wide)
+  gr2(ctx, ox, oy, 9, 0, 14, 3, '#8b5e3c');
 
-  // Mouth (with food crumbs, natch)
-  gr2(ctx, ox, oy, 4, 7, 4, 1, '#a0603a');
+  // EYEBROWS
+  gr2(ctx, ox, oy, 11, 4, 3, 1, '#6b3e1c');
+  gr2(ctx, ox, oy, 18, 4, 3, 1, '#6b3e1c');
 
-  // Hoodie (dark green)
-  gr2(ctx, ox, oy, 1, 8, 10, 7, '#2d5a27');
-  // Hoodie pocket
-  gr2(ctx, ox, oy, 4,12, 4, 2, '#1a3a17');
+  // EYES (warm brown, 3×2)
+  gr2(ctx, ox, oy, 11, 5, 3, 2, '#3a2a1a');
+  gr2(ctx, ox, oy, 18, 5, 3, 2, '#3a2a1a');
 
-  // Arms
-  gr2(ctx, ox, oy, 0, 8, 1, 7, '#2d5a27');  // left
-  gr2(ctx, ox, oy,11, 8, 1, 7, '#2d5a27');  // right
+  // NOSE
+  gr2(ctx, ox, oy, 15, 7, 2, 2, '#c07050');
 
-  // Sandwich in right hand (sways with armSwing)
-  const sandY = 14 + armSwing;
-  gr2(ctx, ox, oy, 11, sandY,    3, 1, '#f5d78a'); // bread top
-  gr2(ctx, ox, oy, 11, sandY+1,  3, 1, '#4aaa44'); // lettuce
-  gr2(ctx, ox, oy, 11, sandY+2,  3, 1, '#f5d78a'); // bread bottom
+  // MOUTH (big smile, 6×2)
+  gr2(ctx, ox, oy, 13, 9, 6, 2, '#a06040');
 
-  // Cargo pants (brown)
-  gr2(ctx, ox, oy, 2, 15, 8, 3, '#7a5c3a');
-  // Cargo pocket
-  gr2(ctx, ox, oy, 2, 16, 2, 2, '#5a3c1e');
+  // NECK
+  gr2(ctx, ox, oy, 14, 12, 4, 3, '#d4956a');
 
-  // Legs / sneakers
-  gr2(ctx, ox, oy, 2, 17 + (legShift === 1 ? -1 : 0), 3, 2, '#7a5c3a');
-  gr2(ctx, ox, oy, 7, 17 + (legShift === 1 ? 1 : 0), 3, 2, '#7a5c3a');
-  gr2(ctx, ox, oy, 2, 19, 3, 1, '#dddddd'); // sneakers
-  gr2(ctx, ox, oy, 7, 19, 3, 1, '#dddddd');
+  // SHOULDERS (hoodie)
+  gr2(ctx, ox, oy, 6, 15, 20, 3, '#2d5a27');
+
+  // TORSO (hoodie)
+  gr2(ctx, ox, oy, 8, 17, 16, 10, '#2d5a27');
+  // Kangaroo pocket
+  gr2(ctx, ox, oy, 11, 20, 10, 5, '#1a3a17');
+  // Drawstrings
+  gr2(ctx, ox, oy, 14, 16, 1, 3, '#eeeeee');
+  gr2(ctx, ox, oy, 17, 16, 1, 3, '#eeeeee');
+
+  // ARMS (hoodie sleeves)
+  gr2(ctx, ox, oy,  4, 15, 4, 13, '#2d5a27');
+  gr2(ctx, ox, oy, 24, 15, 4, 13, '#2d5a27');
+
+  // HANDS
+  gr2(ctx, ox, oy,  3, 28, 5, 3, '#d4956a');
+  gr2(ctx, ox, oy, 24, 28, 5, 3, '#d4956a');
+
+  // SANDWICH — right hand, 3 layers of 5×2, bobs on frame 1
+  const sandY = 24 + sandwichBob;
+  gr2(ctx, ox, oy, 26, sandY,     5, 2, '#f5d78a'); // top bread
+  gr2(ctx, ox, oy, 26, sandY + 2, 5, 2, '#4aaa44'); // lettuce
+  gr2(ctx, ox, oy, 26, sandY + 4, 5, 2, '#f5d78a'); // bottom bread
+
+  // HIPS (cargo pants) + BELT on top
+  gr2(ctx, ox, oy, 9, 27, 14, 3, '#7a5c3a');
+  gr2(ctx, ox, oy, 9, 27, 14, 2, '#4a2c0e');
+
+  // LEGS
+  gr2(ctx, ox, oy,  9, 30 - legShift, 6, 8, '#7a5c3a');
+  gr2(ctx, ox, oy, 17, 30 + legShift, 6, 8, '#7a5c3a');
+  // Cargo pocket on left leg
+  gr2(ctx, ox, oy, 9, 31 - legShift, 3, 4, '#5a3c1e');
+
+  // FEET (white sneakers + gray sole)
+  gr2(ctx, ox, oy,  8, 38 - legShift, 7, 2, '#dddddd');
+  gr2(ctx, ox, oy,  8, 40 - legShift, 7, 1, '#999999');
+  gr2(ctx, ox, oy, 16, 38 + legShift, 7, 2, '#dddddd');
+  gr2(ctx, ox, oy, 16, 40 + legShift, 7, 1, '#999999');
 }
 
 function drawAlex(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, frame: number) {
-  // Alex: black turtleneck, slim gray pants, coffee cup in left hand
-  const ox = cx + 2 * SCALE;
-  const oy = cy - 4 * SCALE;
+  // Alex: ML/AI Guide — 32×32 sprite, black turtleneck, slim gray pants, coffee cup
+  const ox = cx - 8 * SCALE;
+  const oy = cy - 16 * SCALE;
+
   const legShift = frame === 1 ? 1 : 0;
-  const coffeeSlosh = frame === 1 ? -1 : 0; // coffee sloshes
+  const eyeH     = frame % 2 === 0 ? 1 : 2; // squint effect on even frames
 
-  // Hair (dark, sleek)
-  gr2(ctx, ox, oy, 2, 0, 8, 3, '#1a1a1a');
-  gr2(ctx, ox, oy, 2, 2, 8, 1, '#333333'); // hairline
+  // HEAD
+  gr2(ctx, ox, oy, 10, 0, 12, 12, '#d4a07a');
 
-  // Head
-  gr2(ctx, ox, oy, 2, 2, 8, 6, '#d4a07a');
+  // HAIR (sleek black, flat smooth, 14×4, high hairline at dy=-1)
+  gr2(ctx, ox, oy, 9, -1, 14, 4, '#1a1a1a');
 
-  // Eyes (sharp, analytical)
-  gr2(ctx, ox, oy, 3, 4, 2, 1, '#2a2a4a');
-  gr2(ctx, ox, oy, 7, 4, 2, 1, '#2a2a4a');
+  // EYEBROWS (angular)
+  gr2(ctx, ox, oy, 12, 3, 3, 1, '#1a1a1a');
+  gr2(ctx, ox, oy, 17, 3, 3, 1, '#1a1a1a');
 
-  // Turtleneck (black, covers neck)
-  gr2(ctx, ox, oy, 3, 7, 6, 2, '#111111'); // neck
-  gr2(ctx, ox, oy, 1, 8, 10, 7, '#1a1a1a'); // body
+  // EYES (sharp, positioned close together)
+  gr2(ctx, ox, oy, 13, 5, 2, eyeH, '#2a2a4a');
+  gr2(ctx, ox, oy, 17, 5, 2, eyeH, '#2a2a4a');
 
-  // Arms
-  gr2(ctx, ox, oy, 0, 8, 1, 7, '#1a1a1a');
-  gr2(ctx, ox, oy,11, 8, 1, 7, '#1a1a1a');
+  // NOSE
+  gr2(ctx, ox, oy, 15, 7, 2, 1, '#c08060');
 
-  // Coffee cup in LEFT hand (sloshes)
-  const cupY = 14 + coffeeSlosh;
-  gr2(ctx, ox, oy, -1, cupY,   3, 4, '#e8d5b0'); // cup body (paper cup beige)
-  gr2(ctx, ox, oy, -1, cupY,   3, 1, '#c4a882'); // cup band
-  gr2(ctx, ox, oy, -1, cupY-1, 3, 1, '#2a1a0a'); // dark coffee at top (sloshes)
-  gr2(ctx, ox, oy,  0, cupY+3, 2, 1, '#888888'); // cup bottom
+  // MOUTH (subtle, slightly pursed)
+  gr2(ctx, ox, oy, 15, 9, 3, 1, '#8a6050');
 
-  // Slim gray pants
-  gr2(ctx, ox, oy, 3, 15, 6, 3, '#606070');
+  // TURTLENECK COLLAR (rises over chin, dy=10 inside head)
+  gr2(ctx, ox, oy, 11, 10, 10, 4, '#111111');
 
-  // Legs / white sneakers
-  gr2(ctx, ox, oy, 3, 17 + (legShift === 1 ? -1 : 0), 2, 2, '#606070');
-  gr2(ctx, ox, oy, 7, 17 + (legShift === 1 ? 1 : 0), 2, 2, '#606070');
-  gr2(ctx, ox, oy, 3, 19, 3, 1, '#f0f0f0');
-  gr2(ctx, ox, oy, 7, 19, 3, 1, '#f0f0f0');
+  // NECK
+  gr2(ctx, ox, oy, 14, 12, 4, 3, '#111111');
+
+  // SHOULDERS
+  gr2(ctx, ox, oy, 6, 15, 20, 3, '#1a1a1a');
+  gr2(ctx, ox, oy, 8, 15,  3,  1, '#333333'); // shoulder highlight
+
+  // TORSO (turtleneck)
+  gr2(ctx, ox, oy, 8, 17, 16, 10, '#1a1a1a');
+
+  // ARMS (left arm stays still — coffee; right arm barely swings)
+  gr2(ctx, ox, oy,  4, 15, 4, 13, '#111111');
+  gr2(ctx, ox, oy, 24, 15, 4, 13, '#111111');
+
+  // HANDS
+  gr2(ctx, ox, oy,  3, 28, 5, 3, '#d4a07a');
+  gr2(ctx, ox, oy, 24, 28, 5, 3, '#d4a07a');
+
+  // COFFEE CUP — left hand, dx=1, dy=24
+  gr2(ctx, ox, oy,  1, 24, 5, 8, '#e8d5b0'); // paper cup body
+  gr2(ctx, ox, oy,  1, 25, 5, 1, '#c4a882'); // coffee ring
+  gr2(ctx, ox, oy,  1, 24, 5, 1, '#2a1a0a'); // dark coffee at top
+  gr2(ctx, ox, oy,  6, 26, 2, 3, '#bbbb99'); // handle
+
+  // HIPS
+  gr2(ctx, ox, oy, 9, 27, 14, 3, '#606070');
+
+  // LEGS (slim, 5 wide each)
+  gr2(ctx, ox, oy, 10, 30 - legShift, 5, 8, '#606070');
+  gr2(ctx, ox, oy, 17, 30 + legShift, 5, 8, '#606070');
+
+  // FEET (white low-tops)
+  gr2(ctx, ox, oy,  9, 38 - legShift, 7, 3, '#f0f0f0');
+  gr2(ctx, ox, oy, 16, 38 + legShift, 7, 3, '#f0f0f0');
 }
 
 function drawHenry(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, frame: number) {
-  // Henry: HOLOGRAPHIC. Semi-transparent cyan, geometric patterns, flickering.
-  const ox = cx + 2 * SCALE;
-  const oy = cy - 4 * SCALE;
+  // Henry: Holographic Final Mentor — 32×32 sprite, translucent teal, flickering
+  const ox = cx - 8 * SCALE;
+  const oy = cy - 16 * SCALE;
+
   const flicker = frame % 3 === 0 ? 0.4 : frame % 3 === 1 ? 0.65 : 0.55;
 
+  // OUTER GLOW (very faint wider silhouette)
+  ctx.globalAlpha = flicker * 0.2;
+  gr2(ctx, ox, oy, 7, -3, 18, 46, '#00ffffff');
+
+  // MAIN HOLOGRAPHIC BODY
   ctx.globalAlpha = flicker;
 
-  // Outer halo rings (lighter color, very transparent)
-  ctx.globalAlpha = flicker * 0.3;
-  gr2(ctx, ox, oy, -2, -2, 16, 24, '#00ffffff');
-  ctx.globalAlpha = flicker;
+  // HEAD
+  gr2(ctx, ox, oy, 10, 0, 12, 12, '#00ffcc');
 
-  // Body (solid-ish holographic teal)
-  gr2(ctx, ox, oy, 2,  0, 8,  8, '#00ffff'); // head
-  gr2(ctx, ox, oy, 1,  8, 10, 7, '#00cccc'); // torso
-  gr2(ctx, ox, oy, 0,  8,  1, 6, '#00aaaa'); // left arm
-  gr2(ctx, ox, oy,11,  8,  1, 6, '#00aaaa'); // right arm
-  gr2(ctx, ox, oy, 3, 15,  3, 5, '#00cccc'); // left leg
-  gr2(ctx, ox, oy, 6, 15,  3, 5, '#00cccc'); // right leg
+  // HAIR (distinguished silver/white, short and neat)
+  gr2(ctx, ox, oy, 10, 0, 12, 3, '#e0e0ff');
 
-  // Geometric holographic patterns (grid lines)
-  gr2(ctx, ox, oy, 2,  3, 8, 1, '#00ffffff'); // horizontal line across head
-  gr2(ctx, ox, oy, 6,  0, 1, 8, '#00ffffff'); // vertical line on head
-  gr2(ctx, ox, oy, 1, 10, 10, 1, '#00ffffff'); // body horizontal
-  gr2(ctx, ox, oy, 6,  8,  1, 7, '#00ffffff'); // body vertical
+  // Circuit trace on forehead
+  gr2(ctx, ox, oy, 10, 3, 12, 1, '#00ffffff');
 
-  // Eyes (bright white)
-  gr2(ctx, ox, oy, 3, 2, 2, 2, '#ffffff');
-  gr2(ctx, ox, oy, 7, 2, 2, 2, '#ffffff');
+  // EYES (bright white, 3×3)
+  gr2(ctx, ox, oy, 11, 5, 3, 3, '#ffffff');
+  gr2(ctx, ox, oy, 18, 5, 3, 3, '#ffffff');
 
-  // Flickering hexagon pattern on torso
-  if (frame % 2 === 0) {
-    gr2(ctx, ox, oy, 3, 9, 2, 2, '#00ffff');
-    gr2(ctx, ox, oy, 7, 11, 2, 2, '#00ffff');
-  } else {
-    gr2(ctx, ox, oy, 3, 11, 2, 2, '#ffffff');
-    gr2(ctx, ox, oy, 7,  9, 2, 2, '#ffffff');
+  // SMILE (white teeth)
+  gr2(ctx, ox, oy, 12, 9, 8, 1, '#ffffff');
+
+  // NECK
+  gr2(ctx, ox, oy, 14, 12, 4, 3, '#00cccc');
+
+  // SHOULDERS (lab coat silhouette, teal)
+  gr2(ctx, ox, oy, 6, 15, 20, 3, '#00cccc');
+
+  // TORSO
+  gr2(ctx, ox, oy, 8, 17, 16, 10, '#00cccc');
+
+  // Hexagonal grid texture on torso (4×4 grid of 1×1 dots)
+  for (let hgx = 0; hgx < 4; hgx++) {
+    for (let hgy = 0; hgy < 4; hgy++) {
+      gr2(ctx, ox, oy, 9 + hgx * 3, 18 + hgy * 2, 1, 1, '#00ffffff');
+    }
+  }
+
+  // CIRCUIT TRACES (8 total — thin 1×3 and 3×1 lines)
+  gr2(ctx, ox, oy,  9, 19, 3, 1, '#00ffffff');
+  gr2(ctx, ox, oy, 15, 21, 1, 3, '#00ffffff');
+  gr2(ctx, ox, oy, 18, 22, 3, 1, '#00ffffff');
+  gr2(ctx, ox, oy, 10, 24, 1, 3, '#00ffffff');
+  gr2(ctx, ox, oy, 13, 18, 3, 1, '#00ffffff');
+  gr2(ctx, ox, oy, 20, 19, 1, 3, '#00ffffff');
+  gr2(ctx, ox, oy,  9, 25, 3, 1, '#00ffffff');
+  gr2(ctx, ox, oy, 17, 24, 1, 3, '#00ffffff');
+
+  // ARMS
+  gr2(ctx, ox, oy,  4, 15, 4, 13, '#00aaaa');
+  gr2(ctx, ox, oy, 24, 15, 4, 13, '#00aaaa');
+
+  // HANDS
+  gr2(ctx, ox, oy,  3, 28, 5, 3, '#00cccc');
+  gr2(ctx, ox, oy, 24, 28, 5, 3, '#00cccc');
+
+  // HIPS
+  gr2(ctx, ox, oy, 9, 27, 14, 3, '#00cccc');
+
+  // LEGS
+  gr2(ctx, ox, oy,  9, 30, 6, 8, '#00cccc');
+  gr2(ctx, ox, oy, 17, 30, 6, 8, '#00cccc');
+
+  // FEET
+  gr2(ctx, ox, oy,  8, 38, 7, 3, '#00aaaa');
+  gr2(ctx, ox, oy, 16, 38, 7, 3, '#00aaaa');
+
+  // SCANLINE GLITCH at frame%4===0
+  if (frame % 4 === 0) {
+    ctx.globalAlpha = flicker * 0.8;
+    gr2(ctx, ox, oy, 12, 0, 1, 41, '#ffffff');
+    gr2(ctx, ox, oy, 19, 0, 1, 41, '#ffffff');
+  }
+
+  // ORBITING PARTICLES (4 teal orbs, positions based on sin/cos of frame*0.1)
+  ctx.globalAlpha = flicker * 0.7;
+  const t = frame * 0.1;
+  const orbs = [
+    { dx: Math.round(16 + 10 * Math.cos(t)),                   dy: Math.round(20 + 8 * Math.sin(t)) },
+    { dx: Math.round(16 + 10 * Math.cos(t + Math.PI)),         dy: Math.round(20 + 8 * Math.sin(t + Math.PI)) },
+    { dx: Math.round(16 + 10 * Math.cos(t + Math.PI / 2)),     dy: Math.round(20 + 8 * Math.sin(t + Math.PI / 2)) },
+    { dx: Math.round(16 + 10 * Math.cos(t + 3 * Math.PI / 2)), dy: Math.round(20 + 8 * Math.sin(t + 3 * Math.PI / 2)) },
+  ];
+  for (const orb of orbs) {
+    gr2(ctx, ox, oy, orb.dx, orb.dy, 2, 2, '#00ffcc');
   }
 
   ctx.globalAlpha = 1;
@@ -746,89 +867,107 @@ function drawPlayer(
   pose: string = 'walk',
   globalFrame: number = 0
 ) {
-  const ox = cx + 3 * SCALE;
+  const ox = cx - 8 * SCALE;
 
   // Pose-based Y offset and body color
   let poseYOff = 0;
   let effectiveClothColor = clothColor;
 
   if (pose === 'idle') {
-    // Breathing bob: y offset ±1 based on frame%60
     poseYOff = (globalFrame % 60) < 30 ? 0 : -1;
   } else if (pose === 'celebrate') {
-    // Slight jump on even frames
-    poseYOff = (globalFrame % 2 === 0) ? -1 : 0;
+    poseYOff = globalFrame % 2 === 0 ? -2 : 0;
   } else if (pose === 'hurt') {
-    // Red flash on odd frames
-    effectiveClothColor = (globalFrame % 2 === 1) ? '#ff4444' : clothColor;
+    effectiveClothColor = globalFrame % 2 === 1 ? '#ff4444' : clothColor;
   }
 
-  const oy = cy - 2 * SCALE + poseYOff * SCALE;
+  const oy = cy - 16 * SCALE + poseYOff * SCALE;
 
-  // Walk / run / idle leg state
   let legShift = 0;
-  let bob = 0;
   if (pose === 'walk') {
-    bob = frame === 1 ? 1 : 0;
     legShift = frame === 1 ? 1 : 0;
   } else if (pose === 'run') {
-    bob = frame === 1 ? 1 : 0;
-    legShift = frame === 1 ? 2 : -1; // wider spread
-  } else if (pose === 'idle') {
-    bob = 0;
-    legShift = 0;
+    legShift = frame === 1 ? 2 : -1;
   }
 
-  // Hair
-  gr2(ctx, ox, oy, 1, -1 + bob, 8, 3, hairColor);
-
-  // Head (round-ish)
-  gr2(ctx, ox, oy, 1, 1 + bob, 8, 7, skinColor);
-
-  // Eyes (direction-aware)
-  if (dir === 'down' || dir === 'left' || dir === 'right') {
-    gr2(ctx, ox, oy, 2, 3 + bob, 2, 2, '#1a1a1a');
-    gr2(ctx, ox, oy, 6, 3 + bob, 2, 2, '#1a1a1a');
-  } else {
-    // Back of head (no face)
-    gr2(ctx, ox, oy, 3, 3 + bob, 4, 1, shiftColor(hairColor, -20));
-  }
-
-  // Body (run pose leans forward slightly)
-  const bodyXOff = pose === 'run' ? -1 : 0;
-  gr2(ctx, ox, oy, bodyXOff, 8, 10, 6, effectiveClothColor);
-
-  // Arms
-  if (pose === 'celebrate') {
-    // Both arms raised (y offset -3 from body top)
-    gr2(ctx, ox, oy, -2, 5, 2, 5, skinColor); // left arm up
-    gr2(ctx, ox, oy, 10, 5, 2, 5, skinColor); // right arm up
-  } else if (pose === 'run') {
-    // Faster arm swing
-    const runSwing = (globalFrame % 16) < 8 ? -2 : 2;
-    gr2(ctx, ox, oy, -1, 8 + runSwing, 1, 5, skinColor);
-    gr2(ctx, ox, oy, 10, 8 - runSwing, 1, 5, skinColor);
-  } else {
-    gr2(ctx, ox, oy, -1, 8, 1, 5, skinColor); // left
-    gr2(ctx, ox, oy, 10, 8, 1, 5, skinColor); // right
-  }
-
-  // Legs
   const legColor = shiftColor(effectiveClothColor, -30);
-  if (pose === 'celebrate') {
-    gr2(ctx, ox, oy, 1, 14, 3, 3, legColor);
-    gr2(ctx, ox, oy, 6, 14, 3, 3, legColor);
-  } else if (pose === 'run') {
-    gr2(ctx, ox, oy, 1, 14 + Math.min(1, Math.max(-2, -legShift)), 3, 3, legColor);
-    gr2(ctx, ox, oy, 6, 14 + Math.min(2, Math.max(-1, legShift)), 3, 3, legColor);
+
+  // HEAD (skin + 1-px dark outline via slightly larger dark block behind)
+  gr2(ctx, ox, oy,  9, -1, 14, 14, shiftColor(skinColor, -50)); // outline block
+  gr2(ctx, ox, oy, 10,  0, 12, 12, skinColor);                  // fill
+
+  // HAIR & FACE (direction-aware)
+  if (dir === 'up') {
+    // Back of head — hair covers top 8 rows, no face visible
+    gr2(ctx, ox, oy, 10, 0, 12, 8, hairColor);
+  } else if (dir === 'down') {
+    // Hair on top (14×4 above head)
+    gr2(ctx, ox, oy, 9, -1, 14, 4, hairColor);
+    // Two eyes
+    gr2(ctx, ox, oy, 12, 4, 2, 2, '#1a1a1a');
+    gr2(ctx, ox, oy, 18, 4, 2, 2, '#1a1a1a');
+    // Nose
+    gr2(ctx, ox, oy, 15, 7, 2, 1, shiftColor(skinColor, -20));
+    // Mouth
+    gr2(ctx, ox, oy, 13, 9, 4, 1, shiftColor(skinColor, -40));
+  } else if (dir === 'left') {
+    // Profile facing left — hair on right side (back of head), left eye visible
+    gr2(ctx, ox, oy, 15, 0, 7, 8, hairColor);
+    gr2(ctx, ox, oy, 10, 4, 2, 2, '#1a1a1a'); // left eye at dx=10
+    gr2(ctx, ox, oy, 10, 7, 2, 1, shiftColor(skinColor, -20)); // nose
+    gr2(ctx, ox, oy, 10, 9, 3, 1, shiftColor(skinColor, -40)); // mouth
   } else {
-    gr2(ctx, ox, oy, 1, 14 + (legShift ? -1 : 0), 3, 3, legColor);
-    gr2(ctx, ox, oy, 6, 14 + (legShift ?  1 : 0), 3, 3, legColor);
+    // Profile facing right — hair on left side, right eye visible
+    gr2(ctx, ox, oy, 10, 0, 7, 8, hairColor);
+    gr2(ctx, ox, oy, 18, 4, 2, 2, '#1a1a1a'); // right eye at dx=18
+    gr2(ctx, ox, oy, 18, 7, 2, 1, shiftColor(skinColor, -20)); // nose
+    gr2(ctx, ox, oy, 17, 9, 3, 1, shiftColor(skinColor, -40)); // mouth
   }
 
-  // Shoes
-  gr2(ctx, ox, oy, 0, 17, 4, 1, '#333333');
-  gr2(ctx, ox, oy, 6, 17, 4, 1, '#333333');
+  // NECK
+  gr2(ctx, ox, oy, 14, 12, 4, 3, skinColor);
+
+  // SHOULDERS
+  gr2(ctx, ox, oy, 6, 15, 20, 3, effectiveClothColor);
+
+  // TORSO
+  gr2(ctx, ox, oy, 8, 17, 16, 10, effectiveClothColor);
+
+  // ARMS & HANDS (pose-aware)
+  if (pose === 'celebrate') {
+    gr2(ctx, ox, oy,  0,  8, 4, 10, effectiveClothColor); // left arm raised
+    gr2(ctx, ox, oy, 28,  8, 4, 10, effectiveClothColor); // right arm raised
+    gr2(ctx, ox, oy,  0,  5, 5,  3, skinColor);            // left hand up
+    gr2(ctx, ox, oy, 27,  5, 5,  3, skinColor);            // right hand up
+  } else if (pose === 'run') {
+    const runSwing = (globalFrame % 16) < 8 ? -2 : 2;
+    gr2(ctx, ox, oy,  4, 15 + runSwing, 4, 13, effectiveClothColor);
+    gr2(ctx, ox, oy, 24, 15 - runSwing, 4, 13, effectiveClothColor);
+    gr2(ctx, ox, oy,  3, 28 + runSwing, 5,  3, skinColor);
+    gr2(ctx, ox, oy, 24, 28 - runSwing, 5,  3, skinColor);
+  } else {
+    gr2(ctx, ox, oy,  4, 15, 4, 13, effectiveClothColor);
+    gr2(ctx, ox, oy, 24, 15, 4, 13, effectiveClothColor);
+    gr2(ctx, ox, oy,  3, 28, 5,  3, skinColor);
+    gr2(ctx, ox, oy, 24, 28, 5,  3, skinColor);
+  }
+
+  // HIPS
+  gr2(ctx, ox, oy, 9, 27, 14, 3, legColor);
+
+  // LEGS
+  if (pose === 'celebrate') {
+    gr2(ctx, ox, oy,  9, 30, 6, 8, legColor);
+    gr2(ctx, ox, oy, 17, 30, 6, 8, legColor);
+  } else {
+    gr2(ctx, ox, oy,  9, 30 - legShift, 6, 8, legColor);
+    gr2(ctx, ox, oy, 17, 30 + legShift, 6, 8, legColor);
+  }
+
+  // FEET/SHOES
+  const fShift = pose === 'celebrate' ? 0 : legShift;
+  gr2(ctx, ox, oy,  8, 38 - fShift, 7, 3, '#333333');
+  gr2(ctx, ox, oy, 16, 38 + fShift, 7, 3, '#333333');
 }
 
 /** Convenience: draw game-pixel rect from local offset inside sprite origin. */
