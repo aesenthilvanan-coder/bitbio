@@ -389,7 +389,7 @@ function drawDialogue(
 // ─── Welcome sign ─────────────────────────────────────────────────────────────
 const REALM_NAMES  = ['', 'THE CYTOPLASM', 'GENOME FOREST', 'NEURAL NEBULA', 'PROTEIN CATHEDRAL'];
 const REALM_TOPICS: Record<number, string[]> = {
-  1: ['○ - EXPLORE','○ - LEARN','○ - DISCOVER'],
+  1: ['- LEARN','- BUILD','- DISCOVER','- EVOLVE'],
   2: ['○ - LEARN','○ - ANALYZE','○ - DISCOVER','○ - CONNECT'],
   3: ['○ - LEARN','○ - TRAIN','○ - EVALUATE','○ - INNOVATE'],
   4: ['○ - EXPLORE','○ - MODEL','○ - DESIGN','○ - DISCOVER','○ - CURE'],
@@ -502,261 +502,386 @@ function drawInfoPanel(
 // Each background closely matches the reference AI images
 
 function drawCytoplasmBG(ctx: CanvasRenderingContext2D, CW: number, CH: number, t: number) {
-  // Deep teal-black void
-  ctx.fillStyle = '#020810'; ctx.fillRect(0, 0, CW, CH);
-  ctx.fillStyle = '#030f1a'; ctx.fillRect(0, 0, CW, CH * 0.6);
+  // 1. Base fill: bioluminescent cave interior
+  ctx.fillStyle = '#020a08';
+  ctx.fillRect(0, 0, CW, CH);
 
-  // Ambient particles (floating molecules)
-  for (let i = 0; i < 60; i++) {
-    const px = (i * 137.5 + Math.sin(t * 0.3 + i) * 20) % CW;
-    const py = (i * 97.3 + Math.cos(t * 0.2 + i * 0.7) * 15) % (CH * 0.8);
-    const a = 0.2 + 0.3 * Math.sin(t + i * 0.4);
-    ctx.fillStyle = i % 3 === 0 ? `rgba(0,255,200,${a})` : i % 3 === 1 ? `rgba(0,150,255,${a})` : `rgba(100,255,255,${a * 0.5})`;
-    ctx.fillRect(px, py, i % 5 === 0 ? 3 : 2, i % 5 === 0 ? 3 : 2);
-  }
-
-  // Nucleus (large glowing sphere center-right)
-  const nX = CW * 0.72, nY = CH * 0.38;
-  for (let r = 110; r > 0; r -= 4) {
-    const a = r / 110;
-    const col = r > 80 ? `rgba(20,50,120,${(1-a)*0.6})` : r > 40 ? `rgba(40,80,200,${(1-a)*0.5})` : `rgba(100,60,220,${(1-a)*0.4})`;
-    ctx.fillStyle = col;
-    for (let row = -r; row < r; row += 4) {
-      const w = Math.sqrt(r*r - row*row) * 2;
-      ctx.fillRect(nX - w/2, nY + row, w, 4);
-    }
-  }
-  // Nuclear glow
-  ctx.fillStyle = 'rgba(80,120,255,0.08)';
-  for (let r = 140; r > 110; r -= 4) {
-    for (let row = -r; row < r; row += 4) {
-      const w = Math.sqrt(r*r - row*row) * 2;
-      ctx.fillRect(nX - w/2, nY + row, w, 4);
-    }
-  }
-  // Nuclear pores
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    const px2 = nX + Math.cos(a) * 100, py2 = nY + Math.sin(a) * 85;
-    ctx.fillStyle = `rgba(0,255,200,${0.4 + 0.3 * Math.sin(t + i)})`;
-    ctx.fillRect(px2 - 4, py2 - 4, 8, 8);
-    ctx.fillStyle = 'rgba(0,100,80,0.6)';
-    ctx.fillRect(px2 - 2, py2 - 2, 4, 4);
-  }
-
-  // DNA helix (left side)
-  for (let i = 0; i < 30; i++) {
-    const ang = (i / 30) * Math.PI * 5 + t * 0.4;
-    const hy = CH * 0.12 + i * (CH * 0.65 / 30);
-    const hx = CW * 0.22;
-    ctx.fillStyle = '#3355ff'; ctx.fillRect(hx + Math.cos(ang) * 28 - 5, hy, 10, 8);
-    ctx.fillStyle = '#aa33ff'; ctx.fillRect(hx + Math.cos(ang + Math.PI) * 28 - 5, hy, 10, 8);
-    if (i % 4 === 0) {
-      const x1 = hx + Math.cos(ang) * 28, x2 = hx + Math.cos(ang + Math.PI) * 28;
-      const col2 = i % 8 === 0 ? '#33cc66' : '#3366ff';
-      ctx.fillStyle = col2;
-      ctx.fillRect(Math.min(x1,x2), hy + 3, Math.abs(x2-x1), 2);
+  // 6 diagonal light rays from upper-center fanning outward
+  for (let ray = 0; ray < 6; ray++) {
+    const spreadAngle = (ray - 2.5) * 0.22;
+    ctx.fillStyle = 'rgba(0,180,80,0.04)';
+    for (let seg = 0; seg < 38; seg++) {
+      const d = seg * 18;
+      const rx = CW * 0.5 + Math.sin(spreadAngle) * d;
+      const rw = 10 + seg * 4;
+      ctx.fillRect(rx - rw / 2, seg * 18, rw, 20);
     }
   }
 
-  // Mitochondria (floating bean shapes)
-  ([[CW*0.1,CH*0.3],[CW*0.45,CH*0.2],[CW*0.85,CH*0.5]] as [number,number][]).forEach(([mx,my],idx) => {
-    const bob = Math.sin(t * 0.7 + idx * 2) * 8;
-    // Outer membrane
-    ctx.fillStyle = '#8B3a00';
-    ctx.fillRect(mx - 32, my + bob - 12, 64, 24);
-    ctx.fillStyle = '#cc5500';
-    ctx.fillRect(mx - 28, my + bob - 9, 56, 18);
-    ctx.fillStyle = '#ff8800';
-    ctx.fillRect(mx - 26, my + bob - 7, 52, 4);
-    // Cristae
-    ctx.fillStyle = '#ff6600';
-    for (let c = 0; c < 4; c++) ctx.fillRect(mx - 18 + c * 12, my + bob - 5, 3, 10);
-    // ATP dots
-    ctx.fillStyle = `rgba(255,200,0,${0.6 + 0.4*Math.sin(t*2+idx)})`;
-    ctx.fillRect(mx - 20, my + bob - 8, 4, 4);
-    ctx.fillRect(mx + 16, my + bob - 8, 4, 4);
+  // 2. LEFT CAVE WALL — organic dark purple-black, irregular edge
+  const wallSegs = [
+    { w: CW * 0.18, h: CH },     { w: CW * 0.16, h: CH * 0.90 },
+    { w: CW * 0.20, h: CH * 0.85 }, { w: CW * 0.14, h: CH * 0.95 },
+    { w: CW * 0.17, h: CH * 0.88 }, { w: CW * 0.19, h: CH },
+    { w: CW * 0.13, h: CH * 0.92 }, { w: CW * 0.15, h: CH * 0.97 },
+    { w: CW * 0.11, h: CH * 0.82 }, { w: CW * 0.12, h: CH * 0.78 },
+  ];
+  wallSegs.forEach(({ w, h }, i) => {
+    ctx.fillStyle = i % 2 === 0 ? '#0a0514' : '#0d0618';
+    ctx.fillRect(0, CH - h, w, h);
   });
 
-  // Golgi apparatus (stacked membranes)
-  for (let g = 0; g < 6; g++) {
-    const gx = CW * 0.82;
-    const gy = CH * 0.42 + g * 14;
-    ctx.fillStyle = g % 2 === 0 ? '#1a7040' : '#22aa60';
-    ctx.fillRect(gx - g*4, gy, 80 - g*6, 10);
-    ctx.fillStyle = '#33dd88';
-    ctx.fillRect(gx - g*4, gy, 80 - g*6, 3);
+  // 3. DNA HELIX — large, center-left at x=CW*0.28, y=CH*0.05 to CH*0.75
+  const dnaX = CW * 0.28;
+  const dnaTop = CH * 0.05, dnaBot = CH * 0.75;
+  const dnaSteps = Math.floor((dnaBot - dnaTop) / 6);
+  for (let i = 0; i < dnaSteps; i++) {
+    const ang = (i / dnaSteps) * Math.PI * 8 + t * 0.5;
+    const hy = dnaTop + i * 6;
+    const rad = 24;
+    const ax = dnaX + Math.cos(ang) * rad;
+    const bx = dnaX + Math.cos(ang + Math.PI) * rad;
+    // Strand A: #3344ff
+    ctx.fillStyle = '#3344ff';
+    ctx.fillRect(ax - 6, hy, 12, 6);
+    // Strand B: #9933ff
+    ctx.fillStyle = '#9933ff';
+    ctx.fillRect(bx - 6, hy, 12, 6);
+    // Base pairs every 5 steps
+    if (i % 5 === 0) {
+      const pIdx = Math.floor(i / 5) % 3;
+      const pCol = pIdx === 0 ? '#33ff88' : pIdx === 1 ? '#66aaff' : '#ff66cc';
+      ctx.fillStyle = pCol;
+      const x1 = ax + (ax < bx ? 6 : -6);
+      const x2 = bx + (bx < ax ? 6 : -6);
+      ctx.fillRect(Math.min(x1, x2), hy + 2, Math.max(2, Math.abs(x2 - x1)), 2);
+    }
   }
 
-  // Cell membrane wall (top arc)
-  ctx.fillStyle = 'rgba(0,200,150,0.06)';
-  ctx.fillRect(0, 0, CW, CH * 0.08);
-  ctx.fillStyle = '#004433';
-  ctx.fillRect(0, CH * 0.07, CW, 3);
-  // Protein channels on membrane
-  for (let i = 0; i < 12; i++) {
-    const pcx = (CW / 12) * i + CW/24;
-    const pulse = 0.5 + 0.5 * Math.sin(t * 1.5 + i * 0.9);
-    ctx.fillStyle = `rgba(0,255,180,${pulse * 0.4})`;
-    ctx.fillRect(pcx - 6, CH * 0.03, 12, CH * 0.05);
-    ctx.fillStyle = '#002a1a';
-    ctx.fillRect(pcx - 2, CH * 0.04, 4, CH * 0.03);
+  // 4. NUCLEUS — dominant, right side, center x=CW*0.72, y=CH*0.35
+  const nX = CW * 0.72, nY = CH * 0.35;
+
+  // Outer glow behind everything
+  ctx.fillStyle = 'rgba(80,100,200,0.06)';
+  ctx.fillRect(nX - 180, nY - 180, 360, 360);
+
+  // 5 outer ring layers (elliptical, stacked rects)
+  const ringRadii = [165, 148, 130, 110, 88];
+  const ringColors = ['#445566', '#4a4a77', '#504488', '#5a3a99', '#6644aa'];
+  ringRadii.forEach((r, ri) => {
+    ctx.fillStyle = ringColors[ri];
+    for (let row = -r; row <= r; row += 3) {
+      const w = Math.sqrt(Math.max(0, r * r - row * row)) * 2 * 1.3;
+      ctx.fillRect(nX - w / 2, nY + row, w, 3);
+    }
+  });
+
+  // Inner sphere radius 72 — #44006a with #8833bb highlight upper-left
+  for (let row = -72; row <= 72; row += 3) {
+    const w = Math.sqrt(Math.max(0, 72 * 72 - row * row)) * 2;
+    ctx.fillStyle = row < 0 ? '#8833bb' : '#44006a';
+    ctx.fillRect(nX - w / 2, nY + row, w, 3);
   }
 
-  // Ground (cell floor)
-  ctx.fillStyle = '#0a1a10';
-  ctx.fillRect(0, CH * 0.78, CW, CH * 0.22);
-  ctx.fillStyle = '#0d2018';
-  ctx.fillRect(0, CH * 0.77, CW, 8);
-  // Floor pattern
+  // 8 nuclear pores — teal 6x6 rectangles around sphere edge
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const px = nX + Math.cos(angle) * 82;
+    const py = nY + Math.sin(angle) * 62;
+    ctx.fillStyle = '#00bbaa';
+    ctx.fillRect(px - 3, py - 3, 6, 6);
+  }
+
+  // 5. MITOCHONDRIA
+  // Mito1: x=CW*0.86, y=CH*0.13
+  const m1x = CW * 0.86, m1y = CH * 0.13 + Math.sin(t * 0.6) * 6;
+  ctx.fillStyle = '#5a2800'; ctx.fillRect(m1x - 27, m1y - 13, 54, 26);
+  ctx.fillStyle = '#cc5500'; ctx.fillRect(m1x - 23, m1y - 9, 46, 18);
+  ctx.fillStyle = '#ff8800'; ctx.fillRect(m1x - 21, m1y - 9, 42, 5);
+  ctx.fillStyle = '#3a1500';
+  for (let c = 0; c < 5; c++) ctx.fillRect(m1x - 18 + c * 9, m1y - 5, 3, 10);
+  drawInfoPanel(ctx, 'MITOCHONDRION', 'ATP synthesis', m1x - 65, m1y - 70, 0.85, '#00ffaa');
+
+  // Mito2: x=CW*0.46, y=CH*0.47, larger (64x30px)
+  const m2x = CW * 0.46, m2y = CH * 0.47 + Math.sin(t * 0.7 + 1) * 5;
+  ctx.fillStyle = '#5a2800'; ctx.fillRect(m2x - 32, m2y - 15, 64, 30);
+  ctx.fillStyle = '#cc5500'; ctx.fillRect(m2x - 28, m2y - 11, 56, 22);
+  ctx.fillStyle = '#ff8800'; ctx.fillRect(m2x - 26, m2y - 11, 52, 5);
+  ctx.fillStyle = '#3a1500';
+  for (let c = 0; c < 5; c++) ctx.fillRect(m2x - 20 + c * 10, m2y - 7, 3, 14);
+
+  // 6. GOLGI APPARATUS — x=CW*0.80, y=CH*0.56, 7 stacked green ribbons
+  const gx = CW * 0.80, gy = CH * 0.56;
+  drawInfoPanel(ctx, 'GOLGI', 'vesicle transport', gx - 65, gy - 60, 0.85, '#00ffaa');
+  for (let g = 0; g < 7; g++) {
+    const rW = 80 - g * 8;
+    ctx.fillStyle = g % 2 === 0 ? '#1a6030' : '#22884a';
+    ctx.fillRect(gx - rW / 2, gy + g * 12, rW, 8);
+  }
+  // 5 small blue vesicles at edges
+  ctx.fillStyle = '#2244ff';
+  for (let v = 0; v < 5; v++) {
+    const vx = v < 2 ? gx - 46 + v * 10 : gx + 36 + (v - 2) * 10;
+    ctx.fillRect(vx, gy + v * 9 + 8, 8, 8);
+  }
+
+  // 7. RIBOSOME — x=CW*0.42, y=CH*0.32, 8 small 10x10 green/teal blobs
+  const ribX = CW * 0.42, ribY = CH * 0.32;
+  drawInfoPanel(ctx, 'RIBOSOME', 'protein factory', ribX - 10, ribY - 65, 0.85, '#00ffaa');
+  for (let r = 0; r < 8; r++) {
+    const rx = ribX + (r % 3) * 14 - 14;
+    const ry = ribY + Math.floor(r / 3) * 14 - 14;
+    ctx.fillStyle = '#22aa44';
+    ctx.fillRect(rx, ry, 10, 10);
+    ctx.fillStyle = '#44cc66';
+    ctx.fillRect(rx + 2, ry + 2, 5, 5);
+  }
+
+  // 8. PROTEIN — x=CW*0.88, y=CH*0.10, 10 blue 8x8 blobs in chain
+  const prX = CW * 0.88, prY = CH * 0.10;
+  drawInfoPanel(ctx, 'PROTEIN', 'folded chain', prX - 140, prY + 10, 0.85, '#00ffaa');
+  for (let p = 0; p < 10; p++) {
+    const px2 = prX - 30 + (p % 5) * 12;
+    const py2 = prY + Math.floor(p / 5) * 12;
+    ctx.fillStyle = '#4488ff';
+    ctx.fillRect(px2, py2, 8, 8);
+    ctx.fillStyle = '#88bbff';
+    ctx.fillRect(px2 + 1, py2 + 1, 4, 4);
+    if (p > 0 && p % 5 !== 0) {
+      ctx.fillStyle = '#2266cc';
+      ctx.fillRect(px2 - 4, py2 + 3, 4, 2);
+    }
+  }
+
+  // 9. RNA STRAND — x=CW*0.52 to x=CW*0.68, y=CH*0.17, wavy sine pattern
+  const rnaX0 = CW * 0.52, rnaX1 = CW * 0.68, rnaBaseY = CH * 0.17;
+  drawInfoPanel(ctx, 'RNA', 'messenger', rnaX0, rnaBaseY - 60, 0.85, '#00ffaa');
+  const rnaCount = 18;
+  for (let i = 0; i < rnaCount; i++) {
+    const rx = rnaX0 + i * ((rnaX1 - rnaX0) / rnaCount);
+    const ry = rnaBaseY + Math.sin(i * 0.8) * 12;
+    ctx.fillStyle = '#ff88aa';
+    ctx.fillRect(rx, ry, 6, 4);
+  }
+
+  // 10. ENZYME BLOBS — scattered 5 pink/magenta 14x10px blobs
+  const ePositions: [number, number][] = [
+    [CW * 0.22, CH * 0.40], [CW * 0.35, CH * 0.60],
+    [CW * 0.55, CH * 0.70], [CW * 0.15, CH * 0.55], [CW * 0.40, CH * 0.58],
+  ];
+  ePositions.forEach(([ex, ey], ei) => {
+    ctx.fillStyle = '#cc4488';
+    ctx.fillRect(ex - 7, ey - 5, 14, 10);
+    ctx.fillStyle = '#ee66aa';
+    ctx.fillRect(ex - 5, ey - 3, 10, 6);
+    if (ei === 4) drawInfoPanel(ctx, 'ENZYME', 'catalyst', ex + 14, ey - 25, 0.85, '#00ffaa');
+  });
+
+  // 11. LYSOSOME — x=CW*0.72, y=CH*0.70, concentric rects for sphere
+  const lysX = CW * 0.72, lysY = CH * 0.70 + Math.sin(t * 0.5) * 4;
+  drawInfoPanel(ctx, 'LYSOSOME', 'digest & recycle', lysX + 34, lysY - 25, 0.85, '#00ffaa');
+  const lysData: [number, string][] = [[28,'#6633aa'],[22,'#7744bb'],[16,'#8855cc'],[10,'#aa77dd']];
+  lysData.forEach(([lr, col]) => {
+    ctx.fillStyle = col;
+    for (let row = -lr; row <= lr; row += 3) {
+      const w = Math.sqrt(Math.max(0, lr * lr - row * row)) * 2;
+      ctx.fillRect(lysX - w / 2, lysY + row, w, 3);
+    }
+  });
+
+  // 12. FLOATING VESICLES (35 total) — 3-layer concentric rects
+  for (let i = 0; i < 35; i++) {
+    const vx = (i * 137.5 + Math.sin(t * 0.3 + i) * 20) % CW;
+    const vy = (i * 91.3 + Math.cos(t * 0.2 + i * 0.7) * 15) % (CH * 0.8);
+    const vSz = 8 + (i % 4) * 3;
+    const vCol = i % 3 === 0 ? '#00ccaa' : i % 3 === 1 ? '#4488ff' : '#8844cc';
+    ctx.fillStyle = vCol;
+    ctx.fillRect(vx, vy, vSz, vSz);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(vx + 2, vy + 2, vSz - 4, vSz - 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillRect(vx + Math.floor(vSz / 2) - 1, vy + Math.floor(vSz / 2) - 1, 3, 3);
+  }
+
+  // 13. SMALL MOLECULES (20 dots) — 3x3 to 5x5 colorful
+  const mCols = ['#ff88aa', '#00ccaa', '#44ff88', '#ffaa44'];
   for (let i = 0; i < 20; i++) {
-    ctx.fillStyle = i % 2 === 0 ? '#0a1812' : '#080f0e';
-    ctx.fillRect(i * (CW/20), CH * 0.78, CW/20, CH * 0.22);
-    ctx.fillStyle = '#0d2018';
-    ctx.fillRect(i * (CW/20), CH * 0.78, 2, CH * 0.22);
+    const mx = (i * 173.1 + Math.sin(t * 0.4 + i * 1.3) * 18) % CW;
+    const my = (i * 113.7 + Math.cos(t * 0.3 + i * 0.9) * 12) % (CH * 0.75);
+    const mSz = 3 + (i % 3);
+    ctx.fillStyle = mCols[i % 4];
+    ctx.fillRect(mx, my, mSz, mSz);
+  }
+
+  // 14. GROUND — dark organic, bottom 20% of frame
+  ctx.fillStyle = '#040c08';
+  ctx.fillRect(0, CH * 0.80, CW, CH * 0.20);
+  for (let i = 0; i < 30; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#040c08' : '#060e0a';
+    ctx.fillRect(i * (CW / 30), CH * 0.80, CW / 30, CH * 0.20);
+    // Green-black moss at ground edge
+    ctx.fillStyle = '#0a3014';
+    ctx.fillRect(i * (CW / 30) + 2, CH * 0.80, 4, 4);
   }
 }
 
 function drawGenomeForestBG(ctx: CanvasRenderingContext2D, CW: number, CH: number, t: number) {
-  // Deep forest — reference image shows dark green atmosphere
-  ctx.fillStyle = '#06100a'; ctx.fillRect(0, 0, CW, CH);
-
-  // Sky gradient (deep forest canopy)
-  for (let i = 0; i < 8; i++) {
-    const a = i / 8;
-    ctx.fillStyle = `rgba(5,20,10,${1-a*0.5})`;
-    ctx.fillRect(0, i * (CH * 0.35 / 8), CW, CH * 0.35 / 8 + 2);
+  // 1. Base + sky gradient layers
+  ctx.fillStyle = '#06100a';
+  ctx.fillRect(0, 0, CW, CH);
+  for (let i = 0; i < 6; i++) {
+    const a = (1 - i / 6) * 0.4;
+    ctx.fillStyle = `rgba(5,18,8,${a})`;
+    ctx.fillRect(0, i * (CH * 0.25 / 6), CW, CH * 0.25 / 6 + 2);
   }
+  // Atmospheric depth
+  ctx.fillStyle = 'rgba(10,40,15,0.4)';
+  ctx.fillRect(0, CH * 0.05, CW, CH * 0.55);
 
-  // Background depth layers (atmospheric perspective)
-  ctx.fillStyle = 'rgba(10,40,15,0.5)';
-  ctx.fillRect(0, CH * 0.05, CW, CH * 0.6);
-  ctx.fillStyle = 'rgba(15,55,20,0.3)';
-  ctx.fillRect(CW*0.1, CH * 0.08, CW*0.8, CH * 0.5);
-
-  // Cherry blossom tree (left side — matching image)
-  const cbx = CW * 0.08, cby = CH * 0.5;
-  ctx.fillStyle = '#3a1a0a'; // trunk
-  ctx.fillRect(cbx - 10, CH * 0.2, 20, CH * 0.6);
-  ctx.fillRect(cbx - 6, CH * 0.1, 12, CH * 0.15);
-  // Branches
-  ctx.fillRect(cbx - 40, CH * 0.15, 40, 8);
-  ctx.fillRect(cbx, CH * 0.12, 50, 6);
-  // Blossoms (dense pink cloud)
-  for (let b = 0; b < 120; b++) {
+  // 3. CHERRY BLOSSOM TREE — far left, x=CW*0.05
+  const cbx = CW * 0.05;
+  // Dark brown trunk 18px wide, CH*0.85 to CH*0.1
+  ctx.fillStyle = '#3a1a0a';
+  ctx.fillRect(cbx - 9, CH * 0.10, 18, CH * 0.75);
+  // Two main branches
+  ctx.fillRect(cbx - 60, CH * 0.18, 60, 7);  // left branch
+  ctx.fillRect(cbx, CH * 0.14, 80, 5);         // right branch
+  // Dense blossom cloud (150+ small 2x2 to 4x4 rects)
+  for (let b = 0; b < 160; b++) {
     const bx2 = cbx - 60 + (b * 37) % 140;
-    const by2 = CH * 0.02 + (b * 53) % (CH * 0.18);
-    const br2 = 2 + b % 4;
+    const by2 = CH * 0.01 + (b * 53) % (CH * 0.22);
+    const bSz = 2 + b % 3;
     const bob = Math.sin(t * 0.5 + b * 0.3) * 3;
-    ctx.fillStyle = b % 3 === 0 ? '#ff88aa' : b % 3 === 1 ? '#ffaabb' : '#ffccdd';
-    ctx.fillRect(bx2, by2 + bob, br2 * 2, br2 * 2);
-    if (b % 5 === 0) { // falling petals
-      const fallY = (by2 + t * 20 * (1 + b%3)) % CH;
-      ctx.fillStyle = 'rgba(255,180,200,0.5)';
-      ctx.fillRect(bx2 + 20, fallY, 4, 4);
-    }
+    ctx.fillStyle = b % 3 === 0 ? '#ff88cc' : b % 3 === 1 ? '#ffaadd' : '#ff66aa';
+    ctx.fillRect(bx2, by2 + bob, bSz * 2, bSz * 2);
   }
 
-  // Background normal trees (dark trunks with moss)
-  for (let tr = 0; tr < 6; tr++) {
-    const tx = CW * 0.15 + tr * (CW * 0.13);
-    const th = CH * 0.7;
-    ctx.fillStyle = '#1a0e06'; ctx.fillRect(tx, CH - th, 14, th);
-    ctx.fillStyle = '#2a1a0a'; ctx.fillRect(tx + 2, CH - th, 10, th);
-    // Foliage
-    ctx.fillStyle = '#1a4020'; ctx.fillRect(tx - 35, CH - th - 10, 85, 55);
-    ctx.fillStyle = '#224a28'; ctx.fillRect(tx - 25, CH - th - 25, 65, 30);
-    ctx.fillStyle = '#2a5a30'; ctx.fillRect(tx - 15, CH - th - 35, 45, 15);
-    // Moss
-    ctx.fillStyle = '#2a6a30';
-    for (let m = 0; m < 5; m++) ctx.fillRect(tx + (m%2)*4, CH - th + m*30, 5, 8);
-  }
+  // 2. FIVE DNA HELIX TREES at x: CW*0.08, 0.24, 0.45, 0.65, 0.84
+  const treeXs = [CW*0.08, CW*0.24, CW*0.45, CW*0.65, CW*0.84];
+  treeXs.forEach((dx, didx) => {
+    const isOuter = didx === 0 || didx === 4;
+    const treeH = isOuter ? CH * 0.80 : CH;
+    const treeTop = CH - treeH;
+    const hRad = 22 + didx * 3;
 
-  // DNA HELIX TREES (the signature element from the image — 3-4 of them)
-  const dnaPositions = [CW*0.25, CW*0.45, CW*0.65, CW*0.82];
-  dnaPositions.forEach((dx, didx) => {
-    const dnaH = CH * 0.85;
-    // Ivy/vine wrapped trunk
-    ctx.fillStyle = '#2a1a08'; ctx.fillRect(dx - 6, CH - dnaH, 12, dnaH);
-    ctx.fillStyle = '#1a2a10';
-    for (let v = 0; v < 8; v++) {
-      ctx.fillRect(dx - 4 + (v%2)*4, CH - dnaH + v * (dnaH/8), 4, dnaH/8);
+    // Tree trunk/base: dark brown #3a1a0a, 20px wide, from bottom of helix to CH*0.8
+    ctx.fillStyle = '#3a1a0a';
+    ctx.fillRect(dx - 10, CH * 0.80, 20, CH * 0.20);
+
+    // VINES: 3-4 dark green thin (4px wide) rects hanging down
+    ctx.fillStyle = '#1a3008';
+    for (let v = 0; v < 4; v++) {
+      const vineStart = treeTop + (v * treeH * 0.22);
+      ctx.fillRect(dx - 7 + v * 5, vineStart, 4, treeH * 0.28);
     }
-    // DNA helix wrapping the trunk
-    for (let i = 0; i < 32; i++) {
-      const ang = (i / 32) * Math.PI * 8 + t * (0.2 + didx * 0.05);
-      const hy = CH - dnaH + i * (dnaH / 32);
-      const hrad = 22 + didx * 4;
-      // Left strand (blue-purple)
-      const lx = dx + Math.cos(ang) * hrad, rx = dx + Math.cos(ang + Math.PI) * hrad;
-      ctx.fillStyle = '#2244cc'; ctx.fillRect(lx - 5, hy, 10, 8);
-      // Right strand (green-teal)
-      ctx.fillStyle = '#228844'; ctx.fillRect(rx - 5, hy, 10, 8);
-      // Base pairs (rungs) every 4 iterations
-      if (i % 4 === 0) {
-        const pairColors = ['#cc3333','#4488ff','#33cc44','#ffcc00'];
-        ctx.fillStyle = pairColors[i % 4];
-        ctx.fillRect(Math.min(lx, rx), hy + 3, Math.abs(rx - lx), 2);
+
+    // DNA helix strands (14px wide each)
+    const dSteps = Math.floor(treeH / 8);
+    for (let i = 0; i < dSteps; i++) {
+      const ang = (i / dSteps) * Math.PI * 10 + t * (0.2 + didx * 0.05);
+      const hy = treeTop + i * 8;
+      const lx = dx + Math.cos(ang) * hRad;
+      const rx = dx + Math.cos(ang + Math.PI) * hRad;
+
+      // Strand A: alternate #2244ff, #44aaff, #6644ff
+      const aIdx = i % 3;
+      ctx.fillStyle = aIdx === 0 ? '#2244ff' : aIdx === 1 ? '#44aaff' : '#6644ff';
+      ctx.fillRect(lx - 7, hy, 14, 8);
+
+      // Strand B: alternate #22aa66, #44ff88, #8844cc
+      const bIdx = i % 3;
+      ctx.fillStyle = bIdx === 0 ? '#22aa66' : bIdx === 1 ? '#44ff88' : '#8844cc';
+      ctx.fillRect(rx - 7, hy, 14, 8);
+
+      // Base pairs every 6 steps
+      if (i % 6 === 0) {
+        const bpCols = ['#ff66cc','#44ffcc','#aaff44','#ff8844'];
+        ctx.fillStyle = bpCols[i % 4];
+        const bpX1 = Math.min(lx, rx) + 7;
+        const bpW = Math.max(2, Math.abs(rx - lx) - 14);
+        ctx.fillRect(bpX1, hy + 3, bpW, 2);
       }
     }
     // Glowing top
     const glowA = 0.4 + 0.3 * Math.sin(t * 1.5 + didx);
     ctx.fillStyle = `rgba(0,255,150,${glowA})`;
-    ctx.fillRect(dx - 8, CH - dnaH - 4, 16, 8);
+    ctx.fillRect(dx - 8, treeTop - 4, 16, 8);
   });
 
-  // Glowing info panels (floating - matching reference image)
+  // 4. Stone PATH — trapezoid, bottom CW*0.4 wide at y=CH*0.80, narrows to CW*0.1 at y=CH*0.45
+  const pathSteps = 22;
+  for (let s = 0; s < pathSteps; s++) {
+    const prog = s / pathSteps;
+    const pathY = CH * 0.45 + prog * (CH * 0.80 - CH * 0.45);
+    const pathW = CW * 0.10 + prog * (CW * 0.40 - CW * 0.10);
+    const sliceH = (CH * 0.80 - CH * 0.45) / pathSteps + 1;
+    ctx.fillStyle = s % 2 === 0 ? '#c8a87a' : '#b89060';
+    ctx.fillRect(CW * 0.5 - pathW / 2, pathY, pathW, sliceH);
+  }
+
+  // 5. STREAM — x CW*0.38 to CW*0.62, y CH*0.58 to CH*0.66, animated blue-teal
+  ctx.fillStyle = '#0a2030';
+  ctx.fillRect(CW * 0.38, CH * 0.58, CW * 0.24, CH * 0.08);
+  ctx.fillStyle = '#0d3048';
+  ctx.fillRect(CW * 0.40, CH * 0.59, CW * 0.20, CH * 0.06);
+  for (let rip = 0; rip < 8; rip++) {
+    const ripOff = ((t * 30 + rip * 22) % 90) / 90;
+    ctx.fillStyle = 'rgba(30,120,180,0.4)';
+    ctx.fillRect(CW * 0.40 + ripOff * CW * 0.20, CH * 0.60 + rip * 4, 26, 3);
+  }
+
+  // 6. WOODEN BRIDGE over stream — brown planks, vertical posts
+  ctx.fillStyle = '#7a5028';
+  ctx.fillRect(CW * 0.36, CH * 0.58, CW * 0.12, 8);
+  ctx.fillStyle = '#5a3a18';
+  ctx.fillRect(CW * 0.36, CH * 0.57, CW * 0.12, 5);
+  ctx.fillStyle = '#6a4520';
+  for (let pl = 0; pl < 7; pl++) {
+    ctx.fillRect(CW * 0.36 + pl * (CW * 0.12 / 7), CH * 0.57, 2, 8);
+  }
+  // Vertical posts
+  ctx.fillStyle = '#4a2a10';
+  ctx.fillRect(CW * 0.36, CH * 0.54, 6, CH * 0.12);
+  ctx.fillRect(CW * 0.48 - 6, CH * 0.54, 6, CH * 0.12);
+
+  // 7. WATERFALL — right side, animated column at x=CW*0.87
+  ctx.fillStyle = '#0a1820';
+  ctx.fillRect(CW * 0.87, CH * 0.22, 18, CH * 0.55);
+  for (let w2 = 0; w2 < 6; w2++) {
+    const wProg = ((t * 40 + w2 * 15) % 100) / 100;
+    ctx.fillStyle = w2 % 2 === 0 ? 'rgba(150,220,255,0.6)' : 'rgba(100,180,220,0.4)';
+    ctx.fillRect(CW * 0.87 + w2 * 3, CH * 0.22 + wProg * CH * 0.50, 4, 22);
+  }
+  ctx.fillStyle = 'rgba(50,150,200,0.25)';
+  ctx.fillRect(CW * 0.83, CH * 0.75, 44, 18);
+
+  // 8. NINE INFO PANELS
   const panels = [
-    { x: CW*0.12, y: CH*0.08, title: 'BLAST', sub: '▬▬ ▬▬▬', col: '#00ff88' },
-    { x: CW*0.32, y: CH*0.04, title: 'RNA-seq', sub: '▁▃▅▇▅▃', col: '#00ffcc' },
-    { x: CW*0.55, y: CH*0.06, title: 'CRISPR', sub: '✦ ⊕', col: '#44ff88' },
-    { x: CW*0.72, y: CH*0.12, title: 'scRNA-seq', sub: '◉ ◎ ◉', col: '#88ffcc' },
-    { x: CW*0.24, y: CH*0.32, title: 'PANDAS', sub: '▦ ▦ ▦', col: '#00cc88' },
-    { x: CW*0.48, y: CH*0.36, title: 'VISUALIZATION', sub: '◒ ▲ ●', col: '#44ff44' },
-    { x: CW*0.66, y: CH*0.22, title: 'PROTEOMICS', sub: '▁▄█▄▁', col: '#00ffaa' },
-    { x: CW*0.78, y: CH*0.38, title: 'NETWORK BIO', sub: '○─○─○', col: '#66ff88' },
+    { x: CW*0.11, y: CH*0.06, title: 'BLAST',          sub: 'seq alignment',  col: '#00ff88' },
+    { x: CW*0.30, y: CH*0.04, title: 'RNA-seq',         sub: 'transcriptomics', col: '#00ffcc' },
+    { x: CW*0.54, y: CH*0.05, title: 'CRISPR',          sub: 'gene editing',   col: '#44ff88' },
+    { x: CW*0.72, y: CH*0.10, title: 'scRNA-seq',       sub: 'single cell',    col: '#88ffcc' },
+    { x: CW*0.22, y: CH*0.30, title: 'PANDAS',          sub: 'data frames',    col: '#00cc88' },
+    { x: CW*0.46, y: CH*0.34, title: 'VISUALIZATION',   sub: 'plots & graphs', col: '#44ff44' },
+    { x: CW*0.65, y: CH*0.20, title: 'PROTEOMICS',      sub: 'mass spec',      col: '#00ffaa' },
+    { x: CW*0.78, y: CH*0.36, title: 'NETWORK BIOLOGY', sub: 'graph models',   col: '#66ff88' },
+    { x: CW*0.36, y: CH*0.46, title: 'MICROBIOME',      sub: 'metagenomics',   col: '#88ff44' },
   ];
   panels.forEach(({ x, y, title, sub, col }) => {
     const bob = Math.sin(t * 0.6 + x) * 5;
     drawInfoPanel(ctx, title, sub, x, y + bob, 0.9, col);
   });
 
-  // Stream / river
-  ctx.fillStyle = '#0a2030'; ctx.fillRect(CW * 0.38, CH * 0.68, CW * 0.22, CH * 0.32);
-  ctx.fillStyle = '#0d2840'; ctx.fillRect(CW * 0.40, CH * 0.7, CW * 0.18, CH * 0.30);
-  // Ripples
-  for (let s = 0; s < 6; s++) {
-    const rOff = ((t * 25 + s * 30) % 120) / 120;
-    ctx.fillStyle = 'rgba(30,100,150,0.4)';
-    ctx.fillRect(CW*0.40 + rOff*(CW*0.18), CH*0.72 + s*8, 30, 3);
-  }
-
-  // Wooden bridge over stream
-  ctx.fillStyle = '#5a3a18'; ctx.fillRect(CW*0.33, CH*0.69, CW*0.14, 10);
-  ctx.fillStyle = '#7a5028'; ctx.fillRect(CW*0.33, CH*0.67, CW*0.14, 5);
-  ctx.fillStyle = '#4a2a10';
-  ctx.fillRect(CW*0.33, CH*0.65, 8, CH*0.15);
-  ctx.fillRect(CW*0.47, CH*0.65, 8, CH*0.15);
-
-  // Waterfall (right side)
-  ctx.fillStyle = '#0a1820'; ctx.fillRect(CW*0.86, CH*0.25, 18, CH*0.55);
-  for (let w2 = 0; w2 < 6; w2++) {
-    const wProg = ((t * 40 + w2 * 15) % 100) / 100;
-    ctx.fillStyle = w2 % 2 === 0 ? 'rgba(150,220,255,0.6)' : 'rgba(100,180,220,0.4)';
-    ctx.fillRect(CW*0.86 + w2*3, CH*0.25 + wProg * CH*0.5, 4, 20);
-  }
-  ctx.fillStyle = 'rgba(50,150,200,0.2)'; ctx.fillRect(CW*0.82, CH*0.74, 40, 20);
-
-  // Ground (mossy forest floor)
-  ctx.fillStyle = '#0a180c'; ctx.fillRect(0, CH*0.76, CW, CH*0.24);
-  ctx.fillStyle = '#0e2010'; ctx.fillRect(0, CH*0.75, CW, 6);
-  // Path of stones
-  ctx.fillStyle = '#c8a87a';
-  ctx.fillRect(CW*0.28, CH*0.76, 80, CH*0.24);
-  ctx.fillRect(CW*0.31, CH*0.60, 60, CH*0.16);
-  for (let s = 0; s < 10; s++) {
-    ctx.fillStyle = s % 2 === 0 ? '#b89060' : '#a07840';
-    ctx.fillRect(CW*0.29 + s*8, CH*0.77, 7, 6);
+  // 9. GROUND — mossy forest floor, bottom 22% of frame
+  ctx.fillStyle = '#0a180c';
+  ctx.fillRect(0, CH * 0.78, CW, CH * 0.22);
+  ctx.fillStyle = '#0e2010';
+  ctx.fillRect(0, CH * 0.77, CW, 6);
+  for (let i = 0; i < 24; i++) {
+    ctx.fillStyle = i % 3 === 0 ? '#0a180c' : i % 3 === 1 ? '#0c1c0e' : '#0e2010';
+    ctx.fillRect(i * (CW / 24), CH * 0.78, CW / 24, CH * 0.22);
+    ctx.fillStyle = '#123018';
+    ctx.fillRect(i * (CW / 24) + 2, CH * 0.78, 4, 4);
   }
 }
 
@@ -796,7 +921,7 @@ function drawNeuralNebulaBG(ctx: CanvasRenderingContext2D, CW: number, CH: numbe
     const [ax,ay] = nodes[a], [bx,by] = nodes[b];
     const prog = ((t * 0.8 + ci * 0.3) % 1);
     const px2 = ax*CW + (bx-ax)*CW*prog, py2 = ay*CH + (by-ay)*CH*prog;
-    ctx.fillStyle = `rgba(0,200,255,${0.6})`;
+    ctx.fillStyle = 'rgba(0,200,255,0.6)';
     ctx.fillRect(px2 - 3, py2 - 3, 6, 6);
   });
   // Draw nodes
@@ -806,6 +931,36 @@ function drawNeuralNebulaBG(ctx: CanvasRenderingContext2D, CW: number, CH: numbe
     ctx.fillRect(nx*CW - 6, ny*CH - 6, 12, 12);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(nx*CW - 2, ny*CH - 2, 4, 4);
+  });
+
+  // LEFT CONSTELLATION CLUSTERS — 3 small star networks at x < CW*0.30
+  const leftClusters: [number, number][] = [[CW*0.06, CH*0.22],[CW*0.16, CH*0.38],[CW*0.26, CH*0.14]];
+  leftClusters.forEach(([clx, cly], cli) => {
+    // 5-6 cluster nodes with connecting lines
+    const clNodeCount = 5 + (cli % 2);
+    const clNodes: [number, number][] = [];
+    for (let n = 0; n < clNodeCount; n++) {
+      const nx2 = clx + (n * 83.1) % 60 - 30;
+      const ny2 = cly + (n * 57.3) % 50 - 25;
+      clNodes.push([nx2, ny2]);
+    }
+    // Draw connection lines (faint pink)
+    for (let n = 0; n < clNodeCount - 1; n++) {
+      const [x1, y1] = clNodes[n], [x2, y2] = clNodes[n + 1];
+      ctx.fillStyle = 'rgba(255,44,150,0.2)';
+      const lineSteps = 12;
+      for (let ls = 0; ls <= lineSteps; ls++) {
+        ctx.fillRect(x1 + (x2-x1)*ls/lineSteps, y1 + (y2-y1)*ls/lineSteps, 2, 2);
+      }
+    }
+    // Draw nodes: pink/magenta #ff44cc
+    clNodes.forEach(([nx2, ny2], ni) => {
+      const pulse4 = 0.6 + 0.4 * Math.sin(t * 2 + ni + cli * 1.2);
+      ctx.fillStyle = `rgba(255,68,204,${pulse4})`;
+      ctx.fillRect(nx2 - 3, ny2 - 3, 6, 6);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(nx2 - 1, ny2 - 1, 2, 2);
+    });
   });
 
   // The great neural BRAIN TREE (right side) — the signature element from image 25
@@ -833,7 +988,7 @@ function drawNeuralNebulaBG(ctx: CanvasRenderingContext2D, CW: number, CH: numbe
       ctx.fillRect(nx2 - 5, ny2 - 5, 10, 10);
       // Connect to center
       if (ri < 3) {
-        ctx.fillStyle = `rgba(60,150,255,0.15)`;
+        ctx.fillStyle = 'rgba(60,150,255,0.15)';
         const steps2 = 15;
         for (let s = 0; s <= steps2; s++) {
           ctx.fillRect(btx + (nx2-btx)*s/steps2, bty + (ny2-bty)*s/steps2, 2, 2);
@@ -846,7 +1001,7 @@ function drawNeuralNebulaBG(ctx: CanvasRenderingContext2D, CW: number, CH: numbe
   ctx.fillStyle = 'rgba(200,255,255,0.6)'; ctx.fillRect(btx - 4, bty - 4, 8, 8);
   ctx.fillStyle = '#ffffff'; ctx.fillRect(btx - 2, bty - 2, 4, 4);
 
-  // Floating crystal platforms
+  // Floating crystal platforms — enhanced with small equipment on top
   const platforms: [number,number,number][] = [[0.18,0.65,100],[0.42,0.55,90],[0.78,0.62,80],[0.30,0.45,70]];
   platforms.forEach(([px2,py2,pw],i) => {
     const bob = Math.sin(t * 0.4 + i * 1.3) * 8;
@@ -855,6 +1010,21 @@ function drawNeuralNebulaBG(ctx: CanvasRenderingContext2D, CW: number, CH: numbe
     ctx.fillStyle = '#2a2460'; ctx.fillRect(px2*CW - pw/2, py2*CH + bob, pw, 4);
     // Shadow below
     ctx.fillStyle = 'rgba(0,0,20,0.4)'; ctx.fillRect(px2*CW - pw/2 + 10, py2*CH + bob + 22, pw - 20, 6);
+    // Small equipment on platform top — 2 tiny monitor shapes (6x5 px, #44aaff)
+    if (i === 0) { // Platform 1 at x=CW*0.20, y=CH*0.55
+      ctx.fillStyle = '#44aaff';
+      ctx.fillRect(px2*CW - pw/2 + 10, py2*CH + bob - 5, 6, 5);
+      ctx.fillRect(px2*CW - pw/2 + 20, py2*CH + bob - 5, 6, 5);
+      ctx.fillStyle = '#002244';
+      ctx.fillRect(px2*CW - pw/2 + 11, py2*CH + bob - 4, 4, 3);
+      ctx.fillRect(px2*CW - pw/2 + 21, py2*CH + bob - 4, 4, 3);
+    }
+    // Add a small equipment piece to other platforms too
+    if (i === 1) {
+      ctx.fillStyle = '#44aaff';
+      ctx.fillRect(px2*CW - pw/2 + 8, py2*CH + bob - 5, 6, 5);
+      ctx.fillRect(px2*CW - pw/2 + 18, py2*CH + bob - 5, 6, 5);
+    }
   });
 
   // Purple amethyst crystals (bottom corners and sides)
@@ -867,24 +1037,24 @@ function drawNeuralNebulaBG(ctx: CanvasRenderingContext2D, CW: number, CH: numbe
       ctx.fillStyle = `rgba(100,0,200,${glow})`;
       ctx.fillRect(cx2*CW - 25 + c * 11, cy2*CH - ch2, cw2, ch2);
       ctx.fillStyle = `rgba(180,80,255,${glow * 0.4})`;
-      ctx.fillRect(cx2*CW - 23 + c * 11, cy2*CH - ch2, cw2/3, ch2/3);
+      ctx.fillRect(cx2*CW - 23 + c * 11, cy2*CH - ch2, Math.floor(cw2/3), Math.floor(ch2/3));
     }
   });
 
-  // Info panels (ML topics from reference image)
+  // Info panels (ML topics from reference image — all 12 kept)
   const nPanels = [
-    { x: CW*0.06, y: CH*0.08, title: 'NEURAL NETWORKS', sub: '○─○─○', col: '#4488ff' },
-    { x: CW*0.22, y: CH*0.18, title: 'CLASSICAL ML', sub: '/ trend', col: '#88aaff' },
-    { x: CW*0.40, y: CH*0.04, title: 'TRANSFORMERS', sub: '▦→▦→▦', col: '#aa44ff' },
-    { x: CW*0.58, y: CH*0.10, title: 'MODEL EVAL', sub: '▁▃▆▇▄', col: '#6688ff' },
-    { x: CW*0.82, y: CH*0.06, title: 'PYTORCH', sub: '◉ flame', col: '#ff6644' },
-    { x: CW*0.80, y: CH*0.26, title: 'XAI / SHAP', sub: '▁▄█▄▁', col: '#aa88ff' },
-    { x: CW*0.72, y: CH*0.44, title: 'CAUSAL INF.', sub: 'A→B→C', col: '#88ddff' },
-    { x: CW*0.22, y: CH*0.56, title: 'RL DRUG DESIGN', sub: '◎─◎─◎', col: '#4488ff' },
-    { x: CW*0.42, y: CH*0.48, title: 'FOUNDATION MDLS', sub: '◉ brain', col: '#aa66ff' },
-    { x: CW*0.60, y: CH*0.55, title: 'BAYESIAN UQ', sub: '∩ curve', col: '#66aaff' },
-    { x: CW*0.02, y: CH*0.42, title: 'MULTI-MODAL', sub: '▦⊕♫', col: '#88aaff' },
-    { x: CW*0.80, y: CH*0.60, title: 'FEDERATED LEARN', sub: '○─○─○', col: '#6688ff' },
+    { x: CW*0.06, y: CH*0.08, title: 'NEURAL NETWORKS',  sub: 'deep learning',   col: '#4488ff' },
+    { x: CW*0.22, y: CH*0.18, title: 'CLASSICAL ML',     sub: 'SVM, forests',    col: '#88aaff' },
+    { x: CW*0.40, y: CH*0.04, title: 'TRANSFORMERS',     sub: 'attention',       col: '#aa44ff' },
+    { x: CW*0.58, y: CH*0.10, title: 'MODEL EVAL',       sub: 'metrics & CV',    col: '#6688ff' },
+    { x: CW*0.82, y: CH*0.06, title: 'PYTORCH',          sub: 'tensor ops',      col: '#ff6644' },
+    { x: CW*0.80, y: CH*0.26, title: 'XAI / SHAP',       sub: 'explainability',  col: '#aa88ff' },
+    { x: CW*0.72, y: CH*0.44, title: 'CAUSAL INF.',      sub: 'A causes B',      col: '#88ddff' },
+    { x: CW*0.22, y: CH*0.56, title: 'RL DRUG DESIGN',   sub: 'reward optim.',   col: '#4488ff' },
+    { x: CW*0.42, y: CH*0.48, title: 'FOUNDATION MDLS',  sub: 'large scale',     col: '#aa66ff' },
+    { x: CW*0.60, y: CH*0.55, title: 'BAYESIAN UQ',      sub: 'uncertainty',     col: '#66aaff' },
+    { x: CW*0.02, y: CH*0.42, title: 'MULTI-MODAL',      sub: 'text + vision',   col: '#88aaff' },
+    { x: CW*0.80, y: CH*0.60, title: 'FEDERATED LEARN',  sub: 'distributed',     col: '#6688ff' },
   ];
   nPanels.forEach(({ x, y, title, sub, col }) => {
     const bob = Math.sin(t * 0.5 + x * 0.01) * 4;
@@ -940,7 +1110,7 @@ function drawProteinCathedralBG(ctx: CanvasRenderingContext2D, CW: number, CH: n
   ctx.fillStyle = '#180e28';
   for (let gx = 0; gx <= cols2; gx++) ctx.fillRect(winX + 3 + gx * (winW-8)/cols2, winY, 2, winH);
   for (let gy = 0; gy <= rows2; gy++) ctx.fillRect(winX, winY + 3 + gy * winH*0.9/rows2, winW, 2);
-  // DNA helix in center of window (the reference image shows this)
+  // DNA helix in center of window
   for (let i = 0; i < 20; i++) {
     const ang = (i/20) * Math.PI * 4 + t * 0.2;
     const hy = winH * 0.05 + i * (winH * 0.85 / 20);
@@ -955,6 +1125,43 @@ function drawProteinCathedralBG(ctx: CanvasRenderingContext2D, CW: number, CH: n
       ctx.fillRect(Math.min(x1,x2), hy+2, Math.abs(x2-x1), 2);
     }
   }
+
+  // SIDE STAINED GLASS WINDOWS — 3 on left wall, 3 on right wall
+  const sideGlass = ['#1a44cc','#6622aa','#cc8800','#1a8844','#cc2222','#8833bb'];
+  // Left wall windows at x≈CW*0.05, 0.12, 0.19
+  [CW*0.05, CW*0.12, CW*0.19].forEach((wx, wi) => {
+    ctx.fillStyle = '#1a1430';
+    ctx.fillRect(wx - 2, 0, 44, CH * 0.35 + 4);
+    for (let pRow = 0; pRow < 4; pRow++) {
+      for (let pCol = 0; pCol < 6; pCol++) {
+        const gPulse = 0.3 + 0.2 * Math.sin(t * 0.4 + pCol + pRow + wi);
+        const gc = sideGlass[(pCol + pRow * 2 + wi) % sideGlass.length];
+        const gr = parseInt(gc.slice(1,3),16), gg = parseInt(gc.slice(3,5),16), gb = parseInt(gc.slice(5,7),16);
+        ctx.fillStyle = `rgba(${gr},${gg},${gb},${gPulse})`;
+        ctx.fillRect(wx + pCol * 6, pRow * (CH * 0.35 / 4) + 4, 5, CH * 0.35 / 4 - 2);
+      }
+    }
+    ctx.fillStyle = '#180e28';
+    for (let pCol = 0; pCol <= 6; pCol++) ctx.fillRect(wx + pCol * 6 - 1, 0, 2, CH * 0.35);
+    for (let pRow = 0; pRow <= 4; pRow++) ctx.fillRect(wx - 1, pRow * (CH * 0.35 / 4), 42, 2);
+  });
+  // Right wall windows at x≈CW*0.81, 0.88, 0.95
+  [CW*0.81, CW*0.88, CW*0.95].forEach((wx, wi) => {
+    ctx.fillStyle = '#1a1430';
+    ctx.fillRect(wx - 2, 0, 44, CH * 0.35 + 4);
+    for (let pRow = 0; pRow < 4; pRow++) {
+      for (let pCol = 0; pCol < 6; pCol++) {
+        const gPulse = 0.3 + 0.2 * Math.sin(t * 0.4 + pCol + pRow + wi + 3);
+        const gc = sideGlass[(pCol * 2 + pRow + wi + 2) % sideGlass.length];
+        const gr = parseInt(gc.slice(1,3),16), gg = parseInt(gc.slice(3,5),16), gb = parseInt(gc.slice(5,7),16);
+        ctx.fillStyle = `rgba(${gr},${gg},${gb},${gPulse})`;
+        ctx.fillRect(wx + pCol * 6, pRow * (CH * 0.35 / 4) + 4, 5, CH * 0.35 / 4 - 2);
+      }
+    }
+    ctx.fillStyle = '#180e28';
+    for (let pCol = 0; pCol <= 6; pCol++) ctx.fillRect(wx + pCol * 6 - 1, 0, 2, CH * 0.35);
+    for (let pRow = 0; pRow <= 4; pRow++) ctx.fillRect(wx - 1, pRow * (CH * 0.35 / 4), 42, 2);
+  });
 
   // Stone pillars (6 pairs matching the image)
   const pillarXs = [0.07, 0.18, 0.82, 0.93];
@@ -977,8 +1184,28 @@ function drawProteinCathedralBG(ctx: CanvasRenderingContext2D, CW: number, CH: n
     ctx.fillStyle = '#20183a'; ctx.fillRect(px2*CW - pw/2 - 8, CH*0.78, pw + 16, 16);
   });
 
+  // DNA HELIX MOTIF on LEFT WALL: x=CW*0.02 to CW*0.06, glowing pink #cc44aa and purple #9922cc
+  const wallDnaX = CW * 0.04;
+  const wallDnaTop = CH * 0.04, wallDnaBot = CH * 0.72;
+  const wallDnaSteps = Math.floor((wallDnaBot - wallDnaTop) / 7);
+  for (let i = 0; i < wallDnaSteps; i++) {
+    const ang = (i / wallDnaSteps) * Math.PI * 7 + t * 0.3;
+    const hy = wallDnaTop + i * 7;
+    const rad = 10;
+    const ax = wallDnaX + Math.cos(ang) * rad;
+    const bx = wallDnaX + Math.cos(ang + Math.PI) * rad;
+    ctx.fillStyle = '#cc44aa';
+    ctx.fillRect(ax - 3, hy, 6, 5);
+    ctx.fillStyle = '#9922cc';
+    ctx.fillRect(bx - 3, hy, 6, 5);
+    if (i % 4 === 0) {
+      ctx.fillStyle = 'rgba(200,80,200,0.5)';
+      ctx.fillRect(Math.min(ax, bx) + 3, hy + 2, Math.max(1, Math.abs(bx - ax) - 6), 1);
+    }
+  }
+
   // Side gargoyle/statue silhouettes (from the image — stone guardians)
-  [[0.27,0.52],[0.73,0.52]].forEach(([sx,sy]) => {
+  ([[0.27,0.52],[0.73,0.52]] as [number,number][]).forEach(([sx,sy]) => {
     ctx.fillStyle = '#18142a';
     ctx.fillRect(sx*CW - 12, sy*CH, 24, 35);
     ctx.fillRect(sx*CW - 8, sy*CH - 12, 16, 14);
@@ -1011,13 +1238,25 @@ function drawProteinCathedralBG(ctx: CanvasRenderingContext2D, CW: number, CH: n
     // Arrow tip
     ctx.fillStyle = '#4466cc'; ctx.fillRect(protX - 32 + b*16, protY + protBob + 8, 16, 5);
   }
-  // Platform/altar below protein
+
+  // Enhanced altar steps — circular 4-tier using stacked rects (each tier 30px wider than next)
   for (let s = 0; s < 4; s++) {
+    const tierW = CW * 0.20 + s * 30;
+    const tierX = CW * 0.5 - tierW / 2;
+    const tierY = CH * 0.68 + s * 7;
     ctx.fillStyle = '#14102a';
-    ctx.fillRect(CW*0.4 - s*10, CH*0.68 + s*7, CW*0.2 + s*20, 7);
+    ctx.fillRect(tierX, tierY, tierW, 7);
     ctx.fillStyle = '#1c1638';
-    ctx.fillRect(CW*0.4 - s*10, CH*0.68 + s*7, CW*0.2 + s*20, 3);
+    ctx.fillRect(tierX, tierY, tierW, 3);
+    // Circular approximation: draw concentric rects narrowing toward edge
+    for (let cr = 0; cr < 3; cr++) {
+      const crW = tierW - cr * 8;
+      const crX = CW * 0.5 - crW / 2;
+      ctx.fillStyle = cr === 0 ? '#1e1a3c' : cr === 1 ? '#16122e' : '#12102a';
+      ctx.fillRect(crX, tierY + cr * 1, crW, 2);
+    }
   }
+
   // Electric light column below protein
   const lightA = 0.3 + 0.2 * Math.sin(t * 2);
   ctx.fillStyle = `rgba(100,50,255,${lightA})`;
@@ -1032,35 +1271,53 @@ function drawProteinCathedralBG(ctx: CanvasRenderingContext2D, CW: number, CH: n
       ctx.fillStyle = `rgba(120,0,220,${glow})`;
       ctx.fillRect(cx2*CW - 20 + c * 10, cy2*CH - ch2, 8, ch2);
       ctx.fillStyle = `rgba(200,100,255,${glow * 0.3})`;
-      ctx.fillRect(cx2*CW - 18 + c * 10, cy2*CH - ch2, 3, ch2/4);
+      ctx.fillRect(cx2*CW - 18 + c * 10, cy2*CH - ch2, 3, Math.floor(ch2/4));
     }
   });
 
   // Info panels
   const cPanels = [
-    { x: CW*0.06, y: CH*0.12, title: 'ALPHAFOLD', sub: '◎ fold', col: '#4488ff' },
-    { x: CW*0.28, y: CH*0.06, title: 'STRUCT. BIO', sub: '⌇⌇ helix', col: '#88aaff' },
-    { x: CW*0.62, y: CH*0.04, title: 'GNNs', sub: '○─○─○', col: '#aa66ff' },
-    { x: CW*0.80, y: CH*0.10, title: 'GEN. MODELS', sub: '◉ shape', col: '#cc88ff' },
-    { x: CW*0.06, y: CH*0.38, title: 'DRUG PIPELINES', sub: '◎→▽→⬡', col: '#88ccff' },
-    { x: CW*0.28, y: CH*0.50, title: 'METABOLIC FBA', sub: '○─◎─○', col: '#66aaff' },
-    { x: CW*0.66, y: CH*0.38, title: 'VIRTUAL SCREEN', sub: '▦▦▦', col: '#aa88ff' },
-    { x: CW*0.66, y: CH*0.52, title: 'SPATIAL TRANS.', sub: '◉◉◉ map', col: '#88aaff' },
+    { x: CW*0.06, y: CH*0.12, title: 'ALPHAFOLD',     sub: 'structure pred.', col: '#4488ff' },
+    { x: CW*0.28, y: CH*0.06, title: 'STRUCT. BIO',   sub: 'X-ray, cryo-EM',  col: '#88aaff' },
+    { x: CW*0.62, y: CH*0.04, title: 'GNNs',          sub: 'graph networks',  col: '#aa66ff' },
+    { x: CW*0.80, y: CH*0.10, title: 'GEN. MODELS',   sub: 'diffusion',       col: '#cc88ff' },
+    { x: CW*0.06, y: CH*0.38, title: 'DRUG PIPELINES',sub: 'ADMET & dock',    col: '#88ccff' },
+    { x: CW*0.28, y: CH*0.50, title: 'METABOLIC FBA', sub: 'flux balance',    col: '#66aaff' },
+    { x: CW*0.66, y: CH*0.38, title: 'VIRTUAL SCREEN',sub: 'docking',         col: '#aa88ff' },
+    { x: CW*0.66, y: CH*0.52, title: 'SPATIAL TRANS.',sub: 'cell mapping',    col: '#88aaff' },
   ];
   cPanels.forEach(({ x, y, title, sub, col }) => {
     const bob = Math.sin(t * 0.45 + x * 0.01) * 5;
     drawInfoPanel(ctx, title, sub, x, y + bob, 0.88, col);
   });
 
-  // Checkered floor
+  // CHECKERED FLOOR — more prominent, tiles 36px at front narrowing to 18px at middle
   const floorY = CH * 0.78;
-  for (let ty = 0; ty < 10; ty++) {
-    for (let tx2 = 0; tx2 < 20; tx2++) {
-      ctx.fillStyle = (tx2 + ty) % 2 === 0 ? '#14102a' : '#0e0c20';
-      ctx.fillRect(tx2*(CW/20), floorY + ty*18, CW/20, 18);
-      if ((tx2+ty)%2===0) {
+  // Back section (smaller tiles, 18px, perspective vanishing point)
+  for (let ty = 0; ty < 5; ty++) {
+    for (let tx2 = 0; tx2 < 28; tx2++) {
+      ctx.fillStyle = (tx2 + ty) % 2 === 0 ? '#18162a' : '#22203a';
+      ctx.fillRect(tx2*(CW/28), floorY + ty*18, CW/28, 18);
+      // Grid lines
+      ctx.fillStyle = '#0e0c18';
+      ctx.fillRect(tx2*(CW/28), floorY + ty*18, 1, 18);
+      ctx.fillRect(tx2*(CW/28), floorY + ty*18, CW/28, 1);
+    }
+  }
+  // Front section (larger tiles, 36px)
+  const frontFloorY = floorY + 5 * 18;
+  for (let ty = 0; ty < 5; ty++) {
+    for (let tx2 = 0; tx2 < 14; tx2++) {
+      ctx.fillStyle = (tx2 + ty) % 2 === 0 ? '#18162a' : '#22203a';
+      ctx.fillRect(tx2*(CW/14), frontFloorY + ty*36, CW/14, 36);
+      // Grid lines
+      ctx.fillStyle = '#0e0c18';
+      ctx.fillRect(tx2*(CW/14), frontFloorY + ty*36, 2, 36);
+      ctx.fillRect(tx2*(CW/14), frontFloorY + ty*36, CW/14, 2);
+      // Sheen on lighter tiles
+      if ((tx2 + ty) % 2 === 0) {
         ctx.fillStyle = 'rgba(200,180,255,0.04)';
-        ctx.fillRect(tx2*(CW/20)+1, floorY + ty*18+1, CW/20-2, 8);
+        ctx.fillRect(tx2*(CW/14)+2, frontFloorY + ty*36+2, CW/14-4, 10);
       }
     }
   }
