@@ -1,14 +1,19 @@
 import level1Modules from "./level1";
 import level1ExtraModules from "./level1extra";
 import level1BonusModules from "./level1bonus";
+import level1AdvancedModules from "./level1advanced";
 import level2Modules from "./level2";
 import level2ExtraModules from "./level2extra";
 import level2BonusModules from "./level2bonus";
+import level2AdvancedModules from "./level2advanced";
 import level3Modules from "./level3";
 import level3ExtraModules from "./level3extra";
 import level3BonusModules from "./level3bonus";
+import level3AdvancedModules from "./level3advanced";
 import level4Modules from "./level4";
 import level4ExtraModules from "./level4extra";
+import level4BonusModules from "./level4bonus";
+import level4AdvancedModules from "./level4advanced";
 import type { Level, Module, LessonNode, Exercise } from "@/lib/types";
 
 export const LEVELS: Level[] = [
@@ -18,7 +23,7 @@ export const LEVELS: Level[] = [
     mascot: "elliot",
     realm: "The Cytoplasm",
     description: "Journey inside a living cell and learn the foundations of life and Python",
-    modules: [...level1Modules, ...level1ExtraModules, ...level1BonusModules],
+    modules: [...level1Modules, ...level1ExtraModules, ...level1BonusModules, ...level1AdvancedModules],
     unlockXP: 0,
   },
   {
@@ -27,7 +32,7 @@ export const LEVELS: Level[] = [
     mascot: "ben",
     realm: "The Genome Forest",
     description: "Walk through DNA double-helix forests and master genomics and data analysis",
-    modules: [...level2Modules, ...level2ExtraModules, ...level2BonusModules],
+    modules: [...level2Modules, ...level2ExtraModules, ...level2BonusModules, ...level2AdvancedModules],
     unlockXP: 2000,
   },
   {
@@ -36,7 +41,7 @@ export const LEVELS: Level[] = [
     mascot: "alex",
     realm: "The Neural Network Nebula",
     description: "Traverse a deep-space neural constellation and build ML models from scratch",
-    modules: [...level3Modules, ...level3ExtraModules, ...level3BonusModules],
+    modules: [...level3Modules, ...level3ExtraModules, ...level3BonusModules, ...level3AdvancedModules],
     unlockXP: 6000,
   },
   {
@@ -45,7 +50,7 @@ export const LEVELS: Level[] = [
     mascot: "henry",
     realm: "The Protein Fold Cathedral",
     description: "Enter a cathedral of protein architecture and reach the cutting edge of computational biology",
-    modules: [...level4Modules, ...level4ExtraModules],
+    modules: [...level4Modules, ...level4ExtraModules, ...level4BonusModules, ...level4AdvancedModules],
     unlockXP: 12000,
   },
 ];

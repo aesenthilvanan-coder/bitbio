@@ -10,8 +10,8 @@ interface Props {
   expression?: 'idle' | 'happy' | 'surprised' | 'excited';
 }
 
-// Game pixel scale for this renderer (preview mode)
-const S = 2;
+// Game pixel scale for this renderer (preview mode — 4x for large character select)
+const S = 4;
 
 // Helper: fill a game-pixel rect (x, y, w, h are in game pixels)
 function px(
@@ -1183,7 +1183,7 @@ function drawAura(
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function AvatarRenderer({
   config,
-  size = 120,
+  size = 300,
   animate = true,
   className = '',
 }: Props) {
@@ -1335,6 +1335,25 @@ export default function AvatarRenderer({
         ctx.fillStyle = `rgba(255,200,50,${sparkAlpha * 0.7})`;
         ctx.fillRect((hx + 1) * S, (hy - 5) * S, S, S);
         ctx.fillRect((hx + 8) * S, (hy - 5) * S, S, S);
+      }
+
+      // Orbital sparkle particles (always when animate=true)
+      if (animate) {
+        const orbColors = ['#00ffcc', '#ffffff', '#a855f7', '#00ffcc', '#f59e0b', '#ffffff'];
+        const orbRadii = [28, 22, 32, 20, 26, 30];
+        const orbSpeeds = [0.8, 1.2, 0.6, 1.5, 1.0, 0.9];
+        const orbSizes = [2, 1, 2, 1, 2, 1];
+        const cx = W / 2;
+        const cy = H * 0.38;
+        for (let i = 0; i < 6; i++) {
+          const angle = t * orbSpeeds[i] + (i * Math.PI * 2) / 6;
+          const ox = cx + Math.cos(angle) * orbRadii[i] * S * 0.5;
+          const oy = cy + Math.sin(angle) * orbRadii[i] * S * 0.3;
+          const alpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + i));
+          ctx.fillStyle = orbColors[i] + Math.round(alpha * 255).toString(16).padStart(2, '0');
+          const sz = orbSizes[i] * S;
+          ctx.fillRect(ox - sz / 2, oy - sz / 2, sz, sz);
+        }
       }
     },
     [config, animate],
