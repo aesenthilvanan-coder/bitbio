@@ -25,6 +25,8 @@ type Dir = 'up' | 'down' | 'left' | 'right';
 type CutPhase = 'fadein' | 'npc-walk' | 'dialogue' | 'done';
 
 interface GameState {
+  // frame counter (increments every RAF tick)
+  frame: number;
   // player
   px: number; py: number;         // tile position (integer)
   pfx: number; pfy: number;       // kept for compat reference; actual progress via moveProgress
@@ -115,7 +117,8 @@ function drawTile(
   isCompleted: boolean,
   t: number,
   tx: number,
-  ty: number
+  ty: number,
+  frame: number
 ) {
   const W = TILE; // 16 game pixels per tile
 
@@ -138,6 +141,25 @@ function drawTile(
       // Single-pixel edge accents (makes tiles feel tiled, not noise-y)
       if (tx % 4 === 0) gr(ctx, cx, cy, 0, 0, 1, W, shiftColor(fl, 12));
       if (ty % 4 === 0) gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(fl, 12));
+      // Realm 1: ribosome protein dots (appear/disappear every 45 frames)
+      if (realm === 1 && (tx * 5 + ty * 3) % 7 === 0) {
+        const proteinOn = frame % 45 < 22;
+        if (proteinOn) {
+          gr(ctx, cx, cy, 5, 5, 2, 2, '#cc8844');
+          gr(ctx, cx, cy, 11, 10, 2, 2, '#bb7733');
+        }
+      }
+      // Realm 1: ATP particle moving toward top-right (every 30 frames)
+      if (realm === 1 && (tx + ty * 2) % 5 === 0) {
+        const atpCycle = frame % 60;
+        if (atpCycle < 30) {
+          const atpX = Math.floor(atpCycle / 2);
+          const atpY = W - 2 - Math.floor(atpCycle / 3);
+          if (atpX >= 0 && atpX <= W - 2 && atpY >= 0 && atpY <= W - 2) {
+            gr(ctx, cx, cy, atpX, atpY, 2, 2, '#ffcc00');
+          }
+        }
+      }
       break;
     }
 
@@ -179,9 +201,10 @@ function drawTile(
         });
         // Inner matrix (dark core)
         gr(ctx, cx, cy, 3, 6, 10, 6, '#110000');
-        // Cristae (white-ish folds inside)
-        gr(ctx, cx, cy, 4, 7, 8, 1, '#cc3300');
-        gr(ctx, cx, cy, 4, 9, 8, 1, '#cc3300');
+        // Cristae — slide position every 60 frames (membrane breathing)
+        const cristaOff = Math.floor(frame / 60) % 2;
+        gr(ctx, cx, cy, 4, 7 + cristaOff, 8, 1, '#cc3300');
+        gr(ctx, cx, cy, 4, 9 - cristaOff, 8, 1, '#cc3300');
         // ATP synthase dots (glowing yellow)
         gr(ctx, cx, cy, 3, 6, 2, 2, '#ffcc00');
         gr(ctx, cx, cy, 7, 6, 2, 2, '#ffcc00');
@@ -207,12 +230,17 @@ function drawTile(
           ['#ff4422', '#4488ff'], // A-T  row 8
           ['#44cc44', '#ffcc00'], // G-C  row 12
         ];
+        // Base pairs breathe: shift ±1 every 20 frames (strand breathing)
+        const bpBreath = Math.floor(frame / 20) % 2;
         bpColors.forEach(([c1, c2], i) => {
-          const row = i * 4 + 2;
-          const lx = lX[row] + 2, rx = rX[row];
+          const row = i * 4 + 2 + (i % 2 === 0 ? bpBreath : -bpBreath);
+          const clampedRow = Math.max(0, Math.min(15, row));
+          const lx = lX[clampedRow] + 2, rx = rX[clampedRow];
           const mid = Math.floor((lx + rx) / 2);
-          gr(ctx, cx, cy, lx, row, mid - lx, 1, c1);
-          gr(ctx, cx, cy, mid, row, rx - mid, 1, c2);
+          if (mid > lx && rx > mid) {
+            gr(ctx, cx, cy, lx, clampedRow, mid - lx, 1, c1);
+            gr(ctx, cx, cy, mid, clampedRow, rx - mid, 1, c2);
+          }
         });
         // Glow at top
         gr(ctx, cx, cy, 5, 0, 6, 1, '#88ffee');
@@ -242,7 +270,7 @@ function drawTile(
       }
 
       else {
-        // REALM 4 — GOTHIC STONE PILLAR
+        // REALM 4 — GOTHIC STONE PILLAR with stained glass light beam
         // Shadow
         gr(ctx, cx, cy, 3, 14, 10, 2, '#000000');
         // Main pillar body
@@ -260,6 +288,13 @@ function drawTile(
         // Stone seams
         gr(ctx, cx, cy, 4, 6, 8, 1, '#0f0c1a');
         gr(ctx, cx, cy, 4, 10, 8, 1, '#0f0c1a');
+        // Stained glass light beam: sweeps across every 60 frames
+        const beamX = Math.floor((frame % 120) / 7) % 10;
+        if (beamX >= 0 && beamX <= 8) {
+          ctx.globalAlpha = 0.35;
+          gr(ctx, cx, cy, 4 + beamX, 0, 2, 16, '#ffee88');
+          ctx.globalAlpha = 1;
+        }
       }
       break;
     }
@@ -267,13 +302,18 @@ function drawTile(
     // ── WATER / VOID / ACID ───────────────────────────────────────────────
     case '~': {
       if (realm === 1) {
-        // LYSOSOME ACID POOL — deep purple, green bubble
+        // LYSOSOME ACID POOL / ER MEMBRANE — deep purple, green bubble, wavy ripple
         gr(ctx, cx, cy, 0, 0, W, W, '#150020');
-        // Animated swirl lines
-        const s1 = Math.max(0, Math.min(W-2, Math.floor(4 + Math.sin(t + tx * 0.4) * 3)));
-        const s2 = Math.max(0, Math.min(W-2, Math.floor(11 + Math.sin(t * 1.4 + ty * 0.4) * 2)));
+        // ER Membrane wavy lines with sin(frame) ripple
+        const ripple1 = Math.floor(Math.sin(frame * 0.05 + tx * 0.4) * 2);
+        const ripple2 = Math.floor(Math.sin(frame * 0.05 + ty * 0.5 + 1.5) * 2);
+        const s1 = Math.max(1, Math.min(W-2, 4 + ripple1));
+        const s2 = Math.max(1, Math.min(W-2, 11 + ripple2));
         gr(ctx, cx, cy, 0, s1, W, 1, '#2a0040');
-        gr(ctx, cx, cy, 0, s2, W, 1, '#330055');
+        gr(ctx, cx, cy, 0, s2, W, 1, '#4400aa');
+        // Animated swirl
+        const s3 = Math.max(0, Math.min(W-2, Math.floor(4 + Math.sin(t + tx * 0.4) * 3)));
+        gr(ctx, cx, cy, 0, s3, W, 1, '#330055');
         // Bubble
         const bY = Math.max(2, Math.min(W-5, Math.floor(8 + Math.sin(t * 1.8 + tx) * 5)));
         gr(ctx, cx, cy, 6, bY, 4, 4, '#005500');
@@ -282,25 +322,33 @@ function drawTile(
         gr(ctx, cx, cy, 0, 0, 2, 2, '#cc0000');
         gr(ctx, cx, cy, W-2, 0, 2, 2, '#cc0000');
       } else if (realm === 2) {
-        // FOREST STREAM — cobalt blue with ripples
+        // FOREST STREAM / WATERFALL — cobalt blue, animated falling pixels
         gr(ctx, cx, cy, 0, 0, W, W, '#0a182a');
         gr(ctx, cx, cy, 3, 0, 10, W, '#071015'); // depth centre
         const rOff = Math.floor(t * 2.5) % 8;
         gr(ctx, cx, cy, 1, rOff % W, W-2, 1, '#1a3a5a');
         gr(ctx, cx, cy, 3, (rOff + 5) % W, W-6, 1, '#1a4868');
+        // Waterfall: falling pixel columns (offset by frame)
+        for (let col = 1; col < W - 1; col += 3) {
+          const fallY = (frame * 1 + col * 3) % W;
+          gr(ctx, cx, cy, col, fallY, 1, 2, '#4499cc');
+        }
         // Sparkle
         if (animFrame % 2 === 0) gr(ctx, cx, cy, 6, 4, 4, 1, '#66aacc');
-        // Lily pad (every 3rd water tile)
+        // Lily pad (every 5th water tile)
         if ((tx * 2 + ty) % 5 === 0) {
           gr(ctx, cx, cy, 5, 6, 6, 5, '#1a4018');
           gr(ctx, cx, cy, 7, 7, 2, 2, '#ee4466');
         }
       } else if (realm === 3) {
-        // VOID — pure dark with stars
+        // VOID — pure dark with twinkling stars
         gr(ctx, cx, cy, 0, 0, W, W, '#030008');
         const stars: [number, number][] = [[2,3],[7,1],[12,5],[4,10],[14,8],[9,14],[1,13],[11,2],[5,7]];
         stars.forEach(([sx, sy]) => {
-          if ((sx + sy + animFrame) % 3 !== 0) gr(ctx, cx, cy, sx, sy, 1, 1, '#5544aa');
+          // Each star twinkles at a different offset based on position
+          const starOffset = (sx * 7 + sy * 13 + tx * 3 + ty * 5) % 45;
+          const bright = (frame + starOffset) % 45 < 22;
+          gr(ctx, cx, cy, sx, sy, 1, 1, bright ? '#ffffff' : '#aaaaff');
         });
         if (animFrame === 0) gr(ctx, cx, cy, 7, 1, 2, 2, '#aa88ff'); // bright star
       } else {
@@ -331,7 +379,7 @@ function drawTile(
         const mX = Math.floor(((t * 35 + ty * 16) % (TILE * SCALE)) / SCALE);
         if (mX >= 0 && mX <= W - 3) { gr(ctx, cx, cy, mX, 7, 3, 3, '#ff9900'); gr(ctx, cx, cy, mX+1, 7, 1, 1, '#ffcc00'); }
       } else if (realm === 2) {
-        // COBBLESTONE PATH
+        // COBBLESTONE PATH with scrolling data stream
         gr(ctx, cx, cy, 0, 0, W, W, '#1c1008');
         // Two stone blocks per tile
         gr(ctx, cx, cy, 0, 0, 7, 7, '#2e1e0c');
@@ -343,8 +391,17 @@ function drawTile(
         gr(ctx, cx, cy, 8, 0, 7, 1, '#382814');
         gr(ctx, cx, cy, 0, 8, 7, 1, '#382814');
         gr(ctx, cx, cy, 8, 8, 7, 1, '#3e2e1c');
+        // Data stream: scrolling binary pattern (alternates every 15 frames)
+        if ((tx + ty) % 3 === 0) {
+          const bits = [1,0,1,1,0,1,0,0,1,1,0,1,1,0,0,1];
+          for (let bi = 0; bi < 4; bi++) {
+            const bitIdx = (Math.floor(frame / 15) + bi + tx + ty) % bits.length;
+            const bColor = bits[bitIdx] ? '#00aa33' : '#004411';
+            gr(ctx, cx, cy, bi * 4, 13, 1, 2, bColor);
+          }
+        }
       } else if (realm === 3) {
-        // NEURAL LIGHT BRIDGE — glowing platform
+        // NEURAL LIGHT BRIDGE — glowing platform with synapse arc
         gr(ctx, cx, cy, 0, 0, W, W, '#030008');
         gr(ctx, cx, cy, 0, 4, W, 8, '#0f0520');
         gr(ctx, cx, cy, 0, 4, W, 1, '#7722ee'); // top glow edge
@@ -352,6 +409,19 @@ function drawTile(
         // Animated pulse
         const pX = Math.floor(t * 5 * W) % (W * 2);
         if (pX < W) gr(ctx, cx, cy, pX, 6, 3, 4, '#9933ff');
+        // Synapse arc: pulsing diagonal electrical arc every 20 frames
+        if (frame % 20 < 10) {
+          const arcPhase = frame % 20;
+          for (let ai = 0; ai < 6; ai++) {
+            const ax = (ai * 3 + arcPhase) % W;
+            const ay = 5 + (ai % 3);
+            gr(ctx, cx, cy, ax, ay, 1, 1, '#ffffff');
+          }
+        }
+        // Crystal shimmer: bright pixel at random corner every 30 frames
+        if (frame % 30 === ((tx * 7 + ty * 11) % 30)) {
+          gr(ctx, cx, cy, (tx * 5) % 14, (ty * 7) % 6 + 4, 1, 1, '#eeccff');
+        }
       } else {
         // CATHEDRAL AISLE
         gr(ctx, cx, cy, 0, 0, W, W, '#0c0a1c');
@@ -375,6 +445,11 @@ function drawTile(
       gr(ctx, cx, cy, 6, 0, 4, W, aOn ? shiftColor(fl, 15) : fl);
       gr(ctx, cx, cy, 0, 6, W, 4, aOn ? shiftColor(fl, 15) : fl);
       gr(ctx, cx, cy, 6, 6, 4, 4, aOn ? acc : shiftColor(acc, -40));
+      // Realm 4 holographic altar: scan line sweeping down
+      if (realm === 4) {
+        const scanY = (frame * 2) % W;
+        gr(ctx, cx, cy, 0, scanY, W, 1, '#ffcc8844');
+      }
       break;
     }
 
@@ -424,7 +499,7 @@ function drawTile(
           gr(ctx, cx, cy, 5, 12, 6, 2, '#0a1a05'); // stand
           gr(ctx, cx, cy, 4, 11, 8, 2, '#00cc33');
         } else if (realm === 3) {
-          // Purple neural node
+          // Purple neural node with pulsing ring
           gr(ctx, cx, cy, 5, 5, 6, 6, '#220033');
           gr(ctx, cx, cy, 4, 6, 8, 4, on ? '#aa44ff' : '#7722cc');
           gr(ctx, cx, cy, 6, 4, 4, 8, on ? '#aa44ff' : '#7722cc');
@@ -434,6 +509,18 @@ function drawTile(
           gr(ctx, cx, cy, 12, 7, 4, 2, '#440088');
           gr(ctx, cx, cy, 7, 0, 2, 4, '#440088');
           gr(ctx, cx, cy, 7, 12, 2, 4, '#440088');
+          // Pulsing ring: outer ring expands every 15 frames then resets
+          const ringPhase = Math.floor(frame / 15) % 4;
+          const ringR = 3 + ringPhase;
+          const ringX = 8 - ringR, ringY = 8 - ringR;
+          if (ringX >= 0 && ringY >= 0 && ringX + ringR * 2 <= W) {
+            ctx.globalAlpha = 0.4 - ringPhase * 0.08;
+            gr(ctx, cx, cy, ringX, ringY, ringR * 2, 1, '#cc88ff');
+            gr(ctx, cx, cy, ringX, ringY + ringR * 2 - 1, ringR * 2, 1, '#cc88ff');
+            gr(ctx, cx, cy, ringX, ringY, 1, ringR * 2, '#cc88ff');
+            gr(ctx, cx, cy, ringX + ringR * 2 - 1, ringY, 1, ringR * 2, '#cc88ff');
+            ctx.globalAlpha = 1;
+          }
         } else {
           // Gold altar gem
           gr(ctx, cx, cy, 4, 8, 8, 6, '#1a1535');
@@ -458,30 +545,34 @@ function drawTile(
 
 // ─── NPC Sprites ─────────────────────────────────────────────────────────────
 
-function drawElliot(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, frame: number) {
+function drawElliot(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, globalFrame: number) {
   // Elliot: lab coat (white/gray), dark curly hair, cyan glasses, mismatched socks
-  // 12×20 game pixels, drawn centred in tile
   const ox = cx + 2 * SCALE; // offset to centre in 16-tile
   const oy = cy - 4 * SCALE; // shift up so feet land in tile
 
-  const legShift = frame === 1 ? 1 : 0;
+  const legShift = globalFrame % 2 === 1 ? 1 : 0;
+  // Idle: slow head bob every 90 frames
+  const headBob = (globalFrame % 90) < 45 ? 0 : -1;
+  // Blink: eye becomes 2x1 every 120 frames (for 6 frames)
+  const isBlinking = (globalFrame % 120) < 6;
+  const eyeH = isBlinking ? 1 : 2;
 
   // Curly hair (dark brown, wider than head)
-  gr2(ctx, ox, oy, 1, 0, 10, 4, '#2a1a0a');
-  gr2(ctx, ox, oy, 0, 1,  2, 3, '#2a1a0a'); // left puff
-  gr2(ctx, ox, oy,10, 1,  2, 3, '#2a1a0a'); // right puff
+  gr2(ctx, ox, oy, 1, 0 + headBob, 10, 4, '#2a1a0a');
+  gr2(ctx, ox, oy, 0, 1 + headBob,  2, 3, '#2a1a0a'); // left puff
+  gr2(ctx, ox, oy,10, 1 + headBob,  2, 3, '#2a1a0a'); // right puff
 
   // Head (skin tone)
-  gr2(ctx, ox, oy, 2, 2, 8, 6, '#c68642');
+  gr2(ctx, ox, oy, 2, 2 + headBob, 8, 6, '#c68642');
 
   // Glasses (cyan frames)
-  gr2(ctx, ox, oy, 2, 5, 3, 1, '#00cccc'); // left lens
-  gr2(ctx, ox, oy, 7, 5, 3, 1, '#00cccc'); // right lens
-  gr2(ctx, ox, oy, 5, 5, 2, 1, '#888888'); // bridge
+  gr2(ctx, ox, oy, 2, 5 + headBob, 3, 1, '#00cccc'); // left lens
+  gr2(ctx, ox, oy, 7, 5 + headBob, 3, 1, '#00cccc'); // right lens
+  gr2(ctx, ox, oy, 5, 5 + headBob, 2, 1, '#888888'); // bridge
 
-  // Eyes (dark)
-  gr2(ctx, ox, oy, 3, 4, 1, 1, '#1a1a1a');
-  gr2(ctx, ox, oy, 8, 4, 1, 1, '#1a1a1a');
+  // Eyes (dark, with blink)
+  gr2(ctx, ox, oy, 3, 4 + headBob, 1, eyeH, '#1a1a1a');
+  gr2(ctx, ox, oy, 8, 4 + headBob, 1, eyeH, '#1a1a1a');
 
   // Lab coat (white/light gray body)
   gr2(ctx, ox, oy, 1, 8, 10, 7, '#e0e0e0');
@@ -651,12 +742,42 @@ function drawPlayer(
   frame: number,
   skinColor: string,
   clothColor: string,
-  hairColor: string
+  hairColor: string,
+  pose: string = 'walk',
+  globalFrame: number = 0
 ) {
   const ox = cx + 3 * SCALE;
-  const oy = cy - 2 * SCALE;
-  const bob = frame === 1 ? 1 : 0; // head bob
-  const legShift = frame === 1 ? 1 : 0;
+
+  // Pose-based Y offset and body color
+  let poseYOff = 0;
+  let effectiveClothColor = clothColor;
+
+  if (pose === 'idle') {
+    // Breathing bob: y offset ±1 based on frame%60
+    poseYOff = (globalFrame % 60) < 30 ? 0 : -1;
+  } else if (pose === 'celebrate') {
+    // Slight jump on even frames
+    poseYOff = (globalFrame % 2 === 0) ? -1 : 0;
+  } else if (pose === 'hurt') {
+    // Red flash on odd frames
+    effectiveClothColor = (globalFrame % 2 === 1) ? '#ff4444' : clothColor;
+  }
+
+  const oy = cy - 2 * SCALE + poseYOff * SCALE;
+
+  // Walk / run / idle leg state
+  let legShift = 0;
+  let bob = 0;
+  if (pose === 'walk') {
+    bob = frame === 1 ? 1 : 0;
+    legShift = frame === 1 ? 1 : 0;
+  } else if (pose === 'run') {
+    bob = frame === 1 ? 1 : 0;
+    legShift = frame === 1 ? 2 : -1; // wider spread
+  } else if (pose === 'idle') {
+    bob = 0;
+    legShift = 0;
+  }
 
   // Hair
   gr2(ctx, ox, oy, 1, -1 + bob, 8, 3, hairColor);
@@ -673,17 +794,37 @@ function drawPlayer(
     gr2(ctx, ox, oy, 3, 3 + bob, 4, 1, shiftColor(hairColor, -20));
   }
 
-  // Body
-  gr2(ctx, ox, oy, 0, 8, 10, 6, clothColor);
+  // Body (run pose leans forward slightly)
+  const bodyXOff = pose === 'run' ? -1 : 0;
+  gr2(ctx, ox, oy, bodyXOff, 8, 10, 6, effectiveClothColor);
 
   // Arms
-  const armUp = dir === 'up' ? -1 : 0;
-  gr2(ctx, ox, oy, -1, 8, 1, 5, skinColor); // left
-  gr2(ctx, ox, oy, 10, 8, 1, 5, skinColor); // right
+  if (pose === 'celebrate') {
+    // Both arms raised (y offset -3 from body top)
+    gr2(ctx, ox, oy, -2, 5, 2, 5, skinColor); // left arm up
+    gr2(ctx, ox, oy, 10, 5, 2, 5, skinColor); // right arm up
+  } else if (pose === 'run') {
+    // Faster arm swing
+    const runSwing = (globalFrame % 16) < 8 ? -2 : 2;
+    gr2(ctx, ox, oy, -1, 8 + runSwing, 1, 5, skinColor);
+    gr2(ctx, ox, oy, 10, 8 - runSwing, 1, 5, skinColor);
+  } else {
+    gr2(ctx, ox, oy, -1, 8, 1, 5, skinColor); // left
+    gr2(ctx, ox, oy, 10, 8, 1, 5, skinColor); // right
+  }
 
   // Legs
-  gr2(ctx, ox, oy, 1, 14 + (legShift ? -1 : 0), 3, 3, shiftColor(clothColor, -30));
-  gr2(ctx, ox, oy, 6, 14 + (legShift ?  1 : 0), 3, 3, shiftColor(clothColor, -30));
+  const legColor = shiftColor(effectiveClothColor, -30);
+  if (pose === 'celebrate') {
+    gr2(ctx, ox, oy, 1, 14, 3, 3, legColor);
+    gr2(ctx, ox, oy, 6, 14, 3, 3, legColor);
+  } else if (pose === 'run') {
+    gr2(ctx, ox, oy, 1, 14 + Math.min(1, Math.max(-2, -legShift)), 3, 3, legColor);
+    gr2(ctx, ox, oy, 6, 14 + Math.min(2, Math.max(-1, legShift)), 3, 3, legColor);
+  } else {
+    gr2(ctx, ox, oy, 1, 14 + (legShift ? -1 : 0), 3, 3, legColor);
+    gr2(ctx, ox, oy, 6, 14 + (legShift ?  1 : 0), 3, 3, legColor);
+  }
 
   // Shoes
   gr2(ctx, ox, oy, 0, 17, 4, 1, '#333333');
@@ -710,6 +851,54 @@ function shiftColor(hex: string, amount: number): string {
   const clamp = (v: number) => Math.max(0, Math.min(255, v));
   return `#${clamp(r + amount).toString(16).padStart(2, '0')}${clamp(g + amount).toString(16).padStart(2, '0')}${clamp(b + amount).toString(16).padStart(2, '0')}`;
 }
+
+// ─── Particle System ─────────────────────────────────────────────────────────
+interface Particle {
+  x: number; y: number;
+  vx: number; vy: number;
+  life: number; maxLife: number;
+  color: string; size: number;
+}
+const particles: Particle[] = [];
+
+function spawnParticles(x: number, y: number, color: string, count: number) {
+  for (let i = 0; i < count; i++) {
+    if (particles.length >= 50) particles.shift();
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.5 + Math.random() * 2.5;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1,
+      life: 30 + Math.floor(Math.random() * 30),
+      maxLife: 60,
+      color,
+      size: 1 + Math.floor(Math.random() * 2),
+    });
+  }
+}
+
+function drawParticles(ctx: CanvasRenderingContext2D) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.08;
+    p.life--;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size * SCALE, p.size * SCALE);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─── Cherry Blossom Petals (Realm 2) ─────────────────────────────────────────
+interface Petal {
+  wx: number; wy: number;   // world-space canvas X/Y
+  timer: number;            // increments each frame
+}
+const blossomPetals: Petal[] = [];
 
 // ─── Mini-map ─────────────────────────────────────────────────────────────────
 function drawMinimap(
@@ -770,54 +959,86 @@ function drawDialogueBox(
   CW: number,
   CH: number
 ) {
-  const bx = 8, by = CH - 120, bw = CW - 16, bh = 108;
+  const PORTRAIT = 80;   // portrait box size
+  const PAD = 12;
+  const bx = 8, by = CH - 124, bw = CW - 16, bh = 112;
+  const textX = bx + PORTRAIT + PAD * 2;
+  const textW = bw - PORTRAIT - PAD * 3;
 
-  // Dark bg with thick border
+  // ── Outer box: dark background, sharp corners (Undertale style)
   ctx.fillStyle = '#0d0d0d';
   ctx.fillRect(bx, by, bw, bh);
+
+  // Outer border — 3px solid accent color
   ctx.strokeStyle = accentColor;
   ctx.lineWidth = 3;
   ctx.strokeRect(bx, by, bw, bh);
+
+  // Inner border inset — darker shade
   ctx.lineWidth = 1;
-  ctx.strokeStyle = shiftColor(accentColor, -60);
-  ctx.strokeRect(bx + 3, by + 3, bw - 6, bh - 6);
+  ctx.strokeStyle = shiftColor(accentColor, -70);
+  ctx.strokeRect(bx + 4, by + 4, bw - 8, bh - 8);
 
-  // NPC name header
-  ctx.fillStyle = accentColor;
-  ctx.fillRect(bx + 8, by - 14, npcName.length * 8 + 16, 18);
+  // ── Portrait box on the left
   ctx.fillStyle = '#000000';
-  ctx.font = '10px monospace';
-  ctx.fillText(npcName.toUpperCase(), bx + 16, by - 1);
+  ctx.fillRect(bx + PAD, by + PAD, PORTRAIT, PORTRAIT - 8);
+  ctx.strokeStyle = accentColor;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx + PAD, by + PAD, PORTRAIT, PORTRAIT - 8);
+  // Pixel face placeholder inside portrait
+  ctx.fillStyle = accentColor + '33';
+  ctx.fillRect(bx + PAD + 4, by + PAD + 4, PORTRAIT - 8, PORTRAIT - 16);
+  // Draw a simple pixel-face silhouette
+  ctx.fillStyle = accentColor + '88';
+  const fx = bx + PAD + PORTRAIT / 2 - 10, fy = by + PAD + 8;
+  ctx.fillRect(fx, fy, 20, 20);      // head
+  ctx.fillRect(fx + 4, fy + 4, 3, 3); // left eye
+  ctx.fillRect(fx + 13, fy + 4, 3, 3); // right eye
+  ctx.fillRect(fx + 5, fy + 13, 10, 2); // mouth
 
-  // Dialogue text (typewriter)
+  // ── Name label above portrait, Undertale-style colored tag
+  ctx.fillStyle = accentColor;
+  const nameLabel = npcName.toUpperCase();
+  ctx.font = "bold 9px 'Press Start 2P', monospace";
+  const nameMeasure = ctx.measureText(nameLabel);
+  const nameBgW = nameMeasure.width + 16;
+  ctx.fillRect(bx + PAD, by - 18, nameBgW, 20);
+  ctx.fillStyle = '#000000';
+  ctx.fillText(nameLabel, bx + PAD + 8, by - 4);
+
+  // ── Dialogue text (typewriter) — Press Start 2P, white, 10px
   const text = lines[lineIndex] ?? '';
   const shown = text.slice(0, charProgress);
   ctx.fillStyle = '#ffffff';
-  ctx.font = '12px monospace';
+  ctx.font = "10px 'Press Start 2P', monospace";
 
-  // Word-wrap at ~60 chars
+  // Word-wrap to fit textW (roughly 52 chars at 10px)
+  const maxCharsPerLine = Math.floor(textW / 6.5);
   const words = shown.split(' ');
-  let line = '';
+  let currentLine = '';
   let lineY = by + 28;
   for (const word of words) {
-    const test = line ? line + ' ' + word : word;
-    if (test.length > 60) {
-      ctx.fillText(line, bx + 16, lineY);
-      line = word;
+    const test = currentLine ? currentLine + ' ' + word : word;
+    if (test.length > maxCharsPerLine) {
+      ctx.fillText(currentLine, textX, lineY);
+      currentLine = word;
       lineY += 18;
+      if (lineY > by + bh - 16) break; // don't overflow box
     } else {
-      line = test;
+      currentLine = test;
     }
   }
-  if (line) ctx.fillText(line, bx + 16, lineY);
+  if (currentLine && lineY <= by + bh - 16) {
+    ctx.fillText(currentLine, textX, lineY);
+  }
 
-  // "Press E" prompt (blinking)
+  // ── "Press E" advance prompt — blinking cyan triangle
   if (charProgress >= text.length) {
     const blink = Math.floor(Date.now() / 500) % 2 === 0;
     if (blink) {
       ctx.fillStyle = accentColor;
-      ctx.font = '10px monospace';
-      ctx.fillText('▶ PRESS E', bx + bw - 90, by + bh - 12);
+      ctx.font = "9px 'Press Start 2P', monospace";
+      ctx.fillText('▼', bx + bw - 22, by + bh - 10);
     }
   }
 }
@@ -951,6 +1172,7 @@ export default function PixelWorldEngine({ realm, onEnterNode }: Props) {
       camY: Math.max(0, startPos.y - vpH / 2),
     };
     return {
+      frame: 0,
       px: startPos.x, py: startPos.y,
       pfx: 0, pfy: 0,
       moveProgress: 0,
@@ -1096,6 +1318,7 @@ export default function PixelWorldEngine({ realm, onEnterNode }: Props) {
 
     const loop = (now: number) => {
       rafId = requestAnimationFrame(loop);
+      gs.frame++;
 
       const CW = canvasSizeRef.current.w;
       const CH = canvasSizeRef.current.h;
@@ -1279,6 +1502,7 @@ function render(
 ) {
   const { palette } = world;
   const t = now / 1000;
+  const frame = Math.floor(t * 60);
 
   // Clear
   ctx.fillStyle = palette.sky;
@@ -1309,10 +1533,10 @@ function render(
 
       if (isNpcTile) {
         // Draw floor beneath NPC
-        drawTile(ctx, cx, cy, '.', gs.animFrame, palette, realm, false, t, tx, ty);
+        drawTile(ctx, cx, cy, '.', gs.animFrame, palette, realm, false, t, tx, ty, frame);
       } else {
         const isComplete = completedNodeTiles.has(tile);
-        drawTile(ctx, cx, cy, tile, gs.animFrame, palette, realm, isComplete, t, tx, ty);
+        drawTile(ctx, cx, cy, tile, gs.animFrame, palette, realm, isComplete, t, tx, ty, frame);
       }
 
       // Draw NPC sprite
