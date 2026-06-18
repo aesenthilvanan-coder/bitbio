@@ -110,265 +110,252 @@ const BOSS_PHASE_TAUNTS: Record<1 | 2 | 3 | 4, [string, string]> = {
   ],
 };
 
-// ─── Boss sprite drawing ──────────────────────────────────────────────────────
+// ─── Boss sprite drawing — 32×32 game pixel system ───────────────────────────
+// All bosses use game-pixel coordinates (0-31 in x, 0-31 in y).
+// ox/oy = top-left corner of the 32×32 bounding box.
+// b(dx,dy,w,h,c) fills a rect at game-pixel offset from ox,oy.
 
 function drawLyso(ctx: CanvasRenderingContext2D, cx: number, cy: number, hp: number, t: number, sx: number) {
-  const x = cx + sx;
-  const rows: [number, number][] = [
-    [10,2],[20,2],[30,3],[36,3],[40,3],[42,3],[42,3],[42,3],[40,3],[36,3],[30,3],[20,2],[10,2],
-  ];
-  const base = hp > 50 ? '#aa44cc' : hp > 25 ? '#772299' : '#441166';
-  rows.forEach(([w, h], i) => {
-    ctx.fillStyle = base;
-    ctx.fillRect(x - (w * SCALE) / 2, cy + (i - 6) * 3 * SCALE, w * SCALE, h * SCALE);
-  });
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2 + t * 0.5;
-    const r = 22 * SCALE;
-    const spx = x + Math.cos(angle) * r;
-    const spy = cy + Math.sin(angle) * r * 0.6;
-    ctx.fillStyle = '#cc66ee';
-    ctx.fillRect(spx - 2, spy - 6, 4, 8);
+  const ox = cx + sx - 16 * SCALE;
+  const oy = cy - 16 * SCALE;
+  const b = (dx: number, dy: number, w: number, h: number, c: string) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(ox + dx * SCALE, oy + dy * SCALE, w * SCALE, h * SCALE);
+  };
+
+  const p = hp > 66 ? 1 : hp > 33 ? 2 : 3;
+  const main = p === 1 ? '#aa44cc' : p === 2 ? '#772299' : '#441166';
+  const hi   = p === 1 ? '#cc77ee' : p === 2 ? '#9933bb' : '#663399';
+  const drk  = p === 1 ? '#660088' : p === 2 ? '#440066' : '#220044';
+
+  // Blob body — layered for roundness
+  b(9, 0, 14, 2, main);
+  b(6, 2, 20, 3, main);
+  b(4, 5, 24, 3, hi);      // upper highlight band
+  b(3, 8, 26, 14, main);   // main mass
+  b(3, 8, 4, 6, hi);       // left highlight
+  b(4, 22, 24, 3, drk);
+  b(6, 25, 20, 2, drk);
+  b(9, 27, 14, 2, drk);    // bottom
+
+  // Eyes — dark socket + red iris + pupil + gleam
+  b(5, 10, 6, 6, '#220000');
+  b(21, 10, 6, 6, '#220000');
+  b(6, 11, 4, 4, '#cc0000');
+  b(22, 11, 4, 4, '#cc0000');
+  b(7, 12, 2, 2, '#ff3333');
+  b(23, 12, 2, 2, '#ff3333');
+  b(7, 12, 1, 1, '#ffffff');
+  b(23, 12, 1, 1, '#ffffff');
+
+  // Mouth
+  b(8, 18, 16, 4, '#1a0000');
+  b(9, 18, 14, 1, '#440000');
+  // Jagged teeth
+  b(9, 18, 2, 3, '#e0d0aa'); b(12, 18, 2, 3, '#e0d0aa');
+  b(15, 18, 2, 3, '#e0d0aa'); b(18, 18, 2, 3, '#e0d0aa');
+  b(21, 18, 2, 3, '#e0d0aa');
+
+  // Nose bumps
+  b(13, 15, 2, 1, drk); b(17, 15, 2, 1, drk);
+
+  // Enzyme drips (animated)
+  const dr = Math.floor(t * 3) % 3;
+  b(5, 27, 2, 3 + dr, hi);
+  b(12, 28, 2, 2 + dr, hi);
+  b(18, 28, 2, 2 + dr, hi);
+  b(25, 27, 2, 3 + dr, hi);
+
+  // Phase cracks
+  if (p >= 2) {
+    b(11, 5, 1, 9, '#1a0033'); b(21, 8, 1, 7, '#1a0033');
   }
-  ctx.fillStyle = '#cc0000';
-  ctx.fillRect(x - 12, cy - 6, 24, 18);
-  ctx.fillStyle = '#000011';
-  const ps = (3 + Math.sin(t * 1.5)) * SCALE / 2;
-  ctx.fillRect(x - ps, cy - ps, ps * 2, ps * 2);
-  ctx.fillStyle = '#ff0000';
-  ctx.fillRect(x - 3, cy - 9, 6, 3);
-  for (let d = 0; d < 4; d++) {
-    const dH = (6 + Math.sin(t * 2 + d * 1.3) * 3) * SCALE;
-    ctx.fillStyle = '#33ff33';
-    ctx.fillRect(x - 20 * SCALE + d * 14 * SCALE, cy + 7 * SCALE, 6, dH);
-  }
-  if (hp < 50) {
-    ctx.fillStyle = '#1a0033';
-    for (let c = 0; c < 3; c++) {
-      const crackX = x - 10 * SCALE + c * 10 * SCALE;
-      for (let j = 0; j < 5; j++) {
-        ctx.fillRect(crackX + j * 2, cy - 8 * SCALE + j * 4, 2, 2);
-      }
-    }
+  if (p === 3) {
+    b(2, 10, 2, 10, '#330011'); b(28, 10, 2, 10, '#330011');
+    b(15, 1, 2, 4, '#440022');
   }
 }
 
 function drawViron(ctx: CanvasRenderingContext2D, cx: number, cy: number, hp: number, t: number, sx: number) {
-  const x = cx + sx;
-  const phase2 = hp <= 66;
-  const phase3 = hp <= 33;
+  const ox = cx + sx - 16 * SCALE;
+  const oy = cy - 16 * SCALE;
+  const b = (dx: number, dy: number, w: number, h: number, c: string) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(ox + dx * SCALE, oy + dy * SCALE, w * SCALE, h * SCALE);
+  };
 
-  // Phase 3: body pulses between teal and near-black every 8 frames
-  const frame = Math.floor(t * 60);
-  const pulseDark = phase3 && (frame % 8 < 4);
-  const bodyMain = pulseDark ? '#071a0d' : (phase3 ? '#1a4a2e' : (phase2 ? '#2d7a5a' : '#52b788'));
-  const bodyAlt  = pulseDark ? '#030d06' : (phase3 ? '#0d2e1c' : (phase2 ? '#1a5c40' : '#3d9b6a'));
+  const p = hp > 66 ? 1 : hp > 33 ? 2 : 3;
+  const pulseDark = p === 3 && Math.floor(t * 8) % 4 < 2;
+  const main = pulseDark ? '#0d2e1c' : (p === 1 ? '#52b788' : p === 2 ? '#2d7a5a' : '#1a4a35');
+  const alt  = pulseDark ? '#071a0d' : (p === 1 ? '#3d9b6a' : p === 2 ? '#1a5c40' : '#0d3020');
+  const spikeC = p === 3 ? '#cc0000' : '#52b788';
 
-  // Hexagonal body: 7 rows of fillRect approximating a hex, ~80x56px
-  const hexRows: [number, number][] = [
-    [28, 8], [52, 8], [72, 8], [80, 8],
-    [72, 8], [52, 8], [28, 8],
+  // Hexagonal body (approximated with tapered rows)
+  b(10, 1, 12, 2, main);
+  b(6, 3, 20, 3, main);
+  b(3, 6, 26, 3, alt);     // dark hexagonal band
+  b(3, 9, 26, 10, main);   // core
+  b(3, 9, 4, 10, alt);     // left shadow
+  b(3, 19, 26, 3, alt);
+  b(6, 22, 20, 3, main);
+  b(10, 25, 12, 2, main);
+
+  // RNA strands inside (animated wave)
+  for (let j = 0; j < 7; j++) {
+    const rx = 7 + j * 3;
+    const ry = 11 + Math.round(Math.sin(t * 3 + j * 0.9) * 2);
+    b(rx, ry, 1, 3, j % 2 === 0 ? '#ff8c00' : '#ff6600');
+  }
+
+  // Spike proteins (8 directional)
+  const spikes: [number, number, number, number][] = [
+    [14, 0, 4, 1],   // top
+    [24, 2, 3, 2],   // top-right
+    [27, 11, 4, 2],  // right
+    [26, 22, 3, 2],  // bottom-right
+    [14, 28, 4, 2],  // bottom
+    [4, 22, 3, 2],   // bottom-left
+    [1, 11, 3, 2],   // left
+    [4, 2, 3, 2],    // top-left
   ];
-  const hexH = hexRows.length * 8; // 56px total height
-  hexRows.forEach(([w, h], i) => {
-    ctx.fillStyle = i % 2 === 0 ? bodyMain : bodyAlt;
-    ctx.fillRect(x - w / 2, cy - hexH / 2 + i * h, w, h);
-  });
-
-  // Genetic material (RNA): waving alternating orange/dark-orange 2x2 dots inside body
-  for (let j = 0; j < 14; j++) {
-    const rx = x - 20 + j * 3;
-    const ry = cy + Math.sin(t * 4 + j * 0.6) * 6;
-    ctx.fillStyle = j % 2 === 0 ? '#ff8c00' : '#ff6600';
-    ctx.fillRect(rx, ry - 1, 2, 2);
+  spikes.forEach(([dx, dy, w, h]) => b(dx, dy, w, h, spikeC));
+  // Phase 2: extended spikes
+  if (p >= 2) {
+    spikes.forEach(([dx, dy, w, h]) => {
+      const ext = 2;
+      b(dx - ext, dy - ext, w + ext, h + ext, spikeC + '88');
+    });
   }
 
-  // Spike proteins: 8 spikes radiating outward
-  const baseR  = 44;
-  const spikeLen = phase2 ? 28 : 20; // phase 2 extends 4+ extra px
-  const spikeColor = phase3 ? '#cc0000' : '#52b788';
-  for (let i = 0; i < 8; i++) {
-    const baseAngle = (i / 8) * Math.PI * 2;
-    const animAngle = baseAngle + Math.sin(t * 0.4 + i * 0.3) * 0.06;
-    for (let s = 0; s <= spikeLen; s += 2) {
-      const r = baseR + s;
-      ctx.fillStyle = spikeColor;
-      ctx.fillRect(
-        x + Math.cos(animAngle) * r - 1,
-        cy + Math.sin(animAngle) * r - 1,
-        2, 2,
-      );
-    }
-  }
-
-  // Phase 2: second ring of 8 shorter spikes at offset angles
-  if (phase2) {
-    const ring2Color = phase3 ? '#880000' : '#3d9b6a';
-    for (let i = 0; i < 8; i++) {
-      const baseAngle = (i / 8) * Math.PI * 2 + Math.PI / 8;
-      const animAngle = baseAngle + Math.sin(t * 0.5 + i * 0.4) * 0.08;
-      for (let s = 0; s <= 14; s += 2) {
-        const r = 36 + s;
-        ctx.fillStyle = ring2Color;
-        ctx.fillRect(
-          x + Math.cos(animAngle) * r - 1,
-          cy + Math.sin(animAngle) * r - 1,
-          2, 2,
-        );
-      }
-    }
-  }
-
-  // Eyes: 6x6 rectangles; red >60% HP, yellow >25%, white (enraged) ≤25%
-  const eyeColor = hp > 60 ? '#cc0000' : (hp > 25 ? '#cccc00' : '#ffffff');
-  ctx.fillStyle = eyeColor;
-  ctx.fillRect(x - 14, cy - 6, 6, 6);
-  ctx.fillRect(x + 8,  cy - 6, 6, 6);
+  // Eyes
+  const eyeC = p === 1 ? '#cc0000' : p === 2 ? '#cccc00' : '#ffffff';
+  b(8, 12, 5, 5, '#0a1a0a'); b(19, 12, 5, 5, '#0a1a0a');
+  b(9, 13, 3, 3, eyeC);      b(20, 13, 3, 3, eyeC);
+  b(9, 13, 1, 1, '#ffffff');  b(20, 13, 1, 1, '#ffffff');
 }
 
 function drawOverfit(ctx: CanvasRenderingContext2D, cx: number, cy: number, hp: number, t: number, sx: number) {
-  const x = cx + sx;
-  const phase2 = hp <= 66;
-  const phase3 = hp <= 33;
+  const ox = cx + sx - 16 * SCALE;
+  const oy = cy - 16 * SCALE;
+  const b = (dx: number, dy: number, w: number, h: number, c: string) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(ox + dx * SCALE, oy + dy * SCALE, w * SCALE, h * SCALE);
+  };
 
-  // Data-matrix body: 6 cols × 8 rows of 7×7 squares with 1px gap = 8px step
-  const COLS = 6, ROWS = 8, SQ = 7, STEP = 8;
-  const matW = COLS * STEP - 1; // 47px
-  const matH = ROWS * STEP - 1; // 63px
-  const startX = x - matW / 2;
-  const startY = cy - matH / 2;
-
+  const p = hp > 66 ? 1 : hp > 33 ? 2 : 3;
   const BRIGHT = '#a855f7';
   const MID    = '#7c3aed';
   const GRAY   = '#3a3050';
   const BLACK  = '#1a1040';
-  const GLITCH = [BRIGHT, '#ff00ff', '#00ccff', GRAY, BLACK] as const;
+  const GLITCH: string[] = [BRIGHT, '#ff00ff', '#00ccff', GRAY, BLACK];
 
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const idx = r * COLS + c;
-      const px  = startX + c * STEP;
-      const py  = startY + r * STEP;
+  // 5×5 cell data-matrix body (each cell=5gp, 1gp gap = step=6)
+  const COLS = 5, ROWS = 5, CELL = 5, STEP = 6;
+  const bx = 1, by = 1;
 
-      let sqColor: string;
-      if (!phase2) {
-        // Phase 1: all lit bright purple — 100% training accuracy illusion
-        sqColor = idx % 5 === 0 ? BRIGHT : MID;
-      } else if (!phase3) {
-        // Phase 2: generalization failure — half squares go dark/gray
-        sqColor = (r + c) % 2 === 0 ? GRAY : MID;
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const dx = bx + col * STEP;
+      const dy = by + row * STEP;
+      const idx = row * COLS + col;
+
+      let c: string;
+      if (p === 1) {
+        c = idx % 4 === 0 ? BRIGHT : MID;
+      } else if (p === 2) {
+        c = (row + col) % 2 === 0 ? GRAY : MID;
       } else {
-        // Phase 3: glitching — squares randomly flicker
-        const gi = Math.floor(t * 14 + idx * 0.9) % GLITCH.length;
-        sqColor = GLITCH[gi];
+        c = GLITCH[Math.floor(t * 12 + idx * 1.1) % GLITCH.length];
       }
 
-      // Face overrides
-      if (r === 2 && (c === 1 || c === 4)) sqColor = phase3 ? '#ff00ff' : BRIGHT; // eyes
-      if (r === 6 && c >= 1 && c <= 4) {
-        // Wide grin row
-        sqColor = (phase3 && Math.floor(t * 10) % 2 === 0) ? '#ffffff' : BRIGHT;
-      }
+      // Face feature overrides
+      if (row === 1 && (col === 1 || col === 3)) c = p === 3 ? '#ff00ff' : BRIGHT; // eyes
+      if (row === 3 && col >= 1 && col <= 3)
+        c = p === 3 && Math.floor(t * 8) % 2 === 0 ? '#ffffff' : BRIGHT;           // grin
 
-      ctx.fillStyle = sqColor;
-      ctx.fillRect(px, py, SQ, SQ);
+      b(dx, dy, CELL, CELL, c);
     }
   }
 
-  // Arms: rectangle appendages, grow 50% longer at phase 3
-  const armH = phase3 ? 36 : 24;
-  ctx.fillStyle = MID;
-  ctx.fillRect(startX - 10, cy - armH / 2, 8, armH);
-  ctx.fillRect(startX + matW + 2, cy - armH / 2, 8, armH);
-  if (phase3) {
-    // Claw extensions
-    ctx.fillStyle = BRIGHT;
-    ctx.fillRect(startX - 14, cy + 10, 14, 4);
-    ctx.fillRect(startX + matW + 2, cy + 10, 14, 4);
+  // Data arm bars (extend from sides)
+  const armW = p === 3 ? 8 : 5;
+  b(bx - armW, by + 12, armW, CELL, MID);             // left arm
+  b(bx + COLS * STEP, by + 12, armW, CELL, MID);      // right arm
+  if (p === 3) {
+    b(bx - armW - 3, by + 14, 3, 3, BRIGHT);           // left claw
+    b(bx + COLS * STEP + armW, by + 14, 3, 3, BRIGHT); // right claw
   }
 
-  // Training loss curve (right side): zigzag descending → perfect training fit
-  const crv = startX + matW + 14;
-  const crvTop = startY + 4;
-  const crvStep = matH / 8;
-  ctx.fillStyle = '#39ff14';
-  for (let s = 0; s < 8; s++) {
-    const sy = crvTop + s * crvStep;
-    const cx2 = crv + (s % 2) * 4;
-    ctx.fillRect(cx2, sy, 3, Math.max(2, crvStep * 0.7));
-  }
-
-  // Validation loss curve (further right): shoots upward — catastrophic overfit
-  const valX = crv + 12;
-  ctx.fillStyle = '#ff4444';
-  for (let s = 0; s < 8; s++) {
-    const sy = crvTop + (7 - s) * crvStep * 0.4 + s * s * 0.9;
-    const vx2 = valX + (s % 2) * 4;
-    ctx.fillRect(vx2, sy, 3, Math.max(2, crvStep * 0.7));
+  // Floating data particles above head (phase 3)
+  if (p === 3) {
+    for (let i = 0; i < 5; i++) {
+      const px2 = bx + i * 6 + Math.round(Math.sin(t * 3 + i) * 2);
+      b(px2, Math.round(Math.sin(t * 2 + i * 0.7) * 2), 2, 2, GLITCH[i % GLITCH.length]);
+    }
   }
 }
 
 function drawAmyloid(ctx: CanvasRenderingContext2D, cx: number, cy: number, hp: number, t: number, sx: number) {
-  const x = cx + sx;
-  const phase2 = hp <= 66;
-  const phase3 = hp <= 33;
-
-  // Body: 9 stacked layers of misfolded protein, ~56×72px (cy-36 to cy+36)
-  const layers: [number, number, string][] = [
-    [56, 8, '#d4c5a9'], [52, 8, '#b8a899'], [56, 8, '#cabbaa'],
-    [50, 8, '#a09080'], [56, 8, '#b8aa98'], [52, 8, '#989088'],
-    [56, 8, '#c0b0a0'], [50, 8, '#888080'], [52, 8, '#b0a898'],
-  ];
-  layers.forEach(([w, h, c], i) => {
+  const ox = cx + sx - 16 * SCALE;
+  const oy = cy - 16 * SCALE;
+  const b = (dx: number, dy: number, w: number, h: number, c: string) => {
     ctx.fillStyle = c;
-    ctx.fillRect(x - w / 2, cy - 36 + i * h, w, h);
-    // Beta-sheet stripe at bottom of each layer
-    ctx.fillStyle = '#6a6060';
-    ctx.fillRect(x - w / 2 + 2, cy - 36 + i * h + h - 1, w - 4, 1);
+    ctx.fillRect(ox + dx * SCALE, oy + dy * SCALE, w * SCALE, h * SCALE);
+  };
+
+  const p = hp > 66 ? 1 : hp > 33 ? 2 : 3;
+  const extraW = p >= 2 ? 3 : 0; // body grows wider in phase 2+
+
+  // Stacked fibril layers (6 layers of ~4gp each)
+  const layers: [string, string][] = [
+    ['#d4c5a9', '#a09080'],
+    ['#c4b59a', '#908070'],
+    ['#b4a590', '#808060'],
+    ['#a49580', '#706050'],
+    ['#948578', '#605848'],
+    ['#887868', '#504038'],
+  ];
+  layers.forEach(([main, stripe], i) => {
+    const lw = 20 + extraW * 2;
+    const lx = 6 - extraW;
+    const ly = 10 + i * 4;
+    b(lx, ly, lw, 3, main);
+    b(lx + 1, ly + 3, lw - 2, 1, stripe); // beta-sheet stripe
   });
 
-  // Phase 2: extra fibril side layers (body grows wider)
-  if (phase2) {
-    ctx.fillStyle = '#c0b0a0';
-    ctx.fillRect(x - 40, cy - 20, 14, 56);
-    ctx.fillRect(x + 26, cy - 20, 14, 56);
-    ctx.fillStyle = '#8a8080';
-    for (let i = 0; i < 7; i++) {
-      ctx.fillRect(x - 40, cy - 20 + i * 8 + 7, 14, 1);
-      ctx.fillRect(x + 26, cy - 20 + i * 8 + 7, 14, 1);
+  // Phase 2: wide side fibril columns
+  if (p >= 2) {
+    b(2, 14, 3, 18, '#b0a090');
+    b(27, 14, 3, 18, '#b0a090');
+    for (let i = 0; i < 5; i++) {
+      b(2, 14 + i * 4 + 3, 3, 1, '#808070');
+      b(27, 14 + i * 4 + 3, 3, 1, '#808070');
     }
   }
 
-  // Crown: 5 amyloid fibril spikes of varying height
-  const fibrilPulse = phase3 && Math.floor(t * 15) % 4 < 2;
-  const fibrilColor = fibrilPulse ? '#ffffff' : '#c0a0ff';
-  const spikeData: [number, number][] = [[-20, 20], [-10, 28], [0, 32], [10, 24], [20, 18]];
-  spikeData.forEach(([ox, h]) => {
-    ctx.fillStyle = fibrilColor;
-    ctx.fillRect(x + ox - 1, cy - 36 - h, 2, h);
-    ctx.fillRect(x + ox - 3, cy - 36 - h, 6, 2);
+  // Crown — fibril spikes of varying heights
+  const fibPulse = p === 3 && Math.floor(t * 10) % 3 < 2;
+  const fibC = fibPulse ? '#ffffff' : '#c0a0ff';
+  const spikes: [number, number][] = [[7,6],[10,4],[15,2],[20,4],[23,6]];
+  spikes.forEach(([spx, sph]) => {
+    b(spx, 10 - sph, 2, sph, fibC);
+    b(spx - 1, 10 - sph, 4, 1, fibC); // spike tip cap
   });
 
-  // Eyes: 3×3 red squares, deeply set in dark sockets
-  ctx.fillStyle = '#1a0a0a';
-  ctx.fillRect(x - 18, cy - 20, 10, 10);
-  ctx.fillRect(x + 8,  cy - 20, 10, 10);
-  ctx.fillStyle = '#cc0000';
-  ctx.fillRect(x - 16, cy - 18, 6, 6);
-  ctx.fillRect(x + 10, cy - 18, 6, 6);
-  ctx.fillStyle = '#ff5555';
-  ctx.fillRect(x - 15, cy - 17, 2, 2);
-  ctx.fillRect(x + 11, cy - 17, 2, 2);
+  // Eyes — dark socket, red iris, gleam
+  b(6, 14, 5, 5, '#1a0808');
+  b(21, 14, 5, 5, '#1a0808');
+  b(7, 15, 3, 3, '#cc0000');
+  b(22, 15, 3, 3, '#cc0000');
+  b(7, 15, 1, 1, '#ff5555');
+  b(22, 15, 1, 1, '#ff5555');
 
-  // Tendrils: 4 fibril strands, extend 50% longer at phase 3
-  const tendrilMult = phase3 ? 1.5 : 1.0;
-  const tendrilXs: number[] = [-14, -5, 5, 14];
-  tendrilXs.forEach((ox, i) => {
-    const tLen = (18 + Math.sin(t * 2.5 + i * 1.4) * 6) * tendrilMult;
-    ctx.fillStyle = '#b0a0c0';
-    ctx.fillRect(x + ox - 1, cy + 36, 2, tLen);
-    ctx.fillStyle = '#d0c0e0';
-    ctx.fillRect(x + ox - 2, cy + 36 + tLen - 2, 4, 2);
+  // Tendrils (4 animated bottom strands)
+  const tendrilXs = [8, 13, 18, 23];
+  tendrilXs.forEach((tx, i) => {
+    const tl = 3 + Math.round(Math.sin(t * 2.5 + i * 1.4) * 2) + (p === 3 ? 2 : 0);
+    b(tx, 34, 2, tl, '#b0a0c0');
+    b(tx - 1, 34 + tl - 1, 4, 1, '#d0c0e0');
   });
 }
 

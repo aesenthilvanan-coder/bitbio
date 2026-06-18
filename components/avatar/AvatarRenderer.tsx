@@ -1226,10 +1226,10 @@ export default function AvatarRenderer({
       drawAura(ctx, config.auraEffect ?? 0, t, W, H);
 
       // Avatar positions (game pixels, 0-based from canvas)
-      // Canvas is W=100 game pixels wide (200px at S=2), H=130 (260px)
-      // Center the avatar
+      // Canvas is W=40 game pixels wide, H=52 game pixels tall
+      // Character fills roughly 26×46 of that space
       const hx = Math.floor(W / S / 2) - 5; // head left edge in game pixels
-      const hy = 4 + bob; // head top in game pixels
+      const hy = 3 + bob; // head top in game pixels
 
       const bodyX = hx; // body same x as head (10gp wide body, 10gp wide head)
       const bodyY = hy + 14; // body starts below head+neck
@@ -1374,9 +1374,9 @@ export default function AvatarRenderer({
     return () => cancelAnimationFrame(frameRef.current);
   }, [animate, draw]);
 
-  // Canvas dimensions: 100gp × 130gp at S=2 → 200×260px
-  const CW = 100 * S;
-  const CH = 130 * S;
+  // Canvas: 40gp × 52gp at S=4 → 160×208px (character fits in ~28×46gp)
+  const CW = 40 * S;
+  const CH = 52 * S;
 
   return (
     <canvas
