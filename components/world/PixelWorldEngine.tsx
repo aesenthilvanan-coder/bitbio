@@ -122,9 +122,13 @@ function drawTile(
 ) {
   const W = TILE; // 16 game pixels per tile
 
-  // Per-realm base colors (Undertale-style: near-black bg, one signature accent)
-  const FLOORS   = ['#050d10', '#050f04', '#080510', '#0a080f'];
-  const WALLS    = ['#0a1a22', '#0a1a05', '#100820', '#18121f'];
+  // Per-realm base colors — visible atmospheric floors (NOT near-black)
+  // Realm 1: bioluminescent teal cell interior
+  // Realm 2: dark forest earth
+  // Realm 3: deep space station deck
+  // Realm 4: gothic stone cathedral
+  const FLOORS = ['#1a3a44', '#162a0a', '#14083a', '#1e1438'];
+  const WALLS  = ['#0f2530', '#0d1e05', '#0e052a', '#160f30'];
   const ACCENTS  = ['#00ffcc', '#00ff44', '#aa44ff', '#ffaa00'];
   const fl  = FLOORS[realm - 1]  ?? palette.floor;
   const wl  = WALLS[realm - 1]   ?? palette.wall;
@@ -135,30 +139,58 @@ function drawTile(
     // ── FLOOR ─────────────────────────────────────────────────────────────
     case '.':
     case '@': {
+      // Base floor fill — visible atmospheric color
       gr(ctx, cx, cy, 0, 0, W, W, fl);
-      // Subtle checkerboard seam — every other tile slightly lighter (Undertale ruins floor)
-      if ((tx + ty) % 2 === 0) gr(ctx, cx, cy, 0, 0, W, W, shiftColor(fl, 6));
-      // Single-pixel edge accents (makes tiles feel tiled, not noise-y)
-      if (tx % 4 === 0) gr(ctx, cx, cy, 0, 0, 1, W, shiftColor(fl, 12));
-      if (ty % 4 === 0) gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(fl, 12));
-      // Realm 1: ribosome protein dots (appear/disappear every 45 frames)
-      if (realm === 1 && (tx * 5 + ty * 3) % 7 === 0) {
-        const proteinOn = frame % 45 < 22;
-        if (proteinOn) {
-          gr(ctx, cx, cy, 5, 5, 2, 2, '#cc8844');
-          gr(ctx, cx, cy, 11, 10, 2, 2, '#bb7733');
-        }
-      }
-      // Realm 1: ATP particle moving toward top-right (every 30 frames)
-      if (realm === 1 && (tx + ty * 2) % 5 === 0) {
-        const atpCycle = frame % 60;
-        if (atpCycle < 30) {
-          const atpX = Math.floor(atpCycle / 2);
-          const atpY = W - 2 - Math.floor(atpCycle / 3);
-          if (atpX >= 0 && atpX <= W - 2 && atpY >= 0 && atpY <= W - 2) {
-            gr(ctx, cx, cy, atpX, atpY, 2, 2, '#ffcc00');
+      // Checkerboard — every other tile 14 brightness higher (clearly visible seam)
+      if ((tx + ty) % 2 === 0) gr(ctx, cx, cy, 0, 0, W, W, shiftColor(fl, 14));
+      // Tile grout lines — 1px darker stripe every 4 tiles both axes
+      if (tx % 4 === 0) gr(ctx, cx, cy, 0, 0, 1, W, shiftColor(fl, -12));
+      if (ty % 4 === 0) gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(fl, -12));
+      // Realm-specific floor texture
+      if (realm === 1) {
+        // Cytoplasm: bioluminescent organic cell floor
+        // Membrane ripple lines
+        if (ty % 2 === 0) gr(ctx, cx, cy, 0, 7, W, 1, shiftColor(fl, 8));
+        // Protein drift dots
+        if ((tx * 5 + ty * 3) % 7 === 0) {
+          const proteinOn = frame % 45 < 22;
+          if (proteinOn) {
+            gr(ctx, cx, cy, 5, 5, 2, 2, '#1a6644');
+            gr(ctx, cx, cy, 11, 10, 2, 2, '#155533');
           }
         }
+        // ATP particle flowing across tile
+        if ((tx + ty * 2) % 5 === 0) {
+          const atpCycle = frame % 60;
+          if (atpCycle < 30) {
+            const atpX = Math.floor(atpCycle / 2);
+            const atpY = W - 2 - Math.floor(atpCycle / 3);
+            if (atpX >= 0 && atpX <= W - 2 && atpY >= 0) {
+              gr(ctx, cx, cy, atpX, atpY, 2, 2, '#00cc88');
+            }
+          }
+        }
+      } else if (realm === 2) {
+        // Forest floor: root lines and moss patches
+        if ((tx + ty) % 3 === 0) gr(ctx, cx, cy, 2, 8, 12, 1, shiftColor(fl, -8));
+        if ((tx * 3 + ty) % 5 === 0) {
+          gr(ctx, cx, cy, 4, 4, 3, 3, shiftColor(fl, 10));
+          gr(ctx, cx, cy, 10, 10, 2, 2, shiftColor(fl, 8));
+        }
+      } else if (realm === 3) {
+        // Space station: metallic floor grid
+        if (ty % 2 === 0) gr(ctx, cx, cy, 0, W-1, W, 1, shiftColor(fl, -10));
+        if ((tx + ty) % 4 === 0) {
+          gr(ctx, cx, cy, 7, 7, 2, 2, shiftColor(fl, 18));
+        }
+      } else {
+        // Cathedral: stone blocks with mortar
+        const mortarX = tx % 2 === 0 ? 0 : 8;
+        gr(ctx, cx, cy, mortarX, 0, 8, W, shiftColor(fl, 8));
+        gr(ctx, cx, cy, 0, ty % 2 === 0 ? 0 : 8, W, 8, shiftColor(fl, 4));
+        // Mortar joint lines
+        gr(ctx, cx, cy, 0, 7, W, 2, shiftColor(fl, -10));
+        gr(ctx, cx, cy, 7, 0, 2, W, shiftColor(fl, -10));
       }
       break;
     }
@@ -166,17 +198,35 @@ function drawTile(
     // ── WALL ──────────────────────────────────────────────────────────────
     case '#': {
       gr(ctx, cx, cy, 0, 0, W, W, wl);
-      // Bright top edge (light from above, Undertale-style)
-      gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(wl, 55));
-      gr(ctx, cx, cy, 0, 0, W, 2, shiftColor(wl, 25));
-      // Bright left edge
-      gr(ctx, cx, cy, 0, 0, 1, W, shiftColor(wl, 30));
-      // Dark right / bottom edges (shadow)
-      gr(ctx, cx, cy, W-1, 0, 1, W, shiftColor(wl, -15));
-      gr(ctx, cx, cy, 0, W-1, W, 1, shiftColor(wl, -15));
-      // Realm-specific detail: glowing crack in wall
+      // Top face — lighter edge simulating thickness viewed top-down
+      gr(ctx, cx, cy, 0, 0, W, 3, shiftColor(wl, 40));
+      gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(wl, 65));
+      // Left edge highlight
+      gr(ctx, cx, cy, 0, 0, 2, W, shiftColor(wl, 30));
+      // Bottom / right shadow
+      gr(ctx, cx, cy, W-1, 0, 1, W, shiftColor(wl, -20));
+      gr(ctx, cx, cy, 0, W-1, W, 1, shiftColor(wl, -20));
+      // Realm-specific wall texture
+      if (realm === 1) {
+        // Cell wall: double-membrane pattern
+        if (ty % 3 === 0) gr(ctx, cx, cy, 0, 6, W, 2, shiftColor(wl, 15));
+        if (ty % 3 === 0) gr(ctx, cx, cy, 0, 10, W, 1, shiftColor(wl, 8));
+      } else if (realm === 2) {
+        // Forest wall: bark texture
+        if ((tx + ty) % 4 === 0) gr(ctx, cx, cy, 4, 0, 2, W, shiftColor(wl, 12));
+        if ((tx * 3 + ty) % 6 === 0) gr(ctx, cx, cy, 10, 2, 1, W-4, shiftColor(wl, 8));
+      } else if (realm === 3) {
+        // Space wall: panel seams
+        gr(ctx, cx, cy, 0, W/2, W, 1, shiftColor(wl, 20));
+        if (tx % 2 === 0) gr(ctx, cx, cy, W/2, 0, 1, W, shiftColor(wl, 15));
+      } else {
+        // Cathedral: stone blocks
+        gr(ctx, cx, cy, 0, W/2, W, 2, shiftColor(wl, 18));
+        if (tx % 3 === 0) gr(ctx, cx, cy, W-2, 0, 2, W, shiftColor(wl, -10));
+      }
+      // Glowing accent crack (realm-colored)
       if ((tx * 3 + ty * 7) % 9 === 0) {
-        gr(ctx, cx, cy, 6, 3, 1, 10, acc.slice(0, 7) + '55');
+        gr(ctx, cx, cy, 6, 3, 1, 10, acc + '55');
         gr(ctx, cx, cy, 6, 7, 1, 3, acc);
       }
       break;
