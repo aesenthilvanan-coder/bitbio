@@ -1,607 +1,946 @@
-"use client";
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useGameStore } from "@/lib/store";
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useGameStore } from '@/lib/store';
 
-// ── Matrix bio rain canvas ─────────────────────────────────────────────────────
-function BioRain() {
+// ─── Seeded RNG (stable across SSR/CSR, no hydration mismatch) ───────────────
+function mkRng(seed: number) {
+  let s = seed;
+  return () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; };
+}
+const rng = mkRng(0xdeadbeef);
+
+// ─── Pre-generated scene data (deterministic) ─────────────────────────────────
+const STARS = Array.from({ length: 240 }, () => ({
+  x: rng(), y: rng() * 0.54,
+  r: rng() > 0.85 ? 2 : 1,
+  phase: rng() * Math.PI * 2,
+  speed: 0.3 + rng() * 1.6,
+}));
+
+const FLOWERS = Array.from({ length: 50 }, (_, i) => ({
+  xr: 0.02 + rng() * 0.96,
+  yr: 0.73 + rng() * 0.17,
+  size: 2 + Math.floor(rng() * 3),
+  color: ['#ff5599', '#00ffcc', '#bb55ff', '#55ffaa', '#ffcc22'][i % 5],
+  phase: rng() * Math.PI * 2,
+  speed: 0.35 + rng() * 0.8,
+  glow: rng() > 0.45,
+}));
+
+const FAR_TREES  = Array.from({ length: 30 }, (_, i) => ({ xr: (i + rng()*0.7-0.35)/29, h: 28 + rng()*22 }));
+const MID_TREES  = Array.from({ length: 22 }, (_, i) => ({ xr: (i + rng()*0.7-0.35)/21, h: 44 + rng()*32, glow: rng()>0.55 }));
+const NEAR_TREES = Array.from({ length: 15 }, (_, i) => ({ xr: (i + rng()*0.7-0.35)/14, h: 58 + rng()*42 }));
+
+const mkPeaks = (n: number, lo: number, hi: number) =>
+  Array.from({ length: n }, () => lo + rng() * (hi - lo));
+const M_FAR  = mkPeaks(32, 0.07, 0.22);
+const M_MID  = mkPeaks(26, 0.055, 0.17);
+const M_NEAR = mkPeaks(22, 0.04, 0.13);
+
+// ─── Canvas drawing primitives ────────────────────────────────────────────────
+const ip = Math.round;
+
+function drawMountains(
+  ctx: CanvasRenderingContext2D, W: number, H: number,
+  peaks: number[], baseFrac: number, col: string,
+) {
+  const baseY = H * baseFrac;
+  const step   = W / (peaks.length - 1);
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  ctx.lineTo(0, baseY - peaks[0] * H);
+  for (let i = 0; i < peaks.length - 1; i++) {
+    const x0 = i * step, x1 = (i + 1) * step;
+    const y0 = baseY - peaks[i] * H, y1 = baseY - peaks[i + 1] * H;
+    ctx.quadraticCurveTo(x0 + step * 0.5, Math.min(y0, y1) - H * 0.008, x1, y1);
+  }
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawDNATree(
+  ctx: CanvasRenderingContext2D, cx: number, baseY: number,
+  h: number, col: string, glowCol?: string,
+) {
+  if (glowCol) { ctx.shadowColor = glowCol; ctx.shadowBlur = 7; }
+  const cx_ = ip(cx), topY = ip(baseY - h);
+  ctx.fillStyle = col;
+  // trunk
+  ctx.fillRect(cx_ - 1, topY, 2, ip(h * 0.72));
+  // double-helix rungs
+  const rungs = ip(h / 10);
+  for (let r = 0; r < rungs; r++) {
+    const ry = ip(baseY - (r + 0.5) * 10);
+    const sp = ip(5 - (r / rungs) * 3);
+    if (ry > topY + 6 && ry < ip(baseY)) {
+      ctx.fillRect(cx_ - sp - 1, ry, sp, 1);
+      ctx.fillRect(cx_ + 1,      ry, sp, 1);
+    }
+  }
+  // crown
+  ctx.fillRect(cx_ - 6, topY - 1, 12, 4);
+  ctx.fillRect(cx_ - 4, topY - 3, 8,  2);
+  ctx.fillRect(cx_ - 2, topY - 5, 4,  2);
+  ctx.shadowBlur = 0;
+}
+
+function drawFlower(
+  ctx: CanvasRenderingContext2D, x: number, y: number,
+  sz: number, col: string, glow: boolean,
+) {
+  if (glow) { ctx.shadowColor = col; ctx.shadowBlur = sz * 3.5; }
+  const s = ip(sz), x_ = ip(x), y_ = ip(y);
+  ctx.fillStyle = col;
+  ctx.fillRect(x_ - ip(s/2), y_ - s*2, s, s); // up
+  ctx.fillRect(x_ - ip(s/2), y_,       s, s); // down
+  ctx.fillRect(x_ - s*2,     y_ - s,   s, s); // left
+  ctx.fillRect(x_,           y_ - s,   s, s); // right
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(x_ - ip(s/2), y_ - s, s, s);   // center
+  ctx.shadowBlur = 0;
+}
+
+function drawEnzyme(ctx: CanvasRenderingContext2D, cx: number, by: number, frame: number) {
+  const S = 2.4;
+  const f = ip(frame / 10) % 4;
+  const cx_ = ip(cx), by_ = ip(by);
+  ctx.shadowColor = 'rgba(255,255,255,0.3)';
+  ctx.shadowBlur = 5;
+  // body
+  ctx.fillStyle = '#f0f0f0';
+  ctx.fillRect(cx_ - ip(5*S), by_ - ip(10*S), ip(10*S), ip(8*S));
+  // head
+  ctx.fillRect(cx_ - ip(4*S), by_ - ip(16*S), ip(8*S), ip(7*S));
+  // ears
+  ctx.fillRect(cx_ - ip(5*S), by_ - ip(19*S), ip(3*S), ip(3*S));
+  ctx.fillRect(cx_ + ip(2*S), by_ - ip(19*S), ip(3*S), ip(3*S));
+  ctx.fillStyle = '#ffb6c1';
+  ctx.fillRect(cx_ - ip(4*S), by_ - ip(18*S), ip(2*S), ip(2*S));
+  ctx.fillRect(cx_ + ip(2*S), by_ - ip(18*S), ip(2*S), ip(2*S));
+  // eyes
+  const blink = frame % 90 > 84;
+  ctx.fillStyle = blink ? '#f0f0f0' : '#111111';
+  ctx.fillRect(cx_ - ip(2*S), by_ - ip(13*S), ip(S), blink ? 0 : ip(S));
+  ctx.fillRect(cx_ + ip(S),   by_ - ip(13*S), ip(S), blink ? 0 : ip(S));
+  if (!blink) { ctx.fillStyle = '#00bbaa'; ctx.fillRect(cx_ - ip(2*S), by_ - ip(13*S), ip(S/2), ip(S/2)); }
+  // nose
+  ctx.fillStyle = '#ffb6c1';
+  ctx.fillRect(cx_ - ip(S/2), by_ - ip(11.5*S), ip(S), ip(S/2));
+  // whiskers
+  ctx.fillStyle = '#c8c8c8';
+  ctx.fillRect(cx_ - ip(6.5*S), by_ - ip(12*S), ip(4*S), 1);
+  ctx.fillRect(cx_ + ip(2.5*S), by_ - ip(12*S), ip(4*S), 1);
+  // tail
+  const tWag = ip(Math.sin(frame * 0.1) * 3 * S);
+  ctx.fillStyle = '#f0f0f0';
+  ctx.fillRect(cx_ + ip(4*S) + tWag, by_ - ip(7*S), ip(4*S), ip(S));
+  ctx.fillRect(cx_ + ip(7*S) + tWag, by_ - ip(9*S), ip(S),   ip(3*S));
+  // legs
+  const l1 = f < 2 ? ip(S) : 0;
+  const l2 = f < 2 ? 0 : ip(S);
+  ctx.fillStyle = '#e0e0e0';
+  ctx.fillRect(cx_ - ip(3*S), by_ - ip(2*S) + l1, ip(2*S), ip(4*S));
+  ctx.fillRect(cx_ + ip(S),   by_ - ip(2*S) + l2, ip(2*S), ip(4*S));
+  ctx.fillStyle = '#d0d0d0';
+  ctx.fillRect(cx_ - ip(4*S), by_ - ip(2*S) + l2, ip(2*S), ip(3*S));
+  ctx.fillRect(cx_ + ip(2*S), by_ - ip(2*S) + l1, ip(2*S), ip(3*S));
+  // paws
+  ctx.fillStyle = '#ffb6c1';
+  ctx.fillRect(cx_ - ip(3*S), by_ + ip(2*S) + l1, ip(2*S), ip(S));
+  ctx.fillRect(cx_ + ip(S),   by_ + ip(2*S) + l2, ip(2*S), ip(S));
+  ctx.shadowBlur = 0;
+}
+
+function renderScene(ctx: CanvasRenderingContext2D, W: number, H: number, t: number, frame: number) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = false;
+
+  // 1. Sky gradient
+  const sg = ctx.createLinearGradient(0, 0, 0, H * 0.76);
+  sg.addColorStop(0,    '#010810');
+  sg.addColorStop(0.28, '#021220');
+  sg.addColorStop(0.60, '#061c34');
+  sg.addColorStop(1,    '#0c2a48');
+  ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
+
+  // Horizon glow
+  const hg = ctx.createRadialGradient(W*.5, H*.58, 0, W*.5, H*.58, W*.42);
+  hg.addColorStop(0, 'rgba(0,200,110,0.06)');
+  hg.addColorStop(.6, 'rgba(0,80,60,0.025)');
+  hg.addColorStop(1, 'transparent');
+  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
+
+  // 2. Stars
+  for (const s of STARS) {
+    const a = 0.42 + 0.58 * Math.sin(t * s.speed + s.phase);
+    ctx.fillStyle = `rgba(210,228,255,${a.toFixed(2)})`;
+    ctx.fillRect(ip(s.x * W), ip(s.y * H), s.r, s.r);
+  }
+
+  // 3. Aurora bands
+  const aColors = ['rgba(0,255,150,.044)','rgba(100,20,220,.040)','rgba(0,190,220,.036)'];
+  for (let i = 0; i < 3; i++) {
+    const drift = Math.sin(t * 0.17 + i * 2.0) * 16;
+    const ay = H * 0.11 + i * 22 + drift;
+    const ag = ctx.createLinearGradient(0, ay, 0, ay + 20);
+    ag.addColorStop(0, 'transparent');
+    ag.addColorStop(.5, aColors[i]);
+    ag.addColorStop(1, 'transparent');
+    ctx.fillStyle = ag; ctx.fillRect(0, ip(ay), W, 20);
+  }
+
+  // 4. Three mountain ranges (gothic protein-spire silhouettes)
+  drawMountains(ctx, W, H, M_FAR,  0.54, '#0a1620');
+  drawMountains(ctx, W, H, M_MID,  0.57, '#0e1e2c');
+  drawMountains(ctx, W, H, M_NEAR, 0.60, '#122438');
+
+  // 5. Far DNA tree layer
+  const farBase = H * 0.64;
+  for (const tr of FAR_TREES) drawDNATree(ctx, tr.xr*W, farBase, tr.h*.52, '#08160a');
+
+  // Mid-ground rolling hill fill
+  const mg = ctx.createLinearGradient(0, H*.60, 0, H*.78);
+  mg.addColorStop(0, '#0d280a'); mg.addColorStop(1, '#091c06');
+  ctx.fillStyle = mg;
+  ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, H*.71);
+  for (let xi = 0; xi <= 28; xi++) {
+    const xf = xi/28;
+    ctx.lineTo(xf*W, H*(0.67 + Math.sin(xf*Math.PI*5+.6)*.038));
+  }
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+
+  // 6. Mid DNA tree layer
+  const midBase = H * 0.72;
+  for (const tr of MID_TREES)
+    drawDNATree(ctx, tr.xr*W, midBase, tr.h*.68, '#142c10', tr.glow ? '#00ff8826' : undefined);
+
+  // Near hill fill
+  const ng = ctx.createLinearGradient(0, H*.73, 0, H);
+  ng.addColorStop(0, '#1a3c12'); ng.addColorStop(.5,'#122c0c'); ng.addColorStop(1,'#0c1e08');
+  ctx.fillStyle = ng;
+  ctx.beginPath(); ctx.moveTo(0,H); ctx.lineTo(0, H*.77);
+  for (let xi = 0; xi <= 34; xi++) {
+    const xf = xi/34;
+    ctx.lineTo(xf*W, H*(0.74 + Math.sin(xf*Math.PI*7+1.3)*.022));
+  }
+  ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+
+  // 7. Near DNA tree layer
+  const nearBase = H * 0.80;
+  for (const tr of NEAR_TREES) drawDNATree(ctx, tr.xr*W, nearBase, tr.h*.84, '#1e4418', '#00ff4422');
+
+  // 8. Foreground grass base
+  const fg = ctx.createLinearGradient(0, H*.83, 0, H);
+  fg.addColorStop(0,'#0e2408'); fg.addColorStop(.55,'#091a06'); fg.addColorStop(1,'#030802');
+  ctx.fillStyle = fg; ctx.fillRect(0, ip(H*.85), W, H);
+
+  // Grass blades
+  ctx.fillStyle = '#1a4010';
+  for (let gx = 0; gx < W; gx += 5) {
+    const bh = 3 + Math.sin(gx*.32 + t*.5)*3;
+    const gy = H*.855 + Math.sin(gx*.08)*2;
+    ctx.fillRect(ip(gx), ip(gy-bh), 1, ip(bh));
+    if (gx%15===0) ctx.fillRect(ip(gx+2), ip(gy-bh*.6), 1, ip(bh*.6));
+  }
+
+  // 9. Bioluminescent flowers
+  for (const fl of FLOWERS) {
+    const fy = fl.yr*H + Math.sin(t*fl.speed + fl.phase)*1.8;
+    if (fy > H*.77 && fy < H*.91)
+      drawFlower(ctx, fl.xr*W, fy, fl.size, fl.color, fl.glow);
+  }
+
+  // 10. Enzyme cat walking across left side
+  const catPeriod = 420;
+  const catXFrac = (frame % catPeriod) / catPeriod;
+  drawEnzyme(ctx, W*.06 + catXFrac*W*.28, H*.857, frame);
+
+  // 11. Dark foreground silhouette
+  const ds = ctx.createLinearGradient(0, H*.90, 0, H);
+  ds.addColorStop(0,'transparent'); ds.addColorStop(.35,'rgba(3,8,2,.85)'); ds.addColorStop(1,'#020602');
+  ctx.fillStyle = ds; ctx.fillRect(0, ip(H*.90), W, H);
+
+  // Dense silhouette grass
+  ctx.fillStyle = '#050c03';
+  for (let gx = 0; gx < W; gx += 3) {
+    const bh = 5 + Math.sin(gx*.23+t*.28)*5;
+    ctx.fillRect(ip(gx), ip(H*.93-bh), 1, ip(bh));
+  }
+}
+
+// ─── Biology Scene Canvas ─────────────────────────────────────────────────────
+function BiologySceneCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frameRef  = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext('2d')!;
+    let raf: number;
+    let startTs = 0;
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      canvas.width  = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
     };
     resize();
-    window.addEventListener("resize", resize);
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
 
-    const TERMS = [
-      "ADENINE","THYMINE","GUANINE","CYTOSINE","PYTHON","DNA","RNA","ML",
-      "ATP","GTP","HELIX","CODON","EXON","INTRON","RIBOSOME","MRNA","TRNA",
-      "CRISPR","BLAST","PROTEIN","FOLDING","NEURON","SYNAPSE","GRADIENT",
-    ];
-    const COLS = 40;
-    const drops: { x: number; y: number; speed: number; term: string; opacity: number }[] = [];
-
-    for (let i = 0; i < COLS; i++) {
-      drops.push({
-        x: (i / COLS) * window.innerWidth + Math.random() * 30,
-        y: Math.random() * -window.innerHeight,
-        speed: 0.3 + Math.random() * 0.5,
-        term: TERMS[Math.floor(Math.random() * TERMS.length)],
-        opacity: 0.04 + Math.random() * 0.08,
-      });
-    }
-
-    let rafId: number;
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.font = "10px 'Press Start 2P', monospace";
-
-      drops.forEach((d) => {
-        ctx.fillStyle = `rgba(0, 80, 20, ${d.opacity})`;
-        d.term.split("").forEach((ch, ci) => {
-          ctx.fillText(ch, d.x, d.y + ci * 14);
-        });
-        d.y += d.speed;
-        if (d.y > canvas.height + 200) {
-          d.y = -200;
-          d.term = TERMS[Math.floor(Math.random() * TERMS.length)];
-          d.x = Math.random() * canvas.width;
-        }
-      });
-
-      rafId = requestAnimationFrame(draw);
+    const loop = (ts: number) => {
+      if (!startTs) startTs = ts;
+      const t = (ts - startTs) / 1000;
+      frameRef.current++;
+      const { width: W, height: H } = canvas;
+      if (W > 0 && H > 0) renderScene(ctx, W, H, t, frameRef.current);
+      raf = requestAnimationFrame(loop);
     };
-    draw();
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener("resize", resize);
-    };
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 0,
-        imageRendering: "pixelated",
-        display: "block",
-        pointerEvents: "none",
-      }}
+      className="absolute inset-0 w-full h-full"
+      style={{ imageRendering: 'pixelated' }}
     />
   );
 }
 
-// ── Pixel art canvas hero ──────────────────────────────────────────────────────
-function HeroCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const tRef = useRef(0);
-
+// ─── Nav ──────────────────────────────────────────────────────────────────────
+function LandingNav({ onStart, isReturning }: { onStart: () => void; isReturning: boolean }) {
+  const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
-    const S = 2;
-
-    const gr = (x: number, y: number, w: number, h: number, c: string) => {
-      ctx.fillStyle = c;
-      ctx.fillRect(x * S, y * S, w * S, h * S);
-    };
-
-    const drawDNA = (ox: number, oy: number, t: number, color1: string, color2: string) => {
-      for (let i = 0; i < 40; i++) {
-        const wave = Math.sin((i * 0.4) + t) * 8;
-        gr(ox + 10 + wave, oy + i * 2, 3, 2, color1);
-        gr(ox + 10 - wave, oy + i * 2, 3, 2, color2);
-        if (i % 4 === 0) {
-          const lx = Math.min(10 + wave, 10 - wave);
-          const lw = Math.abs(wave * 2);
-          if (lw > 1) {
-            gr(ox + lx + 3, oy + i * 2, lw, 1, i % 8 === 0 ? "#ff4422" : "#44cc44");
-          }
-        }
-      }
-    };
-
-    const drawEnzyme = (ox: number, oy: number, frame: number) => {
-      gr(ox + 2, oy + 4, 8, 6, "#ffffff");
-      gr(ox + 1, oy + 5, 10, 4, "#ffffff");
-      gr(ox + 3, oy, 6, 5, "#ffffff");
-      gr(ox + 3, oy - 2, 2, 2, "#ffffff");
-      gr(ox + 7, oy - 2, 2, 2, "#ffffff");
-      gr(ox + 3, oy - 1, 1, 1, "#ffaaaa");
-      gr(ox + 7, oy - 1, 1, 1, "#ffaaaa");
-      gr(ox + 4, oy + 1, 2, 1, "#000000");
-      gr(ox + 7, oy + 1, 2, 1, "#000000");
-      gr(ox + 4, oy + 1, 1, 1, "#00ffcc");
-      gr(ox + 6, oy + 2, 1, 1, "#ffaaaa");
-      const tailY = frame === 0 ? 1 : 0;
-      gr(ox + 11, oy + 5 + tailY, 2, 3, "#ffffff");
-      gr(ox + 13, oy + 3 + tailY, 2, 2, "#ffffff");
-      gr(ox + 2, oy + 9, 2, 3, "#dddddd");
-      gr(ox + 5, oy + 9, 2, 3, "#dddddd");
-      gr(ox + 8, oy + 9, 2, 3, "#dddddd");
-    };
-
-    const drawAvatar = (ox: number, oy: number, frame: number) => {
-      gr(ox + 2, oy + 8, 8, 10, "#e8e8e8");
-      gr(ox + 1, oy + 9, 2, 8, "#e8e8e8");
-      gr(ox + 9, oy + 9, 2, 8, "#e8e8e8");
-      gr(ox + 3, oy + 18, 3, 6, "#1a3a6a");
-      gr(ox + 7, oy + 18, 3, 6, "#1a3a6a");
-      gr(ox + 2, oy + 23, 4, 2, "#222222");
-      gr(ox + 7, oy + 23, 4, 2, "#222222");
-      gr(ox + 2, oy + 1, 8, 7, "#c68642");
-      gr(ox + 2, oy, 8, 3, "#2a1a0a");
-      gr(ox + 3, oy + 3, 2, 1, "#000000");
-      gr(ox + 7, oy + 3, 2, 1, "#000000");
-      gr(ox + 9, oy + 8, 3, 8, "#225522");
-      gr(ox + 9, oy + 10, 3, 1, "#338833");
-      if (frame === 1) {
-        gr(ox + 3, oy + 21, 3, 3, "#1a3a6a");
-        gr(ox + 7, oy + 18, 3, 5, "#1a3a6a");
-      }
-    };
-
-    const drawStar = (x: number, y: number, bright: boolean) => {
-      gr(x, y, 1, 1, bright ? "#ffffff" : "#554477");
-    };
-
-    let rafId: number;
-    const walk = { x: 5, enzX: 20 };
-
-    const animate = () => {
-      const t = (tRef.current += 0.03);
-      const frame = Math.floor(t * 2) % 2;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#030008";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const starPositions = [[12,8],[45,15],[78,5],[110,20],[148,3],[180,12],[200,25],[230,8],[265,18]];
-      starPositions.forEach(([sx, sy]) => drawStar(sx, sy, Math.sin(t + sx * 0.1) > 0.3));
-
-      ctx.fillStyle = "#020609";
-      ctx.fillRect(0, 0, 120 * S, 100 * S);
-      drawDNA(5, 10, t, "#1166bb", "#11aa66");
-      drawDNA(25, 5, t * 0.8 + 1, "#ff4422", "#4488ff");
-      ctx.fillStyle = "#00ffcc22";
-      ctx.fillRect(0, 0, 120 * S, 100 * S);
-
-      ctx.fillStyle = "#020602";
-      ctx.fillRect(120 * S, 0, 100 * S, 100 * S);
-      drawDNA(130, 5, t * 1.2 + 2, "#44cc44", "#ffcc00");
-
-      ctx.fillStyle = "#030008";
-      ctx.fillRect(220 * S, 0, 100 * S, 100 * S);
-      [[235,15],[255,8],[275,20],[260,30]].forEach(([nx,ny]) => {
-        ctx.fillStyle = Math.sin(t + nx * 0.1) > 0 ? "#aa44ff" : "#550088";
-        ctx.fillRect(nx * S, ny * S, 4 * S, 4 * S);
-        ctx.fillStyle = "#440066";
-        ctx.fillRect((nx+1) * S, (ny+1) * S, 2 * S, 2 * S);
-      });
-
-      ctx.fillStyle = "#040210";
-      ctx.fillRect(320 * S, 0, 80 * S, 100 * S);
-      [[325,0],[345,0],[360,0]].forEach(([px,py]) => {
-        ctx.fillStyle = "#1a1530";
-        ctx.fillRect((px+2) * S, py * S, 4 * S, 50 * S);
-        ctx.fillStyle = "#ffaa00";
-        ctx.fillRect((px+2) * S, py * S, 4 * S, S);
-      });
-
-      walk.x = 60 + Math.sin(t * 0.3) * 20;
-      walk.enzX = walk.x + 14;
-      drawAvatar(walk.x, 68, frame);
-      drawEnzyme(walk.enzX, 75, frame);
-
-      ctx.fillStyle = "#1a1a2a";
-      ctx.fillRect(0, 94 * S, canvas.width, 6 * S);
-      ctx.fillStyle = "#2a2a3a";
-      ctx.fillRect(0, 93 * S, canvas.width, S);
-
-      rafId = requestAnimationFrame(animate);
-    };
-
-    canvas.width = 800;
-    canvas.height = 200;
-    animate();
-    return () => cancelAnimationFrame(rafId);
+    const h = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', h, { passive: true });
+    return () => window.removeEventListener('scroll', h);
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{ imageRendering: "pixelated", width: "100%", maxWidth: 800, display: "block" } as React.CSSProperties}
-    />
-  );
-}
-
-// ── Menu item with SOUL heart ──────────────────────────────────────────────────
-const MENU_ITEMS = [
-  { label: "START GAME", action: "start" },
-  { label: "WORLDS",     action: "worlds" },
-  { label: "CURRICULUM", action: "learn" },
-  { label: "ABOUT",      action: "about" },
-];
-
-function SoulHeart({ visible }: { visible: boolean }) {
-  return (
-    <span
+    <nav
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-200"
       style={{
-        display: "inline-block",
-        width: 10,
-        height: 10,
-        marginRight: 12,
-        color: "#00ffcc",
-        opacity: visible ? 1 : 0,
-        transition: "opacity 0.05s",
-        fontSize: 12,
-        lineHeight: "10px",
-        verticalAlign: "middle",
-        filter: visible ? "drop-shadow(0 0 4px #00ffcc)" : "none",
+        background: scrolled ? 'rgba(1,8,16,0.97)' : 'rgba(1,8,16,0.88)',
+        backdropFilter: 'blur(10px)',
+        borderBottom: scrolled ? '1px solid rgba(0,255,150,0.12)' : '1px solid transparent',
+        height: 60,
       }}
     >
-      ❤
-    </span>
+      <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 no-underline">
+          <span
+            className="font-pixel"
+            style={{ fontSize: 14, color: '#39ff14', textShadow: '0 0 12px #39ff1466', letterSpacing: '0.06em' }}
+          >
+            BIT
+          </span>
+          <span style={{ fontSize: 14, color: '#00ffcc', fontFamily: "'Press Start 2P', monospace", textShadow: '0 0 12px #00ffcc66' }}>
+            BIO
+          </span>
+        </Link>
+
+        {/* Center nav links */}
+        <div className="hidden md:flex items-center gap-1">
+          {[
+            { label: 'Learn',     href: '#realms' },
+            { label: 'Realms',    href: '#realms' },
+            { label: 'Community', href: '#about'  },
+            { label: 'About',     href: '#about'  },
+          ].map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              style={{
+                padding: '8px 14px',
+                fontFamily: "'Press Start 2P', monospace",
+                fontSize: 8,
+                color: '#8899aa',
+                textDecoration: 'none',
+                transition: 'color 0.15s',
+                letterSpacing: '0.04em',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#ccddee')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#8899aa')}
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+
+        {/* Right actions */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onStart}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 8, color: '#8899aa', padding: '8px 12px',
+              letterSpacing: '0.04em',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#8899aa')}
+          >
+            {isReturning ? 'CONTINUE' : 'SIGN IN'}
+          </button>
+          <button
+            onClick={onStart}
+            style={{
+              background: '#b8e643',
+              border: '2px solid #8ab022',
+              color: '#0a1a00',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 8,
+              padding: '10px 20px',
+              cursor: 'pointer',
+              letterSpacing: '0.04em',
+              transition: 'background 0.12s, transform 0.08s',
+              imageRendering: 'pixelated',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#cef855'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#b8e643'; e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            {isReturning ? 'RESUME →' : 'START FREE →'}
+          </button>
+        </div>
+      </div>
+    </nav>
   );
 }
 
-// ── World preview cards ────────────────────────────────────────────────────────
-const WORLDS = [
+// ─── Realm data ───────────────────────────────────────────────────────────────
+const REALMS = [
   {
-    name: "The Cytoplasm",
-    color: "#00ffaa",
-    bg: "#020609",
-    border: "#00ffaa33",
-    mentor: "Elliot",
-    topics: ["Cell biology", "DNA & RNA", "Proteins", "Organelles", "ATP synthesis"],
-    emoji: "🔬",
-    desc: "Enter a living cell. Guide ribosomes, repair membranes, and face a rogue lysosome.",
+    name: 'The Cytoplasm',      num: 1, color: '#00ffcc',
+    accent: '#00ffcc22',        emoji: '🔬',
+    mentor: 'Elliot',           mentorQuip: '"Mitochondria is the powerhouse of the cell. I will say it forever."',
+    topics: ['Cell biology', 'Organelles', 'ATP synthesis', 'Membrane dynamics', 'Cell cycle'],
+    desc: 'Enter a living cell. Navigate organelle rooms, cross lysosome acid pools, and defend against a rogue protease.',
+    bg: '#020a0e',
   },
   {
-    name: "Genome Forest",
-    color: "#52b788",
-    bg: "#020602",
-    border: "#52b78833",
-    mentor: "Ben",
-    topics: ["DNA sequencing", "BLAST", "RNA-seq", "CRISPR", "Variant calling"],
-    emoji: "🌿",
-    desc: "Navigate DNA helix trees, decode corrupted sequences, and fix a retrovirus-infected genome.",
+    name: 'The Genome Forest',  num: 2, color: '#52d483',
+    accent: '#52d48322',        emoji: '🌿',
+    mentor: 'Ben',              mentorQuip: '"DNA double helix? More like a double helix of DELICIOUS information."',
+    topics: ['DNA sequencing', 'BLAST', 'RNA-seq', 'CRISPR', 'Population genetics'],
+    desc: 'Navigate ancient helix trees, decode corrupted sequences, and cross the RNA River to reach the gene vault.',
+    bg: '#020a04',
   },
   {
-    name: "Neural Nebula",
-    color: "#a855f7",
-    bg: "#030008",
-    border: "#a855f733",
-    mentor: "Alex",
-    topics: ["Neural networks", "Transformers", "Model evaluation", "Overfitting", "PyTorch"],
-    emoji: "🌌",
-    desc: "Float through deep space. Train models that actually generalize. Fight OVERFIT.",
+    name: 'The Neural Nebula',  num: 3, color: '#a855f7',
+    accent: '#a855f722',        emoji: '🌌',
+    mentor: 'Alex',             mentorQuip: '"*sips fourth coffee* Back-propagation is just coffee flowing in reverse."',
+    topics: ['Neural networks', 'Transformers', 'CNNs', 'Overfitting', 'PyTorch'],
+    desc: 'Float through deep space platforms. Train models that actually generalize. Face the OVERFIT.',
+    bg: '#03000c',
   },
   {
-    name: "Protein Cathedral",
-    color: "#c0a0ff",
-    bg: "#040210",
-    border: "#c0a0ff33",
-    mentor: "Henry",
-    topics: ["Protein structure", "AlphaFold", "Drug discovery", "GNNs", "Structural biology"],
-    emoji: "🏛️",
-    desc: "Explore a gothic cathedral of misfolded proteins. Henry waits at the end.",
+    name: 'Protein Cathedral',  num: 4, color: '#c0a0ff',
+    accent: '#c0a0ff22',        emoji: '🏛️',
+    mentor: 'Henry',            mentorQuip: '"*flickers* Greetings. I am definitely not a hologram. Achoo!"',
+    topics: ['Protein structure', 'AlphaFold', 'Drug discovery', 'GNNs', 'Systems biology'],
+    desc: 'Explore a gothic cathedral of misfolded proteins. Henry\'s holographic form waits at the grand altar.',
+    bg: '#040210',
   },
 ];
 
-// ── Main page ──────────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const router = useRouter();
-  const { isAuthenticated, onboardingComplete, setUser } = useGameStore();
-  const [loaded, setLoaded] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState<number | null>(null);
-  const [view, setView] = useState<"title" | "worlds" | "learn" | "about">("title");
+  const { isAuthenticated, onboardingComplete, progress } = useGameStore();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  useEffect(() => {
-    setLoaded(true);
-    if (isAuthenticated && onboardingComplete) router.push("/realm/1");
-    else if (isAuthenticated && !onboardingComplete) router.push("/onboarding/character");
-  }, [isAuthenticated, onboardingComplete, router]);
+  const isReturning = isAuthenticated && onboardingComplete;
 
   const handleStart = () => {
-    setUser("BitBio Player", "player@bitbio.io");
-    router.push("/onboarding/character");
-  };
-
-  const handleMenuItem = (action: string) => {
-    if (action === "start") { handleStart(); return; }
-    setView(action as typeof view);
+    if (isAuthenticated && onboardingComplete) {
+      router.push(`/realm/${progress.currentRealm}`);
+    } else {
+      router.push('/onboarding/character');
+    }
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "#000",
-        color: "#e5e7eb",
-        fontFamily: "'Press Start 2P', 'Courier New', monospace",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* Bio rain background */}
-      <BioRain />
+    <div style={{ background: '#010810', color: '#e5e7eb', fontFamily: "'Press Start 2P', 'Courier New', monospace" }}>
+      <LandingNav onStart={handleStart} isReturning={isReturning} />
 
-      {/* Animated pixel-art border */}
-      <div
-        className="animate-border-cycle"
-        style={{
-          position: "fixed",
-          inset: 0,
-          border: "4px solid var(--realm-1)",
-          pointerEvents: "none",
-          zIndex: 2,
-        }}
-      />
+      {/* ═══════════════════════════ HERO SECTION ════════════════════════════ */}
+      <section style={{ position: 'relative', height: '100vh', minHeight: 600, overflow: 'hidden' }}>
+        <BiologySceneCanvas />
 
-      {/* CRT scanline overlay */}
-      <div
-        className="scanlines"
-        style={{
-          position: "fixed",
-          inset: 0,
-          pointerEvents: "none",
-          zIndex: 3,
-        }}
-      />
-
-      {/* ── Title screen view ── */}
-      {view === "title" && (
+        {/* Gradient fade at bottom of hero */}
         <div
           style={{
-            position: "relative",
-            zIndex: 10,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "100%",
-            gap: 0,
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '22%',
+            background: 'linear-gradient(to bottom, transparent, #010810)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Hero text overlay */}
+        <div
+          style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            paddingTop: 60,
+            textAlign: 'center',
+            pointerEvents: 'none',
           }}
         >
-          {/* Hero canvas */}
-          <div
-            style={{
-              border: "2px solid #1a1a2a",
-              background: "#030008",
-              overflow: "hidden",
-              width: "min(800px, 90vw)",
-              marginBottom: 32,
-            }}
-          >
-            <HeroCanvas />
-          </div>
-
-          {/* BITBIO logo with color-cycling glow */}
-          <div
-            className="animate-realm-color"
+          {/* "START YOUR" label */}
+          <p
             style={{
               fontFamily: "'Press Start 2P', monospace",
-              fontSize: "clamp(28px, 6vw, 56px)",
-              letterSpacing: "0.12em",
-              lineHeight: 1.2,
-              marginBottom: 40,
-              opacity: loaded ? 1 : 0,
-              transition: "opacity 0.5s",
+              fontSize: 'clamp(8px, 1.4vw, 14px)',
+              letterSpacing: '0.35em',
+              color: '#7aaa8a',
+              marginBottom: 16,
+              opacity: mounted ? 1 : 0,
+              transition: 'opacity 0.6s',
+              textShadow: '0 2px 8px rgba(0,0,0,0.8)',
             }}
           >
-            BITBIO
-          </div>
+            START YOUR
+          </p>
 
-          {/* Menu items */}
-          <div
+          {/* BIOLOGY ADVENTURE title */}
+          <h1
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 0,
-              alignItems: "flex-start",
-              minWidth: 260,
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 'clamp(36px, 7.5vw, 88px)',
+              lineHeight: 1.18,
+              marginBottom: 28,
+              opacity: mounted ? 1 : 0,
+              transition: 'opacity 0.7s 0.1s',
             }}
           >
-            {MENU_ITEMS.map((item, i) => (
-              <button
-                key={item.action}
-                onMouseEnter={() => setHoveredItem(i)}
-                onMouseLeave={() => setHoveredItem(null)}
-                onClick={() => handleMenuItem(item.action)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: hoveredItem === i ? "#ffffff" : "#888888",
-                  fontFamily: "'Press Start 2P', monospace",
-                  fontSize: 11,
-                  cursor: "pointer",
-                  padding: "10px 0",
-                  display: "flex",
-                  alignItems: "center",
-                  animation: `menu-item-fade 0.4s ease-out ${i * 0.1}s both`,
-                  letterSpacing: "0.05em",
-                  transition: "color 0.05s",
-                  textShadow: hoveredItem === i ? "0 0 12px #00ffcc88" : "none",
-                }}
-              >
-                <SoulHeart visible={hoveredItem === i} />
-                {item.label}
-              </button>
-            ))}
-          </div>
+            <span
+              style={{
+                display: 'block',
+                color: '#c8f044',
+                textShadow: '4px 4px 0 #2a4a00, 7px 7px 0 #0f1e00',
+              }}
+            >
+              Biology
+            </span>
+            <span
+              style={{
+                display: 'block',
+                color: '#c8f044',
+                textShadow: '4px 4px 0 #2a4a00, 7px 7px 0 #0f1e00',
+              }}
+            >
+              Adventure
+            </span>
+          </h1>
 
-          {/* Stats row */}
-          <div
+          {/* Subtitle */}
+          <p
             style={{
-              display: "flex",
-              gap: 40,
-              marginTop: 40,
-              flexWrap: "wrap",
-              justifyContent: "center",
-              opacity: 0.6,
-            }}
-          >
-            {[["442+","EXERCISES"],["4","REALMS"],["4","MENTORS"],["100%","FREE"]].map(([n, l]) => (
-              <div key={l} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 18, color: "#00ffcc", marginBottom: 6 }}>{n}</div>
-                <div style={{ fontSize: 7, color: "#555" }}>{l}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Version text */}
-          <div
-            style={{
-              position: "fixed",
-              bottom: 20,
-              right: 24,
-              fontSize: 7,
-              color: "#333",
               fontFamily: "'Courier New', monospace",
-              letterSpacing: "0.02em",
+              fontSize: 'clamp(12px, 1.6vw, 16px)',
+              color: '#aabbaa',
+              marginBottom: 36,
+              opacity: mounted ? 1 : 0,
+              transition: 'opacity 0.7s 0.2s',
+              textShadow: '0 2px 8px rgba(0,0,0,0.9)',
+              letterSpacing: '0.02em',
             }}
           >
-            BitBio v1.0 // by Dr. Henry Lacks
+            The most immersive way to learn biology. Ever. ✦
+          </p>
+
+          {/* CTA Button */}
+          <button
+            onClick={handleStart}
+            style={{
+              pointerEvents: 'all',
+              background: '#b8e643',
+              border: '3px solid #7ab010',
+              color: '#0a1800',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 'clamp(10px, 1.4vw, 13px)',
+              padding: 'clamp(14px, 2vw, 20px) clamp(28px, 4vw, 48px)',
+              cursor: 'pointer',
+              letterSpacing: '0.06em',
+              opacity: mounted ? 1 : 0,
+              transition: 'opacity 0.7s 0.3s, background 0.12s, transform 0.08s, box-shadow 0.12s',
+              boxShadow: '0 4px 0 #4a7000, 0 0 40px #b8e64355',
+              imageRendering: 'pixelated',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#cef855';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 0 #4a7000, 0 0 60px #c8f04466';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#b8e643';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 0 #4a7000, 0 0 40px #b8e64355';
+            }}
+          >
+            {isReturning ? 'CONTINUE JOURNEY →' : 'BEGIN JOURNEY →'}
+          </button>
+
+          {/* Partner/credit bar */}
+          <div
+            style={{
+              marginTop: 48,
+              display: 'flex', alignItems: 'center', gap: 24,
+              opacity: mounted ? 0.65 : 0,
+              transition: 'opacity 0.8s 0.4s',
+            }}
+          >
+            <span style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: '#556655', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              POWERED BY
+            </span>
+            {['SCIENCE', 'PIXEL ART', 'CURIOSITY'].map((label) => (
+              <span
+                key={label}
+                style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: '#7aaa6a', letterSpacing: '0.08em' }}
+              >
+                {label}
+              </span>
+            ))}
           </div>
         </div>
-      )}
+      </section>
 
-      {/* ── Worlds view ── */}
-      {view === "worlds" && (
+      {/* ══════════════════════════ STATS BAR ════════════════════════════════ */}
+      <section
+        style={{
+          background: '#06100a',
+          borderTop: '2px solid #1a3a20',
+          borderBottom: '2px solid #1a3a20',
+          padding: '48px 24px',
+        }}
+      >
         <div
           style={{
-            position: "relative",
-            zIndex: 10,
-            overflowY: "auto",
-            height: "100%",
-            padding: "40px 24px",
+            maxWidth: 900, margin: '0 auto',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 40, textAlign: 'center',
           }}
         >
-          <button
-            onClick={() => setView("title")}
-            style={{ background: "none", border: "none", color: "#00ffcc", fontFamily: "'Press Start 2P', monospace", fontSize: 9, cursor: "pointer", marginBottom: 32 }}
-          >
-            ← BACK
-          </button>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div style={{ fontSize: 14, color: "#00ffcc", marginBottom: 12 }}>4 WORLDS</div>
+          {[
+            { n: '500+', label: 'Interactive exercises' },
+            { n: '4',    label: 'Immersive realms' },
+            { n: '4',    label: 'NPC mentors' },
+            { n: '100%', label: 'Free to play' },
+          ].map(({ n, label }) => (
+            <div key={label}>
+              <div style={{ fontSize: 'clamp(28px, 4vw, 44px)', color: '#b8e643', fontFamily: "'Press Start 2P', monospace", marginBottom: 12 }}>
+                {n}
+              </div>
+              <div style={{ fontSize: 'clamp(10px, 1.2vw, 14px)', color: '#4a6a50', fontFamily: "'Courier New', monospace", lineHeight: 1.5, letterSpacing: '0.04em' }}>
+                {label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════ REALMS SECTION ═════════════════════════════ */}
+      <section id="realms" style={{ padding: 'clamp(60px, 8vw, 100px) 24px', background: '#010c06' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <p style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(8px, 1.1vw, 11px)', color: '#4a8a5a', letterSpacing: '0.3em', marginBottom: 20 }}>
+              YOUR ADVENTURE AWAITS
+            </p>
+            <h2 style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(22px, 4vw, 40px)', color: '#c8f044', textShadow: '3px 3px 0 #2a4a00', lineHeight: 1.3 }}>
+              Explore Your Four Realms
+            </h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20, maxWidth: 960, margin: "0 auto" }}>
-            {WORLDS.map((w) => (
-              <div key={w.name} style={{ background: w.bg, border: `2px solid ${w.border}`, padding: 20, position: "relative", overflow: "hidden" }}>
-                <div style={{ position: "absolute", top: 0, right: 0, width: 60, height: 60, background: `radial-gradient(circle at top right, ${w.color}22, transparent)` }} />
-                <div style={{ fontSize: 28, marginBottom: 10 }}>{w.emoji}</div>
-                <div style={{ fontSize: 9, color: w.color, marginBottom: 10, lineHeight: 1.6 }}>{w.name}</div>
-                <div style={{ fontSize: 9, color: "#555", marginBottom: 14, lineHeight: 1.8, fontFamily: "'Courier New', monospace" }}>{w.desc}</div>
-                <div style={{ fontSize: 8, color: "#555", marginBottom: 6 }}>MENTOR: <span style={{ color: w.color }}>{w.mentor}</span></div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {w.topics.map((topic) => (
-                    <span key={topic} style={{ background: "#ffffff08", border: `1px solid ${w.color}22`, color: w.color, fontSize: 7, padding: "2px 6px" }}>{topic}</span>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24 }}>
+            {REALMS.map((realm) => (
+              <div
+                key={realm.name}
+                style={{
+                  background: realm.bg,
+                  border: `2px solid ${realm.color}33`,
+                  padding: 28,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'border-color 0.2s, transform 0.15s, box-shadow 0.2s',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = realm.color + '88';
+                  e.currentTarget.style.transform = 'translateY(-3px)';
+                  e.currentTarget.style.boxShadow = `0 8px 40px ${realm.color}22`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = realm.color + '33';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+                onClick={handleStart}
+              >
+                {/* Background corner glow */}
+                <div style={{
+                  position: 'absolute', top: 0, right: 0,
+                  width: 80, height: 80,
+                  background: `radial-gradient(circle at top right, ${realm.color}18, transparent)`,
+                  pointerEvents: 'none',
+                }} />
+
+                <div style={{ fontSize: 36, marginBottom: 14 }}>{realm.emoji}</div>
+                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: realm.color, marginBottom: 10, lineHeight: 1.6 }}>
+                  {realm.name}
+                </div>
+                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, color: '#5a7a60', marginBottom: 18, lineHeight: 1.75 }}>
+                  {realm.desc}
+                </div>
+                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: '#3a5a40', marginBottom: 14 }}>
+                  MENTOR: <span style={{ color: realm.color }}>{realm.mentor}</span>
+                </div>
+                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: realm.color + 'aa', marginBottom: 16, lineHeight: 1.6, fontStyle: 'italic' }}>
+                  {realm.mentorQuip}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {realm.topics.map((t) => (
+                    <span key={t} style={{
+                      background: '#ffffff06',
+                      border: `1px solid ${realm.color}28`,
+                      color: realm.color + 'cc',
+                      fontFamily: "'Courier New', monospace",
+                      fontSize: 9, padding: '3px 8px',
+                    }}>{t}</span>
                   ))}
                 </div>
               </div>
             ))}
           </div>
         </div>
-      )}
+      </section>
 
-      {/* ── Curriculum view ── */}
-      {view === "learn" && (
-        <div
-          style={{
-            position: "relative",
-            zIndex: 10,
-            overflowY: "auto",
-            height: "100%",
-            padding: "40px 24px",
-            maxWidth: 900,
-            margin: "0 auto",
-            width: "100%",
-          }}
-        >
-          <button
-            onClick={() => setView("title")}
-            style={{ background: "none", border: "none", color: "#00ffcc", fontFamily: "'Press Start 2P', monospace", fontSize: 9, cursor: "pointer", marginBottom: 32 }}
-          >
-            ← BACK
-          </button>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div style={{ fontSize: 12, color: "#52b788" }}>WHAT YOU&apos;LL LEARN</div>
+      {/* ════════════════════════ HOW IT WORKS ═══════════════════════════════ */}
+      <section style={{ padding: 'clamp(60px, 8vw, 100px) 24px', background: '#010810' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <p style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(8px, 1.1vw, 11px)', color: '#445566', letterSpacing: '0.3em', marginBottom: 20 }}>
+              YOUR JOURNEY
+            </p>
+            <h2 style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(20px, 3.5vw, 38px)', color: '#c8f044', textShadow: '3px 3px 0 #2a4a00', lineHeight: 1.3 }}>
+              How It Works
+            </h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
-            <div>
-              <div style={{ color: "#00ffcc", fontSize: 9, marginBottom: 14 }}>BIOLOGY</div>
-              {["Cell biology & organelles","DNA replication & transcription","Protein synthesis & folding","Membrane dynamics","Enzyme kinetics","CRISPR-Cas9"].map(t => (
-                <div key={t} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                  <span style={{ color: "#00ffcc", fontSize: 10 }}>▸</span>
-                  <span style={{ color: "#888", fontSize: 9, fontFamily: "'Courier New', monospace" }}>{t}</span>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 36 }}>
+            {[
+              {
+                step: '01', icon: '🎮',
+                title: 'Choose Your Avatar',
+                desc: 'Design your character. Pick skin tone, hair, outfit. Your avatar walks the realms with Enzyme, your white cat companion.',
+                color: '#00ffcc',
+              },
+              {
+                step: '02', icon: '🗺️',
+                title: 'Explore the World',
+                desc: 'Move through 40×28 tile maps — organelle rooms, DNA forest clearings, neural platform hubs, protein cathedral naves.',
+                color: '#52d483',
+              },
+              {
+                step: '03', icon: '📚',
+                title: 'Learn Through Quests',
+                desc: 'Approach glowing lesson nodes. Answer questions about biology & ML. Earn XP, gems, and lore entries in the Codex.',
+                color: '#a855f7',
+              },
+              {
+                step: '04', icon: '⚔️',
+                title: 'Defeat the Realm Boss',
+                desc: 'Complete all 9 nodes to unlock the boss gate. Defeat LYSO, VIRON, OVERFIT, and the AMYLOID TYRANT.',
+                color: '#c0a0ff',
+              },
+              {
+                step: '05', icon: '🔬',
+                title: 'Unlock the Research Tree',
+                desc: 'Spend earned XP to unlock 24 research nodes — from Cell Theory to Foundation Models. Build your knowledge graph.',
+                color: '#ffaa00',
+              },
+              {
+                step: '06', icon: '🏆',
+                title: 'Earn Your Certificate',
+                desc: 'Defeat all 4 bosses to unlock your completion certificate. 50+ achievements to collect along the way.',
+                color: '#ff5599',
+              },
+            ].map(({ step, icon, title, desc, color }) => (
+              <div key={step} style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: 28, lineHeight: 1,
+                    color: color, opacity: 0.25,
+                    marginBottom: 10,
+                  }}>{step}</div>
+                  <div style={{ fontSize: 28 }}>{icon}</div>
                 </div>
-              ))}
-            </div>
-            <div>
-              <div style={{ color: "#a855f7", fontSize: 9, marginBottom: 14 }}>COMPUTATION</div>
-              {["Python & bioinformatics tools","Sequence alignment & BLAST","Machine learning fundamentals","Neural networks & transformers","AlphaFold & structure prediction","Drug discovery pipelines"].map(t => (
-                <div key={t} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                  <span style={{ color: "#a855f7", fontSize: 10 }}>▸</span>
-                  <span style={{ color: "#888", fontSize: 9, fontFamily: "'Courier New', monospace" }}>{t}</span>
+                <div>
+                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color, marginBottom: 12, lineHeight: 1.6 }}>
+                    {title}
+                  </div>
+                  <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, color: '#4a6a55', lineHeight: 1.75 }}>
+                    {desc}
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
-      )}
+      </section>
 
-      {/* ── About view ── */}
-      {view === "about" && (
-        <div
-          style={{
-            position: "relative",
-            zIndex: 10,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "100%",
-            padding: "40px 24px",
-          }}
-        >
-          <button
-            onClick={() => setView("title")}
-            style={{ background: "none", border: "none", color: "#00ffcc", fontFamily: "'Press Start 2P', monospace", fontSize: 9, cursor: "pointer", marginBottom: 40 }}
-          >
-            ← BACK
-          </button>
-          <div style={{ fontSize: 12, color: "#00ffcc", marginBottom: 28 }}>MADE BY</div>
-          <div style={{ background: "#050d10", border: "2px solid #00ffcc33", padding: 40, maxWidth: 560, textAlign: "center" }}>
-            <div style={{ fontSize: 14, color: "#fff", marginBottom: 14 }}>Aaryan Senthilvanan</div>
-            <div style={{ color: "#666", fontSize: 9, lineHeight: 2, marginBottom: 20, fontFamily: "'Courier New', monospace" }}>
-              A game about learning biology and ML the way games should be — through exploration,
-              storytelling, and pixel art that slaps. Built entirely from scratch with Next.js and canvas.
-            </div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-              {["Next.js 16","Canvas API","TypeScript","Zustand","Tailwind CSS"].map(t => (
-                <span key={t} style={{ background: "#00ffcc11", border: "1px solid #00ffcc22", color: "#00ffcc", fontSize: 7, padding: "3px 8px" }}>{t}</span>
-              ))}
-            </div>
-          </div>
-          <div style={{ marginTop: 24, fontSize: 7, color: "#333", fontFamily: "'Courier New', monospace" }}>
-            BitBio v1.0 // by Dr. Henry Lacks
+      {/* ════════════════════════ CAST SECTION ═══════════════════════════════ */}
+      <section style={{ padding: 'clamp(60px, 8vw, 100px) 24px', background: '#060e08' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(8px, 1.1vw, 11px)', color: '#3a5a3a', letterSpacing: '0.3em', marginBottom: 20 }}>
+            YOUR MENTORS
+          </p>
+          <h2 style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(18px, 3vw, 34px)', color: '#c8f044', textShadow: '3px 3px 0 #2a4a00', lineHeight: 1.3, marginBottom: 48 }}>
+            Meet the Cast
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 28 }}>
+            {[
+              { name: 'Elliot', role: 'Cytoplasm Guide', color: '#00ffcc', emoji: '🔬',
+                bio: 'Lab coat. Curly hair. Has opinions about ribosomes. Very strong opinions.' },
+              { name: 'Ben',    role: 'Genome Forest Guide', color: '#52d483', emoji: '🌿',
+                bio: 'Always eating a sandwich. Sequenced 3 genomes today. Productive morning.' },
+              { name: 'Alex',   role: 'Neural Nebula Guide', color: '#a855f7', emoji: '☕',
+                bio: 'Four coffees in. Convinced back-prop flows backward like cold espresso.' },
+              { name: 'Henry',  role: 'Protein Cathedral Guide', color: '#c0a0ff', emoji: '👻',
+                bio: '*flickers* I am definitely not a hologram. Please stop trying to walk through me.' },
+              { name: 'Enzyme', role: 'Your Companion', color: '#ffaa44', emoji: '🐱',
+                bio: 'White cat. Teal eyes. Follows you everywhere. Has never missed a boss fight.' },
+            ].map(({ name, role, color, emoji, bio }) => (
+              <div
+                key={name}
+                style={{
+                  background: '#010c04',
+                  border: `2px solid ${color}28`,
+                  padding: 24,
+                  transition: 'border-color 0.2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + '66')}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = color + '28')}
+              >
+                <div style={{ fontSize: 36, marginBottom: 12 }}>{emoji}</div>
+                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color, marginBottom: 8 }}>{name}</div>
+                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: color + '88', marginBottom: 12 }}>{role}</div>
+                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: '#3a5a40', lineHeight: 1.7 }}>{bio}</div>
+              </div>
+            ))}
           </div>
         </div>
-      )}
+      </section>
+
+      {/* ══════════════════════════ FINAL CTA ════════════════════════════════ */}
+      <section
+        id="about"
+        style={{
+          padding: 'clamp(80px, 10vw, 120px) 24px',
+          background: 'linear-gradient(180deg, #020a06 0%, #010810 100%)',
+          textAlign: 'center',
+          borderTop: '2px solid #1a3a20',
+        }}
+      >
+        <div style={{ maxWidth: 700, margin: '0 auto' }}>
+          <div style={{ fontSize: 48, marginBottom: 24 }}>🐱</div>
+          <h2
+            style={{
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 'clamp(22px, 4vw, 44px)',
+              color: '#c8f044',
+              textShadow: '4px 4px 0 #2a4a00, 7px 7px 0 #0f1e00',
+              lineHeight: 1.3,
+              marginBottom: 28,
+            }}
+          >
+            Your cells are<br />waiting.
+          </h2>
+          <p
+            style={{
+              fontFamily: "'Courier New', monospace",
+              fontSize: 'clamp(13px, 1.6vw, 16px)',
+              color: '#4a6a50',
+              lineHeight: 1.8, marginBottom: 44,
+            }}
+          >
+            Enzyme has been sitting by the Cytoplasm entrance for three days.
+            <br />She&apos;s starting to judge you.
+          </p>
+          <button
+            onClick={handleStart}
+            style={{
+              background: '#b8e643',
+              border: '3px solid #7ab010',
+              color: '#0a1800',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 'clamp(10px, 1.4vw, 14px)',
+              padding: 'clamp(16px, 2.5vw, 24px) clamp(32px, 5vw, 64px)',
+              cursor: 'pointer',
+              letterSpacing: '0.06em',
+              boxShadow: '0 5px 0 #4a7000, 0 0 60px #b8e64340',
+              transition: 'background 0.12s, transform 0.08s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#cef855'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#b8e643'; e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            {isReturning ? 'CONTINUE YOUR ADVENTURE →' : 'START FOR FREE →'}
+          </button>
+        </div>
+      </section>
+
+      {/* ════════════════════════ FOOTER ═════════════════════════════════════ */}
+      <footer
+        style={{
+          background: '#010810',
+          borderTop: '1px solid #0e2010',
+          padding: '32px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 16,
+        }}
+      >
+        <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10 }}>
+          <span style={{ color: '#39ff14' }}>BIT</span>
+          <span style={{ color: '#00ffcc' }}>BIO</span>
+        </div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: '#2a3a2a', letterSpacing: '0.04em', textAlign: 'center' }}>
+          Built entirely with Next.js + Canvas API. No image files — every sprite is drawn from scratch.
+          <br />
+          Made by <span style={{ color: '#39ff14' }}>Aaryan Senthilvanan</span> · BitBio v1.0
+        </div>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[
+            { label: 'Next.js 16', color: '#334' },
+            { label: 'Canvas API', color: '#334' },
+            { label: 'TypeScript', color: '#334' },
+            { label: 'Zustand', color: '#334' },
+          ].map(({ label }) => (
+            <span
+              key={label}
+              style={{
+                background: '#0a1408',
+                border: '1px solid #1a2818',
+                color: '#2a4a2a',
+                fontFamily: "'Courier New', monospace",
+                fontSize: 9, padding: '3px 8px',
+              }}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }

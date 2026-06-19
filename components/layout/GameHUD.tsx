@@ -34,8 +34,28 @@ export default function GameHUD() {
             <XPDisplay xp={progress.totalXP} compact />
           </div>
 
+          {/* Nav links */}
+          <div className="hidden md:flex items-center gap-1 flex-shrink-0">
+            {[
+              { href: '/quests', icon: '📜', label: 'QUESTS' },
+              { href: '/codex', icon: '📖', label: 'CODEX' },
+              { href: '/research', icon: '🔬', label: 'RESEARCH' },
+              { href: '/achievements', icon: '🏆', label: 'TROPHIES' },
+            ].map((nav) => (
+              <Link
+                key={nav.href}
+                href={nav.href}
+                className="flex items-center gap-1 px-2 py-1 border border-transparent hover:border-[#374151] hover:bg-[#1f2937] transition-all"
+                title={nav.label}
+              >
+                <span className="text-sm">{nav.icon}</span>
+                <span className="font-pixel text-[6px] text-gray-500 hover:text-gray-300 hidden lg:block">{nav.label}</span>
+              </Link>
+            ))}
+          </div>
+
           {/* Right — Hearts + Gems + Streak */}
-          <div className="flex items-center gap-4 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0">
             {/* Streak */}
             {progress.streakDays > 0 && (
               <div className="flex items-center gap-1">
@@ -44,11 +64,11 @@ export default function GameHUD() {
               </div>
             )}
 
-            {/* Gems */}
-            <div className="flex items-center gap-1">
+            {/* Gems — link to shop */}
+            <Link href="/shop" className="flex items-center gap-1 hover:opacity-80 transition-opacity">
               <span className="text-sm">💎</span>
               <span className="font-pixel text-[8px] text-[#00ffff]">{progress.gems}</span>
-            </div>
+            </Link>
 
             {/* Hearts */}
             <HeartDisplay hearts={progress.hearts} maxHearts={progress.maxHearts} size="sm" />

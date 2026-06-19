@@ -122,13 +122,13 @@ function drawTile(
 ) {
   const W = TILE; // 16 game pixels per tile
 
-  // Per-realm base colors — visible atmospheric floors (NOT near-black)
+  // Per-realm base colors — clearly visible atmospheric floors
   // Realm 1: bioluminescent teal cell interior
   // Realm 2: dark forest earth
   // Realm 3: deep space station deck
   // Realm 4: gothic stone cathedral
-  const FLOORS = ['#1a3a44', '#162a0a', '#14083a', '#1e1438'];
-  const WALLS  = ['#0f2530', '#0d1e05', '#0e052a', '#160f30'];
+  const FLOORS = ['#2a6070', '#2a5018', '#281870', '#362860'];
+  const WALLS  = ['#1a3a4a', '#183010', '#1a0a50', '#241848'];
   const ACCENTS  = ['#00ffcc', '#00ff44', '#aa44ff', '#ffaa00'];
   const fl  = FLOORS[realm - 1]  ?? palette.floor;
   const wl  = WALLS[realm - 1]   ?? palette.wall;
@@ -1089,6 +1089,239 @@ interface Petal {
 }
 const blossomPetals: Petal[] = [];
 
+// ─── Enzyme overworld companion ────────────────────────────────────────────────
+// Rolling position history so Enzyme trails the player naturally
+const ENZYME_LAG = 20; // frames behind
+const playerPosHistory: { x: number; y: number }[] = [];
+
+function pushPosHistory(px: number, py: number) {
+  playerPosHistory.push({ x: px, y: py });
+  if (playerPosHistory.length > ENZYME_LAG + 4) playerPosHistory.shift();
+}
+
+function getEnzymePos(interpPX: number, interpPY: number) {
+  if (playerPosHistory.length < ENZYME_LAG) return { x: interpPX - 1.5, y: interpPY + 0.5 };
+  const h = playerPosHistory[playerPosHistory.length - ENZYME_LAG];
+  return { x: h.x - 0.5, y: h.y + 0.5 };
+}
+
+function drawEnzymeCompanion(
+  ctx: CanvasRenderingContext2D,
+  sx: number, sy: number,   // screen pixel position (center of tile)
+  globalFrame: number
+) {
+  // White cat, ~16×20 game pixels, SCALE=3
+  const S = SCALE;
+  const f = globalFrame;
+  const bob = Math.floor(f / 30) % 2 === 0 ? 0 : -1;    // idle head bob
+  const tailSwing = Math.round(Math.sin(f * 0.12) * 2);  // tail wag
+  const blinkOpen = (f % 80) < 74;
+  const eyeH = blinkOpen ? 2 : 1;
+
+  // ox/oy: top-left of 16-wide sprite centred on sx
+  const ox = Math.round(sx - 8 * S);
+  const oy = Math.round(sy - 14 * S);
+
+  const r = (gx: number, gy: number, gw: number, gh: number, c: string) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(ox + gx * S, oy + gy * S, gw * S, gh * S);
+  };
+
+  // TAIL (behind body, draw first)
+  r(0, 10 + tailSwing, 3, 2, '#e8e8e8');
+  r(0,  8 + tailSwing, 2, 3, '#e8e8e8');
+
+  // BODY (14×8)
+  r(2, 8, 12, 8, '#f0f0f0');
+  r(3, 7, 10, 2, '#f0f0f0'); // shoulder rise
+
+  // HEAD (10×9, slightly offset up)
+  r(3, bob - 1, 10, 9, '#f0f0f0');
+
+  // EARS (2×3 each, triangular)
+  r(3, bob - 3, 2, 3, '#f0f0f0');
+  r(11, bob - 3, 2, 3, '#f0f0f0');
+  r(3, bob - 3, 1, 2, '#ffb3c6'); // inner ear pink
+  r(12, bob - 3, 1, 2, '#ffb3c6');
+
+  // EYES
+  r(5, bob + 2, 2, eyeH, '#1a1a1a');
+  r(9, bob + 2, 2, eyeH, '#1a1a1a');
+  // Eye shine
+  if (blinkOpen) {
+    r(5, bob + 2, 1, 1, '#ffffff');
+    r(9, bob + 2, 1, 1, '#ffffff');
+  }
+
+  // NOSE
+  r(7, bob + 5, 2, 1, '#ffb3c6');
+
+  // WHISKERS (left)
+  r(1, bob + 4, 4, 1, '#cccccc');
+  r(1, bob + 6, 4, 1, '#cccccc');
+  // WHISKERS (right)
+  r(11, bob + 4, 4, 1, '#cccccc');
+  r(11, bob + 6, 4, 1, '#cccccc');
+
+  // LEGS (4 small stubs)
+  const legPairShift = Math.floor(f / 15) % 2 === 0 ? 0 : 1;
+  r(3, 15 - legPairShift, 3, 3, '#f0f0f0');
+  r(10, 15 + legPairShift, 3, 3, '#f0f0f0');
+  r(5, 15 + legPairShift, 3, 3, '#e8e8e8');
+  r(8, 15 - legPairShift, 3, 3, '#e8e8e8');
+
+  // PAW TIPS (pink)
+  r(3, 17 - legPairShift, 3, 1, '#ffccd8');
+  r(10, 17 + legPairShift, 3, 1, '#ffccd8');
+  r(5, 17 + legPairShift, 3, 1, '#ffccd8');
+  r(8, 17 - legPairShift, 3, 1, '#ffccd8');
+}
+
+// ─── NPC face portraits for dialogue box ──────────────────────────────────────
+function drawNpcPortrait(
+  ctx: CanvasRenderingContext2D,
+  px: number, py: number,   // top-left of 24×24 game-pixel portrait area
+  npc: string,
+  frame: number
+) {
+  const S = 3; // portrait scale: 3 canvas px per game px → 72×72 total
+  const r = (gx: number, gy: number, gw: number, gh: number, c: string) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(px + gx * S, py + gy * S, gw * S, gh * S);
+  };
+  const blink = (frame % 90) < 6;
+
+  const npcKey = npc.toUpperCase();
+  if (npcKey === 'ELLIOT' || npcKey === 'E') {
+    // Background
+    r(0, 0, 24, 24, '#0d1a0d');
+    // Neck/collar
+    r(10, 16, 4, 3, '#4488cc');
+    r(5, 18, 14, 6, '#e8e8f0');   // lab coat shoulders
+    r(8, 19, 8, 5, '#e8e8f0');
+    // Head skin
+    r(7, 3, 10, 11, '#c68642');
+    // Curly hair
+    r(7, 3, 10, 4, '#2a1a0a');
+    r(5, 2, 3, 2, '#2a1a0a');
+    r(16, 2, 3, 2, '#2a1a0a');
+    r(4, 4, 3, 3, '#2a1a0a');
+    r(17, 4, 3, 3, '#2a1a0a');
+    // Glasses cyan lenses
+    r(8, 8, 3, 2, '#00cccc');
+    r(13, 8, 3, 2, '#00cccc');
+    r(11, 8, 2, 1, '#888888'); // bridge
+    // Eyes
+    r(9, 7, 2, blink ? 1 : 2, '#1a1a1a');
+    r(14, 7, 2, blink ? 1 : 2, '#1a1a1a');
+    // Nose
+    r(11, 11, 2, 1, '#b07050');
+    // Mouth
+    r(9, 13, 6, 1, '#8b4513');
+    // Buttons
+    r(11, 21, 2, 1, '#666');
+    r(11, 23, 2, 1, '#666');
+    // Chest pocket pen
+    r(7, 20, 3, 4, '#d8d8e4');
+    r(7, 20, 1, 3, '#4466aa');
+  } else if (npcKey === 'BEN' || npcKey === 'B') {
+    r(0, 0, 24, 24, '#0d1a09');
+    // Hoodie
+    r(4, 17, 16, 7, '#2d5a27');
+    r(7, 19, 10, 5, '#2d5a27');
+    // Pocket
+    r(8, 21, 8, 4, '#1a3a17');
+    // Neck
+    r(10, 15, 4, 3, '#d4956a');
+    // Head
+    r(7, 3, 10, 12, '#d4956a');
+    // Hair flat-top
+    r(7, 3, 10, 4, '#8b5e3c');
+    // Eyebrows
+    r(8, 7, 3, 1, '#6b3e1c');
+    r(13, 7, 3, 1, '#6b3e1c');
+    // Eyes
+    r(8, 8, 3, blink ? 1 : 2, '#3a2a1a');
+    r(13, 8, 3, blink ? 1 : 2, '#3a2a1a');
+    // Nose
+    r(11, 11, 2, 2, '#c07050');
+    // Big smile
+    r(9, 13, 6, 1, '#a06040');
+    r(9, 14, 6, 1, '#884030');
+    // Sandwich in hand visible at bottom right
+    r(18, 20, 5, 2, '#f5d78a');
+    r(18, 22, 5, 2, '#4aaa44');
+    r(18, 24, 5, 2, '#f5d78a');
+  } else if (npcKey === 'ALEX' || npcKey === 'A') {
+    r(0, 0, 24, 24, '#080810');
+    // Turtleneck
+    r(7, 14, 10, 5, '#111111');
+    r(5, 17, 14, 7, '#1a1a1a');
+    // Head
+    r(7, 3, 10, 12, '#d4a07a');
+    // Sleek dark hair
+    r(7, 2, 10, 5, '#1a1a1a');
+    // Angular brows
+    r(8, 7, 3, 1, '#1a1a1a');
+    r(13, 7, 3, 1, '#1a1a1a');
+    // Sharp eyes (slightly squinting)
+    r(9, 8, 2, blink ? 1 : 2, '#2a2a4a');
+    r(13, 8, 2, blink ? 1 : 2, '#2a2a4a');
+    // Nose (minimal)
+    r(11, 11, 2, 1, '#c08060');
+    // Pursed lips
+    r(10, 13, 4, 1, '#8a6050');
+    // Coffee cup in hand
+    r(18, 19, 5, 6, '#ffffff');
+    r(18, 19, 5, 1, '#cc4400');
+    r(19, 20, 3, 5, '#e8e8e8');
+  } else if (npcKey === 'HENRY' || npcKey === 'H') {
+    const flicker = frame % 3 === 0 ? 0.45 : frame % 3 === 1 ? 0.75 : 0.6;
+    ctx.globalAlpha = 0.15;
+    r(0, 0, 24, 24, '#001a18');
+    ctx.globalAlpha = 1;
+    r(0, 0, 24, 24, '#000818');
+    // Holographic glow outline
+    ctx.globalAlpha = flicker * 0.3;
+    r(5, 1, 14, 24, '#00ffcc');
+    ctx.globalAlpha = flicker;
+    // Body
+    r(5, 17, 14, 7, '#00cccc');
+    r(7, 19, 10, 5, '#00cccc');
+    // Chest circuit traces
+    r(8, 20, 4, 1, '#00ffff');
+    r(14, 21, 1, 3, '#00ffff');
+    // Head
+    r(7, 3, 10, 12, '#00ffcc');
+    // Silver hair
+    r(7, 3, 10, 3, '#e0e0ff');
+    // Circuit trace on forehead
+    r(7, 5, 10, 1, '#00ffff');
+    // Eyes (bright white)
+    r(9, 7, 3, blink ? 1 : 3, '#ffffff');
+    r(13, 7, 3, blink ? 1 : 3, '#ffffff');
+    // Smile
+    r(9, 13, 7, 1, '#ffffff');
+    // Scan-line glitch
+    if (frame % 4 === 0) {
+      r(11, 0, 1, 24, '#ffffff');
+    }
+    ctx.globalAlpha = 1;
+  } else {
+    // Enzyme fallback
+    r(0, 0, 24, 24, '#0d0d0d');
+    r(7, 3, 10, 10, '#f0f0f0');
+    r(7, 3, 2, 3, '#f0f0f0');
+    r(15, 3, 2, 3, '#f0f0f0');
+    r(8, 5, 2, 2, '#1a1a1a');
+    r(14, 5, 2, 2, '#1a1a1a');
+    r(11, 8, 2, 1, '#ffb3c6');
+    r(9, 11, 6, 1, '#cccccc');
+    r(5, 16, 4, 6, '#e8e8e8');
+    r(15, 16, 4, 6, '#e8e8e8');
+  }
+}
+
 // ─── Mini-map ─────────────────────────────────────────────────────────────────
 function drawMinimap(
   ctx: CanvasRenderingContext2D,
@@ -1146,7 +1379,8 @@ function drawDialogueBox(
   npcName: string,
   accentColor: string,
   CW: number,
-  CH: number
+  CH: number,
+  globalFrame: number = 0
 ) {
   const PORTRAIT = 80;   // portrait box size
   const PAD = 12;
@@ -1168,22 +1402,21 @@ function drawDialogueBox(
   ctx.strokeStyle = shiftColor(accentColor, -70);
   ctx.strokeRect(bx + 4, by + 4, bw - 8, bh - 8);
 
-  // ── Portrait box on the left
+  // ── Portrait box: render actual NPC face (24×24 game pixels = 72×72 canvas px)
+  const PBOX_W = 72, PBOX_H = 72;
   ctx.fillStyle = '#000000';
-  ctx.fillRect(bx + PAD, by + PAD, PORTRAIT, PORTRAIT - 8);
+  ctx.fillRect(bx + PAD, by + PAD, PBOX_W + 8, PBOX_H + 8);
   ctx.strokeStyle = accentColor;
   ctx.lineWidth = 2;
-  ctx.strokeRect(bx + PAD, by + PAD, PORTRAIT, PORTRAIT - 8);
-  // Pixel face placeholder inside portrait
-  ctx.fillStyle = accentColor + '33';
-  ctx.fillRect(bx + PAD + 4, by + PAD + 4, PORTRAIT - 8, PORTRAIT - 16);
-  // Draw a simple pixel-face silhouette
-  ctx.fillStyle = accentColor + '88';
-  const fx = bx + PAD + PORTRAIT / 2 - 10, fy = by + PAD + 8;
-  ctx.fillRect(fx, fy, 20, 20);      // head
-  ctx.fillRect(fx + 4, fy + 4, 3, 3); // left eye
-  ctx.fillRect(fx + 13, fy + 4, 3, 3); // right eye
-  ctx.fillRect(fx + 5, fy + 13, 10, 2); // mouth
+  ctx.strokeRect(bx + PAD, by + PAD, PBOX_W + 8, PBOX_H + 8);
+
+  // Clip and draw actual NPC portrait
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bx + PAD + 4, by + PAD + 4, PBOX_W, PBOX_H);
+  ctx.clip();
+  drawNpcPortrait(ctx, bx + PAD + 4, by + PAD + 4, npcName, globalFrame);
+  ctx.restore();
 
   // ── Name label above portrait, Undertale-style colored tag
   ctx.fillStyle = accentColor;
@@ -1196,29 +1429,31 @@ function drawDialogueBox(
   ctx.fillText(nameLabel, bx + PAD + 8, by - 4);
 
   // ── Dialogue text (typewriter) — Press Start 2P, white, 10px
+  const effectiveTextX = bx + 80 + PAD * 2 + 8; // offset past wider portrait
+  const effectiveTextW = bw - 80 - PAD * 3 - 8;
   const text = lines[lineIndex] ?? '';
   const shown = text.slice(0, charProgress);
   ctx.fillStyle = '#ffffff';
   ctx.font = "10px 'Press Start 2P', monospace";
 
-  // Word-wrap to fit textW (roughly 52 chars at 10px)
-  const maxCharsPerLine = Math.floor(textW / 6.5);
+  // Word-wrap to fit effectiveTextW
+  const maxCharsPerLine = Math.floor(effectiveTextW / 6.5);
   const words = shown.split(' ');
   let currentLine = '';
   let lineY = by + 28;
   for (const word of words) {
     const test = currentLine ? currentLine + ' ' + word : word;
     if (test.length > maxCharsPerLine) {
-      ctx.fillText(currentLine, textX, lineY);
+      ctx.fillText(currentLine, effectiveTextX, lineY);
       currentLine = word;
       lineY += 18;
-      if (lineY > by + bh - 16) break; // don't overflow box
+      if (lineY > by + bh - 16) break;
     } else {
       currentLine = test;
     }
   }
   if (currentLine && lineY <= by + bh - 16) {
-    ctx.fillText(currentLine, textX, lineY);
+    ctx.fillText(currentLine, effectiveTextX, lineY);
   }
 
   // ── "Press E" advance prompt — blinking cyan triangle
@@ -1301,7 +1536,7 @@ function drawCutscene(
     // Dialogue box
     const { npc, lines } = world.npcGreeting;
     const NPC_NAMES: Record<string, string> = { elliot: 'ELLIOT', ben: 'BEN', alex: 'ALEX', henry: 'HENRY' };
-    drawDialogueBox(ctx, lines, lineIndex, charProgress, NPC_NAMES[npc] ?? npc, palette.accent, CW, CH);
+    drawDialogueBox(ctx, lines, lineIndex, charProgress, NPC_NAMES[npc] ?? npc, palette.accent, CW, CH, Math.floor(Date.now() / 16));
     return;
   }
 }
@@ -1751,7 +1986,18 @@ function render(
     }
   }
 
-  // Draw player (interpolated position)
+  // Track player position history for Enzyme companion
+  pushPosHistory(interpPX, interpPY);
+
+  // Draw Enzyme companion (trails the player)
+  {
+    const ePos = getEnzymePos(interpPX, interpPY);
+    const enzymeScreenX = Math.round((ePos.x - gs.camX) * TILE * SCALE);
+    const enzymeScreenY = Math.round((ePos.y - gs.camY) * TILE * SCALE);
+    drawEnzymeCompanion(ctx, enzymeScreenX, enzymeScreenY, gs.frame);
+  }
+
+  // Draw player (interpolated position, in front of Enzyme)
   {
     const playerScreenX = Math.round((interpPX - gs.camX) * TILE * SCALE);
     const playerScreenY = Math.round((interpPY - gs.camY) * TILE * SCALE);
@@ -1798,7 +2044,7 @@ function render(
   if (gs.dialogueActive) {
     const NPC_NAMES: Record<string, string> = { E: 'ELLIOT', B: 'BEN', A: 'ALEX', H: 'HENRY' };
     const npcName = gs.nearNpc ? (NPC_NAMES[gs.nearNpc] ?? 'NPC') : 'NPC';
-    drawDialogueBox(ctx, world.npcGreeting.lines, gs.dialogueLine, gs.dialogueChar, npcName, palette.accent, CW, CH);
+    drawDialogueBox(ctx, world.npcGreeting.lines, gs.dialogueLine, gs.dialogueChar, npcName, palette.accent, CW, CH, frame);
   }
 
   // Cutscene overlay

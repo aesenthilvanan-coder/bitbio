@@ -162,6 +162,10 @@ export interface PlayerProgress {
   diagnosticScore?: number;
   age?: number;
   useAgeDiagnostic?: boolean;
+  questsCompleted: string[];
+  dailyRewardDate: string;
+  bossesDefeated: Realm[];
+  researchUnlocked: string[];
 }
 
 export const DEFAULT_PROGRESS: PlayerProgress = {
@@ -177,6 +181,10 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   unlockedRealms: [1],
   achievements: [],
   gems: 50,
+  questsCompleted: [],
+  dailyRewardDate: "",
+  bossesDefeated: [],
+  researchUnlocked: [],
 };
 
 // ─── Achievement ───────────────────────────────────────────────────────────────

@@ -44,9 +44,17 @@ interface GameState {
   // Actions — rewards
   awardXP: (amount: number) => void;
   awardGems: (amount: number) => void;
+  spendGems: (amount: number) => boolean;
   loseHeart: () => void;
   refillHearts: () => void;
   dismissAchievement: () => void;
+
+  // Actions — progression
+  unlockRealm: (realm: Realm) => void;
+  defeatBoss: (realm: Realm) => void;
+  completeQuest: (questId: string) => void;
+  unlockResearch: (nodeId: string, cost: number) => void;
+  claimDailyReward: () => void;
 
   // Actions — mascot
   setMascotAnimation: (anim: string) => void;
@@ -250,6 +258,76 @@ export const useGameStore = create<GameState>()(
         set((state) => ({
           progress: { ...state.progress, gems: state.progress.gems + amount },
         })),
+
+      spendGems: (amount) => {
+        const { progress } = get();
+        if (progress.gems < amount) return false;
+        set((state) => ({
+          progress: { ...state.progress, gems: state.progress.gems - amount },
+        }));
+        return true;
+      },
+
+      // ── Progression ───────────────────────────────────────────────────────────
+      unlockRealm: (realm) =>
+        set((state) => ({
+          progress: {
+            ...state.progress,
+            unlockedRealms: state.progress.unlockedRealms.includes(realm)
+              ? state.progress.unlockedRealms
+              : ([...state.progress.unlockedRealms, realm].sort((a, b) => a - b) as Realm[]),
+            currentRealm: realm,
+          },
+        })),
+
+      defeatBoss: (realm) =>
+        set((state) => ({
+          progress: {
+            ...state.progress,
+            bossesDefeated: state.progress.bossesDefeated.includes(realm)
+              ? state.progress.bossesDefeated
+              : ([...state.progress.bossesDefeated, realm] as Realm[]),
+          },
+        })),
+
+      completeQuest: (questId) =>
+        set((state) => ({
+          progress: {
+            ...state.progress,
+            questsCompleted: state.progress.questsCompleted.includes(questId)
+              ? state.progress.questsCompleted
+              : [...state.progress.questsCompleted, questId],
+          },
+        })),
+
+      unlockResearch: (nodeId, cost) =>
+        set((state) => ({
+          progress: {
+            ...state.progress,
+            researchUnlocked: state.progress.researchUnlocked.includes(nodeId)
+              ? state.progress.researchUnlocked
+              : [...state.progress.researchUnlocked, nodeId],
+            totalXP: Math.max(0, state.progress.totalXP - cost),
+          },
+        })),
+
+      claimDailyReward: () => {
+        const today = new Date().toISOString().split('T')[0];
+        const { progress } = get();
+        const streak = progress.streakDays;
+        let gems = 10;
+        let xp = 0;
+        if (streak >= 6) { gems = 50; xp = 500; }
+        else if (streak >= 3) { gems = 25; xp = 0; }
+        set((state) => ({
+          progress: {
+            ...state.progress,
+            dailyRewardDate: today,
+            gems: state.progress.gems + gems,
+            totalXP: state.progress.totalXP + xp,
+          },
+        }));
+      },
 
       loseHeart: () =>
         set((state) => ({
