@@ -166,6 +166,9 @@ export interface PlayerProgress {
   dailyRewardDate: string;
   bossesDefeated: Realm[];
   researchUnlocked: string[];
+  inventory: string[];
+  openedChests: string[];
+  readSigns: string[];
 }
 
 export const DEFAULT_PROGRESS: PlayerProgress = {
@@ -185,6 +188,9 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   dailyRewardDate: "",
   bossesDefeated: [],
   researchUnlocked: [],
+  inventory: [],
+  openedChests: [],
+  readSigns: [],
 };
 
 // ─── Achievement ───────────────────────────────────────────────────────────────

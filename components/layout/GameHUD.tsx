@@ -38,6 +38,7 @@ export default function GameHUD() {
           <div className="hidden md:flex items-center gap-1 flex-shrink-0">
             {[
               { href: '/quests', icon: '📜', label: 'QUESTS' },
+              { href: '/inventory', icon: '🎒', label: 'INVENTORY' },
               { href: '/codex', icon: '📖', label: 'CODEX' },
               { href: '/research', icon: '🔬', label: 'RESEARCH' },
               { href: '/achievements', icon: '🏆', label: 'TROPHIES' },

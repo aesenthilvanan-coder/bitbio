@@ -10,6 +10,8 @@
 //   1–9  lesson nodes (walkable, interactive)
 //   E  Elliot NPC   B  Ben NPC   A  Alex NPC   H  Henry NPC
 //   @  player start position
+//   C  treasure chest (walkable, E to open)
+//   S  sign / placard (walkable, E to read)
 
 export interface WorldMap {
   id: 1 | 2 | 3 | 4;
@@ -45,11 +47,11 @@ function norm(rows: string[]): string[] {
 // Microtubule Highway, Mitochondria Gardens (bottom), Boss Gate (top-center).
 const CYTOPLASM_RAW: string[] = [
   '########################################', // 0  outer membrane
-  '#......................................#', // 1  entry vestibule
-  '#.#######....B....#######..............#', // 2  organelle room walls; B=boss gate
+  '#.S....................................#', // 1  entry vestibule; S=sign
+  '#.#######..S.B....#######..............#', // 2  organelle room walls; B=boss gate; S=sign near boss gate
   '#.#.....#.........#.....#..............#', // 3  room interiors open
-  '#.#.1.E.#.........#.2...#..TTTTTTTTT..#', // 4  node1+Elliot in Nucleus Lab
-  '#.#.....#.........#.3...#..TTTTTTTTT..#', // 5  node3 in Ribosome Chamber
+  '#.#.1.E.#.C.......#.2...#..TTTTTTTTT..#', // 4  node1+Elliot in Nucleus Lab; C=chest
+  '#.#.....#.........#.3.C.#..TTTTTTTTT..#', // 5  node3+chest in Ribosome Chamber
   '#.#.....#.........#.....#..TTTTTTTTT..#', // 6
   '#.#######.........#######..TTTTTTTTT..#', // 7  room walls close
   '#..........4...........................#', // 8  central cytoplasm; node4
@@ -64,7 +66,7 @@ const CYTOPLASM_RAW: string[] = [
   '#......................................#', // 17
   '#..TTTTT.......................TTTTT...#', // 18 mitochondria west cluster
   '#..TTTTT.......................TTTTT...#', // 19
-  '#..TTTTT........8..............TTTTT..#', // 20 node8
+  '#..TTTTT...C....8..............TTTTT..#', // 20 node8; C=chest near mitochondria
   '#..TTTTT.......................TTTTT...#', // 21
   '#.......................9...............', // 22 node9 east side
   '#..............@.......................#', // 23 player start
@@ -84,14 +86,14 @@ const GENOME_FOREST_RAW: string[] = [
   '#TTTTT.1.TTTTTTTT.2.TTTTTTTTTTTTTTTT.#', // 2  node1, node2 poke through canopy
   '#TTTT.....TTTTTTT.....TTTTTTTTTTTTTTT#', // 3  clearing gaps widen
   '#TTT...........TT..........TTTTTTTTTTT', // 4  big clearing opens
-  '#TT...3.........T....4.....TTTTTTTTTT#', // 5  node3, node4 in clearings
+  '#TT...3.C.......T....4.....TTTTTTTTTT#', // 5  node3, node4 in clearings; C=chest
   '#T............................................', // 6  clearings merge — NOTE: truncated to 40
   '#T...........====.......====..TTTTTT.#', // 7  wooden bridge planks
-  '#............====.......====.........#', // 8  bridge continues
+  '#....S.......====.......====.........#', // 8  bridge continues; S=sign at RNA river
   '#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.#', // 9  RNA River west
   '#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#', // 10 RNA River center
   '#.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#', // 11 RNA River east
-  '#.......B..............................#', // 12 Ben in south clearing
+  '#...S...B..............................#', // 12 Ben in south clearing; S=south clearing sign
   '#..T.....T.....T.....T.....T.....T...#', // 13 scattered south trees
   '#....5.......T.......T...............#', // 14 node5
   '#.T.....T.....T.......T.....T........#', // 15
@@ -99,7 +101,7 @@ const GENOME_FOREST_RAW: string[] = [
   '#...T.......T.......T.....T.....T....#', // 17
   '#.T.....7.......T.......T............#', // 18 node7
   '#....T.....T.......T.....T.....T.....#', // 19
-  '#.T.....T.....T.......T....8.........#', // 20 node8
+  '#.T.....T.....T.......T....8.C.......#', // 20 node8; C=chest
   '#...T.......T.......T.....T..........#', // 21
   '#.T.....T.......T.......T.....T......#', // 22
   '#...T.......T....9......T.....T......#', // 23 node9
@@ -116,7 +118,7 @@ const GENOME_FOREST_RAW: string[] = [
 const NEURAL_NEBULA_RAW: string[] = [
   '########################################', // 0
   '#~~~~~~~~~~~.1.~~~~~~~~.2.~~~~~~~~~~~~#', // 1  node1, node2 on north platforms
-  '#~~~~~~~~~~.....~~~~~~~.....~~~~~~~~~~#', // 2  platform interiors walkable
+  '#~~~~~~~~~~..C..~~~~~~~..C..~~~~~~~~~~#', // 2  platform interiors walkable; C=chests on north platforms
   '#~~~~~~~~~~..T..~~~~~~~..T..~~~~~~~~~~#', // 3  terminal pillars
   '#~~~~~~~~~~.....~~~~~~~.....~~~~~~~~~~#', // 4
   '#~~~~~~~~~~~===~~~~~~~~===~~~~~~~~~~~~#', // 5  synapse bridge stubs
@@ -124,12 +126,12 @@ const NEURAL_NEBULA_RAW: string[] = [
   '#~~~~~~~~~.3.=..........=.4..~~~~~~~~~#', // 7  node3, node4 on mid-platforms
   '#~~~~~~~~~.....========.....~~~~~~~~~~#', // 8  platforms connected
   '#~~~~~~~~~...=..........=...~~~~~~~~~~#', // 9  bridge arches
-  '#~~~~~~~~~....5..............~~~~~~~~~#', // 10 node5 on central hub
+  '#~~~~~~~~~..C.5..............~~~~~~~~~#', // 10 node5 on central hub; C=chest
   '#~~~~~~~~~...T...........T...~~~~~~~~~#', // 11 hub pillars
   '#~~~~~~~~~...=.............=.~~~~~~~~~#', // 12 south bridges
-  '#~~~~~~~~~====.............====~~~~~~~#', // 13 bridge widens
+  '#~~~~~~~~~====......S......====~~~~~~~#', // 13 bridge widens; S=sign on bridge
   '#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#', // 14 void narrows to terminal
-  '#..................................A..#', // 15 terminal floor; Alex NPC
+  '#.S................................A..#', // 15 terminal floor; S=sign, Alex NPC
   '#...6..................................#', // 16 node6
   '#..T........T.........T...............#', // 17
   '#......7.......T.......T..............#', // 18 node7
@@ -157,9 +159,9 @@ const PROTEIN_CATHEDRAL_RAW: string[] = [
   '#T.T.T..T.T.##########.T.T..T.T.T.T.#', // 5
   '#==========.##########.==============#', // 6  beta transept bridge
   '#==========.##########.==============#', // 7
-  '#..T.T.T.T..##########..T.T.T.T.T.T.#', // 8
+  '#.CT.T.T.T..##########..T.T.T.T.T.T.#', // 8  C=chest at (2,8)
   '#.T.T.T..T..##########..T.5.T.T.T.T.#', // 9  node5
-  '#.....6..T..##########..T...T.T.T...#', // 10 node6
+  '#.S...6..T..##########..T...T.T.T...#', // 10 S=sign, node6
   '#.T.T.T..T..##########..T.T.T.T.T.T.#', // 11
   '#=====================================#', // 12 grand cathedral aisle
   '#=====================================#', // 13
@@ -169,7 +171,7 @@ const PROTEIN_CATHEDRAL_RAW: string[] = [
   '#.T.T.T..7.............T.T.T.........#', // 17 node7
   '#..T.T.................T.T...........#', // 18
   '#.T.T.T..8.............T.T.T.........#', // 19 node8
-  '#..T.T.................T.T...........#', // 20
+  '#..T.T..C....S.........T.T...........#', // 20 C=chest at (8,20), S=sign at (13,20)
   '#.T.T.T................T.T.T.........#', // 21
   '#..T.T.................T.T...........#', // 22
   '#.T.T.T....9...........T.T.T.........#', // 23 node9

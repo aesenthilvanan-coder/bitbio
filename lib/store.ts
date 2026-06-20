@@ -56,6 +56,11 @@ interface GameState {
   unlockResearch: (nodeId: string, cost: number) => void;
   claimDailyReward: () => void;
 
+  // Actions — items
+  pickupItem: (itemId: string) => void;
+  openChest: (chestKey: string, itemId: string) => void;
+  markSignRead: (signKey: string) => void;
+
   // Actions — mascot
   setMascotAnimation: (anim: string) => void;
   setMascotDialogue: (id: string | null) => void;
@@ -347,6 +352,44 @@ export const useGameStore = create<GameState>()(
         })),
 
       dismissAchievement: () => set({ showAchievementModal: null }),
+
+      // ── Items ─────────────────────────────────────────────────────────────────
+      pickupItem: (itemId) => {
+        // Import lazily to avoid circular deps
+        const { getItem } = require('./items') as typeof import('./items');
+        const item = getItem(itemId);
+        set((state) => {
+          const updates: Partial<import('./types').PlayerProgress> = {
+            inventory: [...state.progress.inventory, itemId],
+          };
+          if (item?.effect?.xp)    updates.totalXP = (state.progress.totalXP ?? 0) + item.effect.xp;
+          if (item?.effect?.gems)  updates.gems = (state.progress.gems ?? 0) + item.effect.gems;
+          if (item?.effect?.hearts) updates.hearts = Math.min(state.progress.maxHearts, (state.progress.hearts ?? 0) + item.effect.hearts);
+          return { progress: { ...state.progress, ...updates } };
+        });
+      },
+
+      openChest: (chestKey, itemId) => {
+        set((state) => ({
+          progress: {
+            ...state.progress,
+            openedChests: state.progress.openedChests.includes(chestKey)
+              ? state.progress.openedChests
+              : [...state.progress.openedChests, chestKey],
+          },
+        }));
+        get().pickupItem(itemId);
+      },
+
+      markSignRead: (signKey) =>
+        set((state) => ({
+          progress: {
+            ...state.progress,
+            readSigns: state.progress.readSigns.includes(signKey)
+              ? state.progress.readSigns
+              : [...state.progress.readSigns, signKey],
+          },
+        })),
 
       // ── Mascot ────────────────────────────────────────────────────────────────
       setMascotAnimation: (anim) => set({ mascotAnimation: anim }),

@@ -18,7 +18,42 @@ const ANIM_MS = 500;       // ms per animation frame tick
 const WALK_MS = 150;       // ms per walk-frame flip
 const CAM_LERP = 0.12;     // camera smoothing
 
-const WALKABLE = new Set(['.','=','*','1','2','3','4','5','6','7','8','9','E','B','A','H','@']);
+const WALKABLE = new Set(['.','=','*','1','2','3','4','5','6','7','8','9','E','B','A','H','@','C','S']);
+
+// Tracks opened chests across hot-reloads within a session
+const SESSION_OPENED: Set<string> = new Set();
+
+// ─── Chest loot table (realmId-tx-ty → reward lines) ─────────────────────────
+// Keys match exact 'C' tile positions in worldMaps.ts
+const CHEST_LOOT: Record<string, { lines: string[]; gems: number; xp: number }> = {
+  // Realm 1 – Cytoplasm
+  '1-10-4': { lines: ['Nucleus Key!', 'Grants access to the inner gene vault.', '+50 XP  +10 💎'], gems: 10, xp: 50 },
+  '1-22-5': { lines: ['Ribosome Bead!', 'A tRNA binding site, still warm.', '+30 XP  +5 💎'], gems: 5, xp: 30 },
+  '1-11-20':{ lines: ['Mitochondria Shard!', '"The powerhouse of the cell."', '+80 XP  +15 💎'], gems: 15, xp: 80 },
+  // Realm 2 – Genome Forest
+  '2-8-5':  { lines: ['Ancient Base Pair!', 'Adenine + Thymine, intact.', '+60 XP  +10 💎'], gems: 10, xp: 60 },
+  '2-29-20':{ lines: ['CRISPR Guide RNA!', 'Precision gene editing tool.', '+100 XP  +20 💎'], gems: 20, xp: 100 },
+  // Realm 3 – Neural Nebula
+  '3-13-2': { lines: ['Gradient Chip!', 'Backprop, but make it hardware.', '+80 XP  +15 💎'], gems: 15, xp: 80 },
+  '3-25-2': { lines: ['Attention Head!', 'Transformer architecture component.', '+100 XP  +18 💎'], gems: 18, xp: 100 },
+  '3-12-10':{ lines: ['Loss Crystal!', 'Cross-entropy, crystallized.', '+90 XP  +16 💎'], gems: 16, xp: 90 },
+  // Realm 4 – Protein Cathedral
+  '4-2-8':  { lines: ['Alpha Helix Pin!', 'Coiled, stable, beautiful.', '+80 XP  +15 💎'], gems: 15, xp: 80 },
+  '4-8-20': { lines: ['Proteome Atlas!', 'Every known protein, charted.', '+150 XP  +30 💎'], gems: 30, xp: 150 },
+};
+
+// ─── Sign text table (realmId-tx-ty → lines) ─────────────────────────────────
+// Keys match exact 'S' tile positions in worldMaps.ts
+const SIGN_TEXT: Record<string, string[]> = {
+  '1-2-1':  ['Welcome to the Cytoplasm!', 'Press E near glowing nodes to study.', 'Elliot is somewhere inside. Good luck.'],
+  '1-11-2': ['⚠ BOSS GATE AHEAD', 'Complete all 9 lessons to challenge LYSO.', 'Bring snacks. It\'s a lysosome.'],
+  '2-5-8':  ['RNA River Crossing', 'The bridge holds. Probably.', 'Ben built it. He was eating at the time.'],
+  '2-4-12': ['GENOME FOREST SOUTH', 'Dense with ancient helix trees.', 'Ben\'s clearing is just beyond the river.'],
+  '3-2-15': ['NEURAL NEBULA TERMINAL', 'Warning: void is not walkable.', 'Alex spilled coffee here once.'],
+  '3-20-13':['SYNAPSE BRIDGE', 'Signal travels at 120 m/s here.', 'Do not disrupt the action potential.'],
+  '4-2-10': ['PROTEIN CATHEDRAL', 'Built by a thousand misfolded chains.', 'Henry is at the altar. He\'s glowing.'],
+  '4-13-20':['THE BETA SHEET TRANSEPT', 'Hydrogen bonds form the lattice.', 'Look closely — it\'s load-bearing.'],
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Dir = 'up' | 'down' | 'left' | 'right';
@@ -65,6 +100,15 @@ interface GameState {
   nodePromptVisible: boolean;
   // helper button overlay
   helperVisible: boolean;
+  // chest / sign interaction
+  nearChest: { tx: number; ty: number } | null;
+  nearSign: { tx: number; ty: number } | null;
+  signDialogueActive: boolean;
+  signLines: string[];
+  signDialogueLine: number;
+  signDialogueChar: number;
+  signDialogueLastChar: number;
+  chestPopup: { text: string; timer: number } | null;
 }
 
 interface Props {
@@ -106,7 +150,7 @@ function gr(
   ctx.fillRect(cx + gx * SCALE, cy + gy * SCALE, gw * SCALE, gh * SCALE);
 }
 
-// ─── Tile rendering (Undertale / Omori aesthetic: dark backgrounds, clean bold shapes) ────
+// ─── Tile rendering — Omori-quality: organic shapes, rich textures, layered depth ─────────
 function drawTile(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
@@ -122,473 +166,395 @@ function drawTile(
 ) {
   const W = TILE; // 16 game pixels per tile
 
-  // Per-realm base colors — clearly visible atmospheric floors
-  // Realm 1: bioluminescent teal cell interior
-  // Realm 2: dark forest earth
-  // Realm 3: deep space station deck
-  // Realm 4: gothic stone cathedral
-  const FLOORS = ['#2a6070', '#2a5018', '#281870', '#362860'];
-  const WALLS  = ['#1a3a4a', '#183010', '#1a0a50', '#241848'];
-  const ACCENTS  = ['#00ffcc', '#00ff44', '#aa44ff', '#ffaa00'];
-  const fl  = FLOORS[realm - 1]  ?? palette.floor;
-  const wl  = WALLS[realm - 1]   ?? palette.wall;
-  const acc = ACCENTS[realm - 1] ?? palette.accent;
+  // Per-realm Omori-inspired color system — one coherent palette per world
+  const FL  = ['#1d4d55','#9acfaa','#0c0e2e','#1a1530'] as const; // floor base
+  const FLH = ['#255e6a','#b0e4bc','#14163e','#241e40'] as const; // floor highlight
+  const WL  = ['#0d2a30','#2e5038','#040310','#0a0818'] as const; // wall
+  const WLT = ['#1a4550','#3e6848','#0c0c2a','#16133a'] as const; // wall top-face
+  const TC  = ['#005a60','#4abf94','#2a0a6a','#1e1c48'] as const; // tree/org main
+  const TH  = ['#00ffcc','#7ee8bc','#8844ff','#ffaa00'] as const; // tree highlight
+  const TS  = ['#003040','#28906a','#100438','#100e28'] as const; // tree shadow
+  const TR  = ['#1a5060','#7a9870','#1a0848','#2a2060'] as const; // trunk
+  const FLW = ['#00ccaa','#ffb8d8','#aa66ff','#ffcc44'] as const; // flower/detail
+  const ACC = ['#00ffcc','#00ff88','#aa44ff','#ffaa00'] as const; // accent
+
+  const fl  = FL[realm-1];
+  const flH = FLH[realm-1];
+  const wl  = WL[realm-1];
+  const wlT = WLT[realm-1];
+  const tc  = TC[realm-1];
+  const tH  = TH[realm-1];
+  const tS  = TS[realm-1];
+  const tR  = TR[realm-1];
+  const flw = FLW[realm-1];
+  const acc = ACC[realm-1];
+
+  // Deterministic per-tile hash — drives scatter decorations without Math.random()
+  const h1 = (tx * 1664525  + ty * 1013904223) & 0x7fffffff;
+  const h2 = (tx * 22695477 + ty * 1103515245) & 0x7fffffff;
 
   switch (tile) {
 
-    // ── FLOOR ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // FLOOR — organic, textured, scattered decorations
+    // ─────────────────────────────────────────────────────────────────────────
     case '.':
     case '@': {
-      // Base floor fill — visible atmospheric color
       gr(ctx, cx, cy, 0, 0, W, W, fl);
-      // Checkerboard — every other tile 14 brightness higher (clearly visible seam)
-      if ((tx + ty) % 2 === 0) gr(ctx, cx, cy, 0, 0, W, W, shiftColor(fl, 14));
-      // Tile grout lines — 1px darker stripe every 4 tiles both axes
-      if (tx % 4 === 0) gr(ctx, cx, cy, 0, 0, 1, W, shiftColor(fl, -12));
-      if (ty % 4 === 0) gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(fl, -12));
-      // Realm-specific floor texture
-      if (realm === 1) {
-        // Cytoplasm: bioluminescent organic cell floor
-        // Membrane ripple lines
-        if (ty % 2 === 0) gr(ctx, cx, cy, 0, 7, W, 1, shiftColor(fl, 8));
-        // Protein drift dots
-        if ((tx * 5 + ty * 3) % 7 === 0) {
-          const proteinOn = frame % 45 < 22;
-          if (proteinOn) {
-            gr(ctx, cx, cy, 5, 5, 2, 2, '#1a6644');
-            gr(ctx, cx, cy, 11, 10, 2, 2, '#155533');
-          }
+      if (h1 % 4 === 0) gr(ctx, cx, cy, 0, 0, W, W, flH);
+
+      if (realm === 2) {
+        // Genome Forest: Omori-style soft mint ground with flowers
+        for (let r = 0; r < W; r += 4)
+          gr(ctx, cx, cy, 0, r, W, 1, shiftColor(fl, -4));
+        if (h1 % 7 === 0) {
+          const fx = (h1>>8)%10+3, fy = (h2>>8)%10+3;
+          gr(ctx, cx, cy, fx,   fy-1, 1, 1, flw); gr(ctx, cx, cy, fx,   fy+1, 1, 1, flw);
+          gr(ctx, cx, cy, fx-1, fy,   1, 1, flw); gr(ctx, cx, cy, fx+1, fy,   1, 1, flw);
+          gr(ctx, cx, cy, fx,   fy,   1, 1, '#ffffff');
+        } else if (h1 % 11 === 0) {
+          const gx = (h1>>6)%12+2, gy = (h2>>6)%12+2;
+          gr(ctx, cx, cy, gx,   gy,   1, 2, shiftColor(fl, 22));
+          gr(ctx, cx, cy, gx+2, gy+1, 1, 2, shiftColor(fl, 16));
+        } else if (h1 % 17 === 0) {
+          const fx2=(h1>>10)%12+2, fy2=(h2>>10)%12+2;
+          gr(ctx, cx, cy, fx2-1, fy2, 3, 1, flw); gr(ctx, cx, cy, fx2, fy2-1, 1, 3, flw);
+          gr(ctx, cx, cy, fx2, fy2, 1, 1, '#ffffff');
         }
-        // ATP particle flowing across tile
-        if ((tx + ty * 2) % 5 === 0) {
-          const atpCycle = frame % 60;
-          if (atpCycle < 30) {
-            const atpX = Math.floor(atpCycle / 2);
-            const atpY = W - 2 - Math.floor(atpCycle / 3);
-            if (atpX >= 0 && atpX <= W - 2 && atpY >= 0) {
-              gr(ctx, cx, cy, atpX, atpY, 2, 2, '#00cc88');
-            }
-          }
+      } else if (realm === 1) {
+        if (ty%3===1) gr(ctx, cx, cy, 0, 10, W, 1, shiftColor(fl, -7));
+        if (h1%9===0) {
+          const px2=(h1>>4)%12+2, py2=(h2>>4)%12+2;
+          if (((frame>>2)+h1)%4<2) { gr(ctx,cx,cy,px2,py2,2,2,'#00ffcc33'); gr(ctx,cx,cy,px2+1,py2+1,1,1,'#00ffcc88'); }
         }
-      } else if (realm === 2) {
-        // Forest floor: root lines and moss patches
-        if ((tx + ty) % 3 === 0) gr(ctx, cx, cy, 2, 8, 12, 1, shiftColor(fl, -8));
-        if ((tx * 3 + ty) % 5 === 0) {
-          gr(ctx, cx, cy, 4, 4, 3, 3, shiftColor(fl, 10));
-          gr(ctx, cx, cy, 10, 10, 2, 2, shiftColor(fl, 8));
+        if (h1%5===0) {
+          const p=(frame+(h1&0xff))%40, ax=Math.floor(p/2.5);
+          if (ax>=0&&ax<=W-2) { const ay=8+Math.floor(Math.sin(p*0.3)*4); if(ay>=0&&ay<=W-2) gr(ctx,cx,cy,ax,ay,2,2,'#00cc88'); }
         }
       } else if (realm === 3) {
-        // Space station: metallic floor grid
-        if (ty % 2 === 0) gr(ctx, cx, cy, 0, W-1, W, 1, shiftColor(fl, -10));
-        if ((tx + ty) % 4 === 0) {
-          gr(ctx, cx, cy, 7, 7, 2, 2, shiftColor(fl, 18));
+        gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(fl, -14));
+        gr(ctx, cx, cy, 0, 0, 1, W, shiftColor(fl, -10));
+        if ((tx+ty)%5===0) {
+          gr(ctx,cx,cy,7,7,2,2,shiftColor(acc,-20));
+          if((frame+h1)%80<6) gr(ctx,cx,cy,7,7,2,2,'#ffffff');
         }
       } else {
-        // Cathedral: stone blocks with mortar
-        const mortarX = tx % 2 === 0 ? 0 : 8;
-        gr(ctx, cx, cy, mortarX, 0, 8, W, shiftColor(fl, 8));
-        gr(ctx, cx, cy, 0, ty % 2 === 0 ? 0 : 8, W, 8, shiftColor(fl, 4));
-        // Mortar joint lines
-        gr(ctx, cx, cy, 0, 7, W, 2, shiftColor(fl, -10));
-        gr(ctx, cx, cy, 7, 0, 2, W, shiftColor(fl, -10));
+        const mX=tx%2===0?0:8;
+        gr(ctx,cx,cy,mX,0,W,W,shiftColor(fl,7));
+        gr(ctx,cx,cy,0,7,W,2,wl); gr(ctx,cx,cy,mX+7,0,2,W,wl);
+        if (h1%13===0&&(frame+h1)%35<18) {
+          ctx.globalAlpha=0.18;
+          gr(ctx,cx,cy,(h1>>4)%12+2,(h2>>4)%12+2,3,3,'#ffaa22');
+          ctx.globalAlpha=1;
+        }
       }
       break;
     }
 
-    // ── WALL ──────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // WALL — raised terrain with cliff-edge depth
+    // ─────────────────────────────────────────────────────────────────────────
     case '#': {
       gr(ctx, cx, cy, 0, 0, W, W, wl);
-      // Top face — lighter edge simulating thickness viewed top-down
-      gr(ctx, cx, cy, 0, 0, W, 3, shiftColor(wl, 40));
-      gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(wl, 65));
-      // Left edge highlight
-      gr(ctx, cx, cy, 0, 0, 2, W, shiftColor(wl, 30));
-      // Bottom / right shadow
+      gr(ctx, cx, cy, 0, 0, W, 3, wlT);
+      gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(wlT, 30));
+      gr(ctx, cx, cy, 0, 0, 1, W, shiftColor(wlT, 20));
       gr(ctx, cx, cy, W-1, 0, 1, W, shiftColor(wl, -20));
-      gr(ctx, cx, cy, 0, W-1, W, 1, shiftColor(wl, -20));
-      // Realm-specific wall texture
-      if (realm === 1) {
-        // Cell wall: double-membrane pattern
-        if (ty % 3 === 0) gr(ctx, cx, cy, 0, 6, W, 2, shiftColor(wl, 15));
-        if (ty % 3 === 0) gr(ctx, cx, cy, 0, 10, W, 1, shiftColor(wl, 8));
-      } else if (realm === 2) {
-        // Forest wall: bark texture
-        if ((tx + ty) % 4 === 0) gr(ctx, cx, cy, 4, 0, 2, W, shiftColor(wl, 12));
-        if ((tx * 3 + ty) % 6 === 0) gr(ctx, cx, cy, 10, 2, 1, W-4, shiftColor(wl, 8));
-      } else if (realm === 3) {
-        // Space wall: panel seams
-        gr(ctx, cx, cy, 0, W/2, W, 1, shiftColor(wl, 20));
-        if (tx % 2 === 0) gr(ctx, cx, cy, W/2, 0, 1, W, shiftColor(wl, 15));
+      gr(ctx, cx, cy, 0, W-4, W, 4, shiftColor(wl, -20));
+      gr(ctx, cx, cy, 0, W-2, W, 2, shiftColor(wl, -35));
+      gr(ctx, cx, cy, 0, W-1, W, 1, '#000000');
+      if (realm===2) {
+        const bx=(h1>>4)%13+1; gr(ctx,cx,cy,bx,3,1,W-6,shiftColor(wl,10));
+        if((tx*3+ty)%5!==0) { const bx2=(h2>>4)%13+1; gr(ctx,cx,cy,bx2,4,1,W-7,shiftColor(wl,6)); }
+      } else if (realm===1) {
+        gr(ctx,cx,cy,0,5,W,1,shiftColor(wl,20)); gr(ctx,cx,cy,0,7,W,1,shiftColor(wl,12)); gr(ctx,cx,cy,0,9,W,1,shiftColor(wl,8));
+        if(h1%7===0) { const pY=5+(h2%5); gr(ctx,cx,cy,6,pY,4,3,acc+'44'); gr(ctx,cx,cy,7,pY+1,2,1,acc); }
+      } else if (realm===3) {
+        gr(ctx,cx,cy,0,W>>1,W,1,shiftColor(wl,22));
+        if(tx%2===0) gr(ctx,cx,cy,W>>1,0,1,W,shiftColor(wl,16));
       } else {
-        // Cathedral: stone blocks
-        gr(ctx, cx, cy, 0, W/2, W, 2, shiftColor(wl, 18));
-        if (tx % 3 === 0) gr(ctx, cx, cy, W-2, 0, 2, W, shiftColor(wl, -10));
-      }
-      // Glowing accent crack (realm-colored)
-      if ((tx * 3 + ty * 7) % 9 === 0) {
-        gr(ctx, cx, cy, 6, 3, 1, 10, acc + '55');
-        gr(ctx, cx, cy, 6, 7, 1, 3, acc);
+        gr(ctx,cx,cy,0,W>>1,W,2,shiftColor(wl,18));
+        if((tx+ty)%3===0) gr(ctx,cx,cy,3,2,W-6,1,acc+'33');
       }
       break;
     }
 
-    // ── ORGANELLE / STRUCTURE ─────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // TREE / ORGANELLE / PILLAR — Omori-quality shapes
+    // ─────────────────────────────────────────────────────────────────────────
     case 'T': {
       gr(ctx, cx, cy, 0, 0, W, W, fl);
+      if (realm===2&&h1%7===0) { gr(ctx,cx,cy,1,14,1,1,flw); gr(ctx,cx,cy,14,13,1,1,flw); }
 
-      if (realm === 1) {
-        // MITOCHONDRION — classic bean shape
-        // Shadow beneath
-        gr(ctx, cx, cy, 3, 13, 10, 2, '#000000');
-        // Outer membrane — dark red oval (rows of decreasing width)
-        const bean: [number, number, string][] = [
-          [4, 4, '#550800'], [2, 6, '#771000'], [1, 8, '#992200'],
-          [1, 8, '#aa2800'], [2, 6, '#881800'], [4, 3, '#551000'],
+      if (realm === 2) {
+        // ── GENOME FOREST: Omori round fluffy tree ────────────────────────
+        // Circle canopy: center (8,7), radius ~7, scanline rows
+        const rows:[number,number,number][] = [
+          [1,4,8],[2,2,12],[3,1,14],[4,1,14],[5,1,14],[6,1,14],
+          [7,1,14],[8,1,14],[9,2,12],[10,3,10],[11,5,6]
         ];
-        bean.forEach(([ox, w, c], i) => {
-          gr(ctx, cx, cy, ox, 4 + i * 2, w, 2, '#1a0000'); // outline
-          gr(ctx, cx, cy, ox + 1, 4 + i * 2, w - 2, 2, c);
+        // Ground shadow
+        rows.slice(7).forEach(([row,x1,w])=>{
+          if(x1+w<=W) gr(ctx,cx,cy,x1+1,row+1,w,1,'#000000');
         });
-        // Inner matrix (dark core)
-        gr(ctx, cx, cy, 3, 6, 10, 6, '#110000');
-        // Cristae — slide position every 60 frames (membrane breathing)
-        const cristaOff = Math.floor(frame / 60) % 2;
-        gr(ctx, cx, cy, 4, 7 + cristaOff, 8, 1, '#cc3300');
-        gr(ctx, cx, cy, 4, 9 - cristaOff, 8, 1, '#cc3300');
-        // ATP synthase dots (glowing yellow)
-        gr(ctx, cx, cy, 3, 6, 2, 2, '#ffcc00');
-        gr(ctx, cx, cy, 7, 6, 2, 2, '#ffcc00');
-        gr(ctx, cx, cy, 11, 6, 2, 2, '#ffcc00');
-        // Highlight
-        gr(ctx, cx, cy, 4, 4, 3, 2, '#ff6633');
-      }
-
-      else if (realm === 2) {
-        // DNA DOUBLE HELIX — two strands + colored base pairs
-        // Left backbone strand (zigzag):
-        const lX = [3, 2, 2, 3, 5, 7, 9, 11, 12, 12, 11, 9, 7, 5, 3, 3];
-        // Right backbone strand (mirror):
-        const rX = [12, 13, 13, 12, 10, 8, 6, 4, 3, 3, 4, 6, 8, 10, 12, 12];
-        for (let row = 0; row < 16; row++) {
-          gr(ctx, cx, cy, lX[row], row, 2, 1, '#1166bb'); // left — blue backbone
-          gr(ctx, cx, cy, rX[row], row, 2, 1, '#11aa66'); // right — teal backbone
-        }
-        // Base pairs at every 4 rows (rungs):
-        const bpColors: [string, string][] = [
-          ['#ff4422', '#4488ff'], // A-T  row 0
-          ['#44cc44', '#ffcc00'], // G-C  row 4
-          ['#ff4422', '#4488ff'], // A-T  row 8
-          ['#44cc44', '#ffcc00'], // G-C  row 12
-        ];
-        // Base pairs breathe: shift ±1 every 20 frames (strand breathing)
-        const bpBreath = Math.floor(frame / 20) % 2;
-        bpColors.forEach(([c1, c2], i) => {
-          const row = i * 4 + 2 + (i % 2 === 0 ? bpBreath : -bpBreath);
-          const clampedRow = Math.max(0, Math.min(15, row));
-          const lx = lX[clampedRow] + 2, rx = rX[clampedRow];
-          const mid = Math.floor((lx + rx) / 2);
-          if (mid > lx && rx > mid) {
-            gr(ctx, cx, cy, lx, clampedRow, mid - lx, 1, c1);
-            gr(ctx, cx, cy, mid, clampedRow, rx - mid, 1, c2);
-          }
+        // Dark outline ring
+        rows.forEach(([row,x1,w])=>{
+          if(x1>0) gr(ctx,cx,cy,x1-1,row,1,1,shiftColor(tc,-30));
+          gr(ctx,cx,cy,x1+w,row,1,1,shiftColor(tc,-30));
         });
-        // Glow at top
-        gr(ctx, cx, cy, 5, 0, 6, 1, '#88ffee');
-      }
+        gr(ctx,cx,cy,3,0,10,1,shiftColor(tc,-30));
+        gr(ctx,cx,cy,4,12,8,1,shiftColor(tc,-30));
+        // Main canopy fill
+        rows.forEach(([row,x1,w])=>gr(ctx,cx,cy,x1,row,w,1,tc));
+        // Shadow bottom-right quadrant
+        [[8,5,8],[9,5,7],[10,5,5],[11,5,3]].forEach(([row,x1,w])=>gr(ctx,cx,cy,x1,row,w,1,tS));
+        // Top-left highlight (light source)
+        gr(ctx,cx,cy,3,2,5,1,tH); gr(ctx,cx,cy,2,3,4,1,tH);
+        gr(ctx,cx,cy,2,4,3,1,tH); gr(ctx,cx,cy,2,5,2,1,shiftColor(tH,-15));
+        gr(ctx,cx,cy,3,2,2,1,'#ffffff');
+        // Scattered flower dots on canopy surface
+        [[5,4],[10,3],[4,7],[11,6],[7,10],[3,8],[12,5]].forEach(([dx,dy],i)=>{
+          if((h1+i*11)%3!==0) gr(ctx,cx,cy,dx,dy,1,1,flw);
+        });
+        if((h1+animFrame)%5===0) gr(ctx,cx,cy,8,2,1,1,'#ffffff');
+        // Trunk
+        gr(ctx,cx,cy,6,12,4,4,tR); gr(ctx,cx,cy,7,12,2,4,shiftColor(tR,18));
+        gr(ctx,cx,cy,9,12,1,4,shiftColor(tR,-15)); gr(ctx,cx,cy,5,14,6,2,shiftColor(tR,-8));
+        // Ground shadow
+        gr(ctx,cx,cy,4,W-1,8,1,shiftColor(fl,-18));
+        // Breathing: bright pixel alternates
+        if(animFrame%2===0) { gr(ctx,cx,cy,2,6,1,1,tH); gr(ctx,cx,cy,13,4,1,1,tH); }
 
-      else if (realm === 3) {
-        // CRYSTAL NEURAL SPIRE — purple crystal with glowing node top
-        const pulse = animFrame % 2;
-        // Shadow
-        gr(ctx, cx, cy, 4, 14, 8, 2, '#000000');
-        // Crystal body (tapered):
-        gr(ctx, cx, cy, 7, 1, 2, 13, '#551188'); // dark core
-        gr(ctx, cx, cy, 6, 3, 4, 10, '#772299'); // mid
-        gr(ctx, cx, cy, 5, 5, 6, 8,  '#8833aa'); // widest
-        // Left highlight edge
-        gr(ctx, cx, cy, 5, 5, 1, 8, '#bb66ee');
-        // Point tip
-        gr(ctx, cx, cy, 7, 0, 2, 2, '#cc88ff');
-        gr(ctx, cx, cy, 8, 0, 1, 1, '#ffffff');
-        // Glowing node at top (pulsing)
-        const glowColor = pulse === 0 ? '#ff88ff' : '#cc44cc';
-        gr(ctx, cx, cy, 6, 0, 4, 3, glowColor);
-        gr(ctx, cx, cy, 7, 0, 2, 1, '#ffffff');
-        // Connection lines (neural)
-        gr(ctx, cx, cy, 0, 6, 5, 1, '#3311aa');
-        gr(ctx, cx, cy, 11, 4, 5, 1, '#3311aa');
-      }
+      } else if (realm === 1) {
+        // ── CYTOPLASM: bioluminescent vesicle ────────────────────────────
+        const glow=(frame%60)/60, bright=Math.sin(glow*Math.PI*2)>0;
+        const gA=0.15+0.15*Math.sin(glow*Math.PI*2);
+        gr(ctx,cx,cy,4,W-1,8,1,'#000000');
+        // Interior fill
+        [[2,4,8],[3,2,12],[4,1,14],[5,1,14],[6,1,14],[7,1,14],[8,1,14],[9,1,14],[10,1,14],[11,2,12],[12,4,8]]
+          .forEach(([row,x1,w])=>gr(ctx,cx,cy,x1,row,w,1,'#001a22'));
+        // Outer membrane ring
+        gr(ctx,cx,cy,3,2,10,1,tc); gr(ctx,cx,cy,2,3,1,10,tc); gr(ctx,cx,cy,13,3,1,10,tc); gr(ctx,cx,cy,3,13,10,1,tc);
+        gr(ctx,cx,cy,4,1,8,1,tH); gr(ctx,cx,cy,1,4,1,8,tH); gr(ctx,cx,cy,14,4,1,8,tH); gr(ctx,cx,cy,4,14,8,1,tH);
+        ctx.globalAlpha=gA; gr(ctx,cx,cy,3,2,10,12,tH); ctx.globalAlpha=1;
+        // Dark interior matrix
+        gr(ctx,cx,cy,4,4,8,8,'#001a22'); gr(ctx,cx,cy,5,5,6,6,'#002233');
+        gr(ctx,cx,cy,4,7,8,1,'#003344'); gr(ctx,cx,cy,4,9,8,1,'#003344');
+        // ATP synthase spots
+        [[3,7],[7,2],[11,7],[7,12]].forEach(([ax,ay])=>{
+          gr(ctx,cx,cy,ax,ay,2,2,bright?'#ffcc00':'#aa8800');
+          if(bright) gr(ctx,cx,cy,ax,ay,1,1,'#ffee44');
+        });
+        gr(ctx,cx,cy,5,2,3,1,'#ffffff'); gr(ctx,cx,cy,2,5,1,2,'#ffffff');
 
-      else {
-        // REALM 4 — GOTHIC STONE PILLAR with stained glass light beam
-        // Shadow
-        gr(ctx, cx, cy, 3, 14, 10, 2, '#000000');
-        // Main pillar body
-        gr(ctx, cx, cy, 4, 0, 8, 16, '#1a1530');
-        // Left highlight
-        gr(ctx, cx, cy, 4, 0, 2, 16, '#2a2048');
-        // Right shadow
-        gr(ctx, cx, cy, 10, 0, 2, 16, '#0f0c1a');
-        // Capital (decorative top):
-        gr(ctx, cx, cy, 2, 0, 12, 3, '#25204a');
-        gr(ctx, cx, cy, 2, 0, 12, 1, acc);
-        // Base
-        gr(ctx, cx, cy, 2, 13, 12, 3, '#25204a');
-        gr(ctx, cx, cy, 2, 15, 12, 1, acc);
-        // Stone seams
-        gr(ctx, cx, cy, 4, 6, 8, 1, '#0f0c1a');
-        gr(ctx, cx, cy, 4, 10, 8, 1, '#0f0c1a');
-        // Stained glass light beam: sweeps across every 60 frames
-        const beamX = Math.floor((frame % 120) / 7) % 10;
-        if (beamX >= 0 && beamX <= 8) {
-          ctx.globalAlpha = 0.35;
-          gr(ctx, cx, cy, 4 + beamX, 0, 2, 16, '#ffee88');
-          ctx.globalAlpha = 1;
-        }
+      } else if (realm === 3) {
+        // ── NEURAL NEBULA: Crystal neural spire ──────────────────────────
+        const pulse=animFrame%2===0;
+        gr(ctx,cx,cy,4,W-1,8,1,'#000000');
+        gr(ctx,cx,cy,7,0,2,14,'#280a55'); gr(ctx,cx,cy,6,2,4,11,'#4a1080'); gr(ctx,cx,cy,5,5,6,8,'#5a18a0');
+        gr(ctx,cx,cy,5,5,1,8,'#9955dd'); gr(ctx,cx,cy,6,2,1,11,'#7733bb'); gr(ctx,cx,cy,10,5,1,8,'#2a0850');
+        gr(ctx,cx,cy,7,1,2,2,'#ddaaff'); gr(ctx,cx,cy,8,0,1,1,'#ffffff');
+        ctx.globalAlpha=pulse?0.9:0.5; gr(ctx,cx,cy,5,0,6,5,tH); ctx.globalAlpha=1;
+        if(pulse) { gr(ctx,cx,cy,7,0,2,1,'#ffffff'); gr(ctx,cx,cy,6,1,4,2,'#eeccff'); }
+        gr(ctx,cx,cy,0,7,5,1,shiftColor(tc,-10)); gr(ctx,cx,cy,11,5,5,1,shiftColor(tc,-10));
+        gr(ctx,cx,cy,0,7,2,1,acc); gr(ctx,cx,cy,14,5,2,1,acc);
+        ctx.globalAlpha=0.2+0.1*Math.sin(t*2+tx); gr(ctx,cx,cy,4,12,8,4,tH); ctx.globalAlpha=1;
+
+      } else {
+        // ── PROTEIN CATHEDRAL: Gothic pillar with stained-glass ──────────
+        gr(ctx,cx,cy,3,W-1,10,1,'#000000');
+        gr(ctx,cx,cy,4,0,8,W,wl); gr(ctx,cx,cy,4,0,2,W,shiftColor(wl,22)); gr(ctx,cx,cy,10,0,2,W,shiftColor(wl,-12));
+        gr(ctx,cx,cy,1,0,14,4,shiftColor(wl,14)); gr(ctx,cx,cy,0,0,16,2,shiftColor(fl,5)); gr(ctx,cx,cy,1,0,14,1,acc);
+        gr(ctx,cx,cy,1,13,14,3,shiftColor(wl,10)); gr(ctx,cx,cy,0,14,16,2,shiftColor(fl,5)); gr(ctx,cx,cy,1,W-1,14,1,acc);
+        gr(ctx,cx,cy,4,6,8,1,shiftColor(wl,-18)); gr(ctx,cx,cy,4,9,8,1,shiftColor(wl,-18));
+        gr(ctx,cx,cy,2,3,12,1,acc+'88'); gr(ctx,cx,cy,2,12,12,1,acc+'88');
+        const bP=(frame+tx*23+ty*7)%150;
+        if(bP<60) { ctx.globalAlpha=0.22; gr(ctx,cx,cy,4+(bP>>3)%7,0,2,W,'#ffe44c'); ctx.globalAlpha=1; }
       }
       break;
     }
 
-    // ── WATER / VOID / ACID ───────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // WATER / VOID / ACID / RIVER
+    // ─────────────────────────────────────────────────────────────────────────
     case '~': {
-      if (realm === 1) {
-        // LYSOSOME ACID POOL / ER MEMBRANE — deep purple, green bubble, wavy ripple
-        gr(ctx, cx, cy, 0, 0, W, W, '#150020');
-        // ER Membrane wavy lines with sin(frame) ripple
-        const ripple1 = Math.floor(Math.sin(frame * 0.05 + tx * 0.4) * 2);
-        const ripple2 = Math.floor(Math.sin(frame * 0.05 + ty * 0.5 + 1.5) * 2);
-        const s1 = Math.max(1, Math.min(W-2, 4 + ripple1));
-        const s2 = Math.max(1, Math.min(W-2, 11 + ripple2));
-        gr(ctx, cx, cy, 0, s1, W, 1, '#2a0040');
-        gr(ctx, cx, cy, 0, s2, W, 1, '#4400aa');
-        // Animated swirl
-        const s3 = Math.max(0, Math.min(W-2, Math.floor(4 + Math.sin(t + tx * 0.4) * 3)));
-        gr(ctx, cx, cy, 0, s3, W, 1, '#330055');
-        // Bubble
-        const bY = Math.max(2, Math.min(W-5, Math.floor(8 + Math.sin(t * 1.8 + tx) * 5)));
-        gr(ctx, cx, cy, 6, bY, 4, 4, '#005500');
-        gr(ctx, cx, cy, 7, bY, 2, 2, '#00aa00');
-        // Danger corners
-        gr(ctx, cx, cy, 0, 0, 2, 2, '#cc0000');
-        gr(ctx, cx, cy, W-2, 0, 2, 2, '#cc0000');
-      } else if (realm === 2) {
-        // FOREST STREAM / WATERFALL — cobalt blue, animated falling pixels
-        gr(ctx, cx, cy, 0, 0, W, W, '#0a182a');
-        gr(ctx, cx, cy, 3, 0, 10, W, '#071015'); // depth centre
-        const rOff = Math.floor(t * 2.5) % 8;
-        gr(ctx, cx, cy, 1, rOff % W, W-2, 1, '#1a3a5a');
-        gr(ctx, cx, cy, 3, (rOff + 5) % W, W-6, 1, '#1a4868');
-        // Waterfall: falling pixel columns (offset by frame)
-        for (let col = 1; col < W - 1; col += 3) {
-          const fallY = (frame * 1 + col * 3) % W;
-          gr(ctx, cx, cy, col, fallY, 1, 2, '#4499cc');
-        }
-        // Sparkle
-        if (animFrame % 2 === 0) gr(ctx, cx, cy, 6, 4, 4, 1, '#66aacc');
-        // Lily pad (every 5th water tile)
-        if ((tx * 2 + ty) % 5 === 0) {
-          gr(ctx, cx, cy, 5, 6, 6, 5, '#1a4018');
-          gr(ctx, cx, cy, 7, 7, 2, 2, '#ee4466');
-        }
-      } else if (realm === 3) {
-        // VOID — pure dark with twinkling stars
-        gr(ctx, cx, cy, 0, 0, W, W, '#030008');
-        const stars: [number, number][] = [[2,3],[7,1],[12,5],[4,10],[14,8],[9,14],[1,13],[11,2],[5,7]];
-        stars.forEach(([sx, sy]) => {
-          // Each star twinkles at a different offset based on position
-          const starOffset = (sx * 7 + sy * 13 + tx * 3 + ty * 5) % 45;
-          const bright = (frame + starOffset) % 45 < 22;
-          gr(ctx, cx, cy, sx, sy, 1, 1, bright ? '#ffffff' : '#aaaaff');
+      if (realm===1) {
+        gr(ctx,cx,cy,0,0,W,W,'#110018'); gr(ctx,cx,cy,2,0,12,W,'#180024');
+        const r1=Math.max(1,Math.min(W-2,4+Math.floor(Math.sin(t*0.9+tx*0.5)*2)));
+        const r2=Math.max(1,Math.min(W-2,11+Math.floor(Math.sin(t*0.9+ty*0.5+1.5)*2)));
+        gr(ctx,cx,cy,0,r1,W,1,'#3a0055'); gr(ctx,cx,cy,0,r2,W,1,'#5500aa');
+        const bY=Math.max(2,Math.min(W-5,Math.floor(8+Math.sin(t*1.8+tx)*5)));
+        gr(ctx,cx,cy,6,bY,4,4,'#004400'); gr(ctx,cx,cy,7,bY,2,2,'#00cc00'); gr(ctx,cx,cy,7,bY+1,1,1,'#88ff44');
+        gr(ctx,cx,cy,0,0,2,2,'#cc0000'); gr(ctx,cx,cy,W-2,0,2,2,'#cc0000');
+        gr(ctx,cx,cy,0,0,W,1,'#330044'); gr(ctx,cx,cy,0,W-1,W,1,'#330044');
+      } else if (realm===2) {
+        gr(ctx,cx,cy,0,0,W,W,'#0a1828'); gr(ctx,cx,cy,2,0,12,W,'#081220');
+        const rOff=Math.floor(t*3)%W;
+        gr(ctx,cx,cy,1,rOff%W,W-2,1,'#1a3a5a'); gr(ctx,cx,cy,2,(rOff+6)%W,W-4,1,'#1a4868'); gr(ctx,cx,cy,4,(rOff+11)%W,W-8,1,'#224d6a');
+        for(let col=1;col<W-1;col+=3) gr(ctx,cx,cy,col,(frame+col*3)%W,1,2,'#4499cc');
+        if(animFrame%2===0) gr(ctx,cx,cy,(h1%10)+3,(h2%8)+2,2,1,'#aaddff');
+        if(h1%5===0) { gr(ctx,cx,cy,5,6,6,5,'#1a4018'); gr(ctx,cx,cy,7,7,2,2,'#ee4466'); gr(ctx,cx,cy,8,7,1,1,'#ff88aa'); }
+      } else if (realm===3) {
+        gr(ctx,cx,cy,0,0,W,W,'#03000a');
+        [[2,3],[7,1],[12,5],[4,10],[14,8],[9,14],[1,13],[11,2],[5,7],[13,11],[3,15],[10,4]].forEach(([sx,sy])=>{
+          const ph=(sx*7+sy*13+tx*3+ty*5)%45;
+          gr(ctx,cx,cy,sx,sy,1,1,(frame+ph)%45<22?'#ffffff':'#8888bb');
         });
-        if (animFrame === 0) gr(ctx, cx, cy, 7, 1, 2, 2, '#aa88ff'); // bright star
+        if((frame+h1)%120<3) gr(ctx,cx,cy,h1%12,h2%12,2,2,'#aa88ff');
+        if(h1%4===0) { ctx.globalAlpha=0.12; gr(ctx,cx,cy,(h1>>8)%12+2,(h2>>8)%12+2,4,3,acc); ctx.globalAlpha=1; }
       } else {
-        // REALM 4 — amethyst crystal pool
-        gr(ctx, cx, cy, 0, 0, W, W, '#08060f');
-        gr(ctx, cx, cy, 2, 0, 12, W, '#0e0a1c'); // lit centre
-        const wv = Math.floor(t * 2) % 8;
-        gr(ctx, cx, cy, 2, wv % W, 12, 1, '#2a1a44');
-        // Crystal reflection dots
-        gr(ctx, cx, cy, 5, 3, 2, 2, '#4422aa');
-        gr(ctx, cx, cy, 9, 9, 2, 2, '#4422aa');
+        gr(ctx,cx,cy,0,0,W,W,'#070510'); gr(ctx,cx,cy,2,0,12,W,'#0c0920');
+        const wv=Math.floor(t*2)%8; gr(ctx,cx,cy,2,wv%W,12,1,'#221444'); gr(ctx,cx,cy,3,(wv+5)%W,10,1,'#331a5a');
+        gr(ctx,cx,cy,5,3,2,2,'#5522cc'); gr(ctx,cx,cy,9,9,2,2,'#4422aa'); gr(ctx,cx,cy,6,11,1,1,'#aa66ff');
       }
       break;
     }
 
-    // ── PATH ──────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // PATH — bridge / highway / aisle
+    // ─────────────────────────────────────────────────────────────────────────
     case '=': {
-      if (realm === 1) {
-        // MICROTUBULE HIGHWAY — 3 parallel orange tubes
-        gr(ctx, cx, cy, 0, 0, W, W, '#060d18');
-        gr(ctx, cx, cy, 0, 1, W, 4, '#993300');
-        gr(ctx, cx, cy, 0, 6, W, 4, '#bb4400');
-        gr(ctx, cx, cy, 0, 11, W, 4, '#993300');
-        gr(ctx, cx, cy, 0, 1, W, 1, '#ff7722'); // top glow
-        gr(ctx, cx, cy, 0, 6, W, 1, '#ff8833');
-        gr(ctx, cx, cy, 0, 11, W, 1, '#ff7722');
-        // Motor protein (animated)
-        const mX = Math.floor(((t * 35 + ty * 16) % (TILE * SCALE)) / SCALE);
-        if (mX >= 0 && mX <= W - 3) { gr(ctx, cx, cy, mX, 7, 3, 3, '#ff9900'); gr(ctx, cx, cy, mX+1, 7, 1, 1, '#ffcc00'); }
-      } else if (realm === 2) {
-        // COBBLESTONE PATH with scrolling data stream
-        gr(ctx, cx, cy, 0, 0, W, W, '#1c1008');
-        // Two stone blocks per tile
-        gr(ctx, cx, cy, 0, 0, 7, 7, '#2e1e0c');
-        gr(ctx, cx, cy, 8, 0, 7, 7, '#28180a');
-        gr(ctx, cx, cy, 0, 8, 7, 7, '#28180a');
-        gr(ctx, cx, cy, 8, 8, 7, 7, '#2e1e0c');
-        // Highlights (top-left of each stone)
-        gr(ctx, cx, cy, 0, 0, 7, 1, '#3e2e1c');
-        gr(ctx, cx, cy, 8, 0, 7, 1, '#382814');
-        gr(ctx, cx, cy, 0, 8, 7, 1, '#382814');
-        gr(ctx, cx, cy, 8, 8, 7, 1, '#3e2e1c');
-        // Data stream: scrolling binary pattern (alternates every 15 frames)
-        if ((tx + ty) % 3 === 0) {
-          const bits = [1,0,1,1,0,1,0,0,1,1,0,1,1,0,0,1];
-          for (let bi = 0; bi < 4; bi++) {
-            const bitIdx = (Math.floor(frame / 15) + bi + tx + ty) % bits.length;
-            const bColor = bits[bitIdx] ? '#00aa33' : '#004411';
-            gr(ctx, cx, cy, bi * 4, 13, 1, 2, bColor);
-          }
-        }
-      } else if (realm === 3) {
-        // NEURAL LIGHT BRIDGE — glowing platform with synapse arc
-        gr(ctx, cx, cy, 0, 0, W, W, '#030008');
-        gr(ctx, cx, cy, 0, 4, W, 8, '#0f0520');
-        gr(ctx, cx, cy, 0, 4, W, 1, '#7722ee'); // top glow edge
-        gr(ctx, cx, cy, 0, 12, W, 1, '#3311aa'); // bottom
-        // Animated pulse
-        const pX = Math.floor(t * 5 * W) % (W * 2);
-        if (pX < W) gr(ctx, cx, cy, pX, 6, 3, 4, '#9933ff');
-        // Synapse arc: pulsing diagonal electrical arc every 20 frames
-        if (frame % 20 < 10) {
-          const arcPhase = frame % 20;
-          for (let ai = 0; ai < 6; ai++) {
-            const ax = (ai * 3 + arcPhase) % W;
-            const ay = 5 + (ai % 3);
-            gr(ctx, cx, cy, ax, ay, 1, 1, '#ffffff');
-          }
-        }
-        // Crystal shimmer: bright pixel at random corner every 30 frames
-        if (frame % 30 === ((tx * 7 + ty * 11) % 30)) {
-          gr(ctx, cx, cy, (tx * 5) % 14, (ty * 7) % 6 + 4, 1, 1, '#eeccff');
-        }
+      if (realm===1) {
+        gr(ctx,cx,cy,0,0,W,W,'#04080f');
+        ([[1,3,'#7a2200'],[6,3,'#993300'],[11,3,'#7a2200']] as [number,number,string][]).forEach(([y,h,c])=>{
+          gr(ctx,cx,cy,0,y,W,h,c); gr(ctx,cx,cy,0,y,W,1,'#ff8833'); gr(ctx,cx,cy,0,y+2,W,1,'#441100');
+        });
+        const mX=Math.floor(((t*35+ty*16)%(TILE*SCALE))/SCALE);
+        if(mX>=0&&mX<=W-3) { gr(ctx,cx,cy,mX,7,3,3,'#ff9900'); gr(ctx,cx,cy,mX+1,7,1,1,'#ffee00'); }
+      } else if (realm===2) {
+        // Wooden bridge planks (Omori-style)
+        gr(ctx,cx,cy,0,0,W,W,'#7a4a1a');
+        gr(ctx,cx,cy,5,0,1,W,'#4a2a08'); gr(ctx,cx,cy,10,0,1,W,'#4a2a08');
+        gr(ctx,cx,cy,0,0,5,1,'#9a6a2a'); gr(ctx,cx,cy,6,0,4,1,'#9a6a2a'); gr(ctx,cx,cy,11,0,5,1,'#9a6a2a');
+        gr(ctx,cx,cy,0,W-1,W,1,'#4a2a08');
+        gr(ctx,cx,cy,1,5,3,1,'#8a5a22'); gr(ctx,cx,cy,6,3,3,1,'#8a5a22'); gr(ctx,cx,cy,11,7,3,1,'#8a5a22');
+        gr(ctx,cx,cy,1,10,3,1,'#8a5a22'); gr(ctx,cx,cy,6,12,3,1,'#8a5a22');
+        gr(ctx,cx,cy,2,2,1,1,'#c0903a'); gr(ctx,cx,cy,8,2,1,1,'#c0903a'); gr(ctx,cx,cy,13,2,1,1,'#c0903a');
+        gr(ctx,cx,cy,2,W-3,1,1,'#c0903a'); gr(ctx,cx,cy,8,W-3,1,1,'#c0903a'); gr(ctx,cx,cy,13,W-3,1,1,'#c0903a');
+      } else if (realm===3) {
+        gr(ctx,cx,cy,0,0,W,W,'#050008'); gr(ctx,cx,cy,0,3,W,10,'#0f0520');
+        gr(ctx,cx,cy,0,3,W,1,'#8833ee'); gr(ctx,cx,cy,0,4,W,1,'#5511aa');
+        gr(ctx,cx,cy,0,12,W,1,'#4411aa'); gr(ctx,cx,cy,0,13,W,1,'#220866');
+        const pX=Math.floor(t*6*W)%(W*2)-W;
+        if(pX>=0&&pX<W) gr(ctx,cx,cy,pX,5,3,6,'#9933ff');
+        if(frame%20<10) { const aP=frame%20; for(let ai=0;ai<5;ai++) gr(ctx,cx,cy,(ai*4+aP)%W,5+(ai%3),1,1,'#ffffff'); }
+        if((frame+h1)%30===0) gr(ctx,cx,cy,(h1%12)+2,4,2,1,'#eeccff');
       } else {
-        // CATHEDRAL AISLE
-        gr(ctx, cx, cy, 0, 0, W, W, '#0c0a1c');
-        gr(ctx, cx, cy, 0, 0, W, 1, '#2a1a55');
-        gr(ctx, cx, cy, 0, W-1, W, 1, '#2a1a55');
-        gr(ctx, cx, cy, 4, 4, 8, 8, '#110d24');
-        gr(ctx, cx, cy, 7, 4, 2, 8, '#1a1535');
-        gr(ctx, cx, cy, 4, 7, 8, 2, '#1a1535');
-        gr(ctx, cx, cy, 7, 7, 2, 2, '#2a1a55');
-        // Candlelight particle
-        const cY = Math.max(1, Math.min(W-2, Math.floor(5 + Math.sin(t * 0.8 + tx) * 4)));
-        gr(ctx, cx, cy, 8, cY, 1, 1, '#cc8800');
+        gr(ctx,cx,cy,0,0,W,W,'#0c0a1c');
+        gr(ctx,cx,cy,0,0,2,W,'#1a163a'); gr(ctx,cx,cy,W-2,0,2,W,'#1a163a');
+        gr(ctx,cx,cy,2,0,12,W,'#100e28'); gr(ctx,cx,cy,2,7,12,2,'#1a163a');
+        gr(ctx,cx,cy,7,0,2,W,'#1a163a'); gr(ctx,cx,cy,7,7,2,2,'#2a1a55');
+        gr(ctx,cx,cy,0,0,W,1,acc+'44'); gr(ctx,cx,cy,0,W-1,W,1,acc+'44');
+        const cY=Math.max(1,Math.min(W-2,Math.floor(5+Math.sin(t*0.8+tx)*4)));
+        gr(ctx,cx,cy,8,cY,1,1,'#cc8800');
+        if(Math.floor(t*4)%3===0) gr(ctx,cx,cy,8,cY-1,1,1,'#ffcc44');
       }
       break;
     }
 
-    // ── DECORATIVE FLOOR ──────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // DECORATIVE FLOOR (altar / crystal)
+    // ─────────────────────────────────────────────────────────────────────────
     case '*': {
-      gr(ctx, cx, cy, 0, 0, W, W, fl);
-      const aOn = animFrame % 2 === 0;
-      gr(ctx, cx, cy, 6, 0, 4, W, aOn ? shiftColor(fl, 15) : fl);
-      gr(ctx, cx, cy, 0, 6, W, 4, aOn ? shiftColor(fl, 15) : fl);
-      gr(ctx, cx, cy, 6, 6, 4, 4, aOn ? acc : shiftColor(acc, -40));
-      // Realm 4 holographic altar: scan line sweeping down
-      if (realm === 4) {
-        const scanY = (frame * 2) % W;
-        gr(ctx, cx, cy, 0, scanY, W, 1, '#ffcc8844');
+      gr(ctx,cx,cy,0,0,W,W,fl);
+      const aOn=animFrame%2===0;
+      gr(ctx,cx,cy,6,0,4,W,aOn?shiftColor(fl,15):fl); gr(ctx,cx,cy,0,6,W,4,aOn?shiftColor(fl,15):fl);
+      gr(ctx,cx,cy,6,6,4,4,aOn?acc:shiftColor(acc,-40));
+      if(realm===4) { const sY=(frame*2)%W; gr(ctx,cx,cy,0,sY,W,1,'#ffcc8844'); if(aOn) gr(ctx,cx,cy,7,7,2,2,'#ffdd55'); }
+      else if(realm===1) { ctx.globalAlpha=0.4+0.3*Math.sin(t*2); gr(ctx,cx,cy,6,6,4,4,tH); ctx.globalAlpha=1; }
+      break;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // BOSS GATE
+    // ─────────────────────────────────────────────────────────────────────────
+    case 'B': {
+      const S=SCALE, TS=W*S;
+      ctx.fillStyle='#100000'; ctx.fillRect(cx,cy,TS,TS);
+      ctx.fillStyle='#2a0000'; ctx.fillRect(cx+6*S,cy,(W-12)*S,TS);
+      ctx.fillStyle='#880000'; ctx.fillRect(cx+3*S,cy,(W-6)*S,2*S);
+      const bP=0.3+0.3*Math.sin(t*1.8);
+      ctx.fillStyle=`rgba(180,0,0,${bP})`; ctx.fillRect(cx+6*S,cy,(W-12)*S,TS);
+      ctx.fillStyle='#ff0000'; ctx.fillRect(cx+7*S,cy+4*S,2*S,6*S); ctx.fillRect(cx+7*S,cy+12*S,2*S,2*S);
+      break;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TREASURE CHEST
+    // ─────────────────────────────────────────────────────────────────────────
+    case 'C': {
+      gr(ctx,cx,cy,0,0,W,W,fl);
+      const chestKey=`${realm}-${tx}-${ty}`, isOpen=SESSION_OPENED.has(chestKey);
+      const cC=realm===1?'#0a5a60':realm===2?'#5a3010':realm===3?'#2a0860':'#3a2a08';
+      const cH=realm===1?'#00ffcc':realm===2?'#aa6622':realm===3?'#aa44ff':'#ffcc44';
+      gr(ctx,cx,cy,3,14,10,2,'#000000'); gr(ctx,cx,cy,2,8,12,8,cC); gr(ctx,cx,cy,2,8,12,1,cH); gr(ctx,cx,cy,2,8,1,8,cH);
+      gr(ctx,cx,cy,6,10,4,4,'#111111'); gr(ctx,cx,cy,7,11,2,2,cH);
+      if(!isOpen) {
+        gr(ctx,cx,cy,2,4,12,5,cC); gr(ctx,cx,cy,2,4,12,1,cH); gr(ctx,cx,cy,2,4,1,5,cH);
+        gr(ctx,cx,cy,1,8,14,1,'#000000'); gr(ctx,cx,cy,2,6,12,1,'#000000');
+        gr(ctx,cx,cy,3,5,2,2,'#888888'); gr(ctx,cx,cy,11,5,2,2,'#888888');
+        const gp=0.25+0.2*Math.sin(t*2.5+tx+ty); ctx.globalAlpha=gp; gr(ctx,cx,cy,0,2,W,14,cH); ctx.globalAlpha=1;
+        if(animFrame%2===0) { gr(ctx,cx,cy,1,2,1,1,cH); gr(ctx,cx,cy,14,5,1,1,cH); gr(ctx,cx,cy,7,1,2,1,cH); }
+      } else {
+        gr(ctx,cx,cy,2,1,12,4,cC); gr(ctx,cx,cy,2,1,12,1,cH);
+        const bA=0.35+0.18*Math.sin(t*3); ctx.globalAlpha=bA; gr(ctx,cx,cy,5,4,6,4,cH); ctx.globalAlpha=0.12; gr(ctx,cx,cy,4,2,8,6,cH); ctx.globalAlpha=1;
       }
       break;
     }
 
-    // ── BOSS GATE ─────────────────────────────────────────────────────────
-    case 'B': {
-      const S = SCALE;
-      const TS = W * S;
-      ctx.fillStyle = '#100000'; ctx.fillRect(cx, cy, TS, TS);
-      ctx.fillStyle = '#2a0000'; ctx.fillRect(cx + 6*S, cy, (W-12)*S, TS); // archway
-      ctx.fillStyle = '#880000'; ctx.fillRect(cx + 3*S, cy, (W-6)*S, 2*S); // lintel
-      // Pulsing red glow
-      const bP = 0.3 + 0.3 * Math.sin(t * 1.8);
-      ctx.fillStyle = `rgba(180,0,0,${bP})`; ctx.fillRect(cx + 6*S, cy, (W-12)*S, TS);
-      // Warning exclamation
-      ctx.fillStyle = '#ff0000';
-      ctx.fillRect(cx + 7*S, cy + 4*S, 2*S, 6*S);
-      ctx.fillRect(cx + 7*S, cy + 12*S, 2*S, 2*S);
+    // ─────────────────────────────────────────────────────────────────────────
+    // SIGN / PLACARD
+    // ─────────────────────────────────────────────────────────────────────────
+    case 'S': {
+      gr(ctx,cx,cy,0,0,W,W,fl);
+      const sC=realm===1?'#0a2a30':realm===2?'#3a1e08':realm===3?'#0a0428':'#1a0f28';
+      const sB=realm===1?'#00ffcc':realm===2?'#44aa22':realm===3?'#aa44ff':'#ffaa00';
+      gr(ctx,cx,cy,7,9,2,7,sC); gr(ctx,cx,cy,7,9,2,1,shiftColor(sC,20));
+      gr(ctx,cx,cy,2,2,12,8,sC); gr(ctx,cx,cy,2,2,12,1,sB); gr(ctx,cx,cy,2,9,12,1,sB);
+      gr(ctx,cx,cy,2,2,1,8,sB); gr(ctx,cx,cy,13,2,1,8,sB);
+      gr(ctx,cx,cy,4,4,8,1,shiftColor(sB,-20)); gr(ctx,cx,cy,4,6,6,1,shiftColor(sB,-30)); gr(ctx,cx,cy,4,8,7,1,shiftColor(sB,-30));
+      gr(ctx,cx,cy,3,3,1,1,'#888888'); gr(ctx,cx,cy,12,3,1,1,'#888888'); gr(ctx,cx,cy,3,8,1,1,'#888888'); gr(ctx,cx,cy,12,8,1,1,'#888888');
+      const sp=0.12+0.08*Math.sin(t*1.5+tx); ctx.globalAlpha=sp; gr(ctx,cx,cy,1,1,14,10,sB); ctx.globalAlpha=1;
       break;
     }
 
-    // ── LESSON NODES ──────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // LESSON NODES (1–9) and NPC floor
+    // ─────────────────────────────────────────────────────────────────────────
     default:
-      if (tile >= '1' && tile <= '9') {
-        gr(ctx, cx, cy, 0, 0, W, W, fl);
-
-        const on = animFrame % 2 === 0;
-        if (realm === 1) {
-          // Teal diamond portal
-          gr(ctx, cx, cy, 6, 0, 4, 2, on ? '#00ffcc' : '#00aa88');
-          gr(ctx, cx, cy, 4, 2, 8, 2, on ? '#00ffcc' : '#00aa88');
-          gr(ctx, cx, cy, 2, 4, 12, 4, on ? '#00ffcc' : '#00aa88');
-          gr(ctx, cx, cy, 4, 8, 8, 2, on ? '#00ffcc' : '#00aa88');
-          gr(ctx, cx, cy, 6, 10, 4, 2, on ? '#00ffcc' : '#00aa88');
-          // Inner dark
-          gr(ctx, cx, cy, 4, 2, 8, 8, '#001a15');
-          gr(ctx, cx, cy, 5, 3, 6, 6, on ? '#001a15' : '#002a20');
-          // Sparkle
-          if (on) { gr(ctx, cx, cy, 5, 4, 2, 2, '#88ffee'); gr(ctx, cx, cy, 9, 8, 2, 2, '#44ccaa'); }
-        } else if (realm === 2) {
-          // Green terminal
-          gr(ctx, cx, cy, 1, 1, 14, 10, '#0a1a05');
-          gr(ctx, cx, cy, 1, 1, 14, 1, '#00cc33');
-          gr(ctx, cx, cy, 1, 1, 1, 10, '#00cc33');
-          gr(ctx, cx, cy, 3, 4, on ? 8 : 6, 1, '#00ff44');
-          gr(ctx, cx, cy, 3, 6, on ? 6 : 9, 1, '#00cc33');
-          gr(ctx, cx, cy, 3, 8, 4, 1, '#00ff44');
-          gr(ctx, cx, cy, 5, 12, 6, 2, '#0a1a05'); // stand
-          gr(ctx, cx, cy, 4, 11, 8, 2, '#00cc33');
-        } else if (realm === 3) {
-          // Purple neural node with pulsing ring
-          gr(ctx, cx, cy, 5, 5, 6, 6, '#220033');
-          gr(ctx, cx, cy, 4, 6, 8, 4, on ? '#aa44ff' : '#7722cc');
-          gr(ctx, cx, cy, 6, 4, 4, 8, on ? '#aa44ff' : '#7722cc');
-          gr(ctx, cx, cy, 6, 6, 4, 4, on ? '#ffffff' : '#cc88ff');
-          // Connectors
-          gr(ctx, cx, cy, 0, 7, 4, 2, '#440088');
-          gr(ctx, cx, cy, 12, 7, 4, 2, '#440088');
-          gr(ctx, cx, cy, 7, 0, 2, 4, '#440088');
-          gr(ctx, cx, cy, 7, 12, 2, 4, '#440088');
-          // Pulsing ring: outer ring expands every 15 frames then resets
-          const ringPhase = Math.floor(frame / 15) % 4;
-          const ringR = 3 + ringPhase;
-          const ringX = 8 - ringR, ringY = 8 - ringR;
-          if (ringX >= 0 && ringY >= 0 && ringX + ringR * 2 <= W) {
-            ctx.globalAlpha = 0.4 - ringPhase * 0.08;
-            gr(ctx, cx, cy, ringX, ringY, ringR * 2, 1, '#cc88ff');
-            gr(ctx, cx, cy, ringX, ringY + ringR * 2 - 1, ringR * 2, 1, '#cc88ff');
-            gr(ctx, cx, cy, ringX, ringY, 1, ringR * 2, '#cc88ff');
-            gr(ctx, cx, cy, ringX + ringR * 2 - 1, ringY, 1, ringR * 2, '#cc88ff');
-            ctx.globalAlpha = 1;
+      if (tile>='1'&&tile<='9') {
+        gr(ctx,cx,cy,0,0,W,W,fl);
+        const on=animFrame%2===0;
+        if (realm===1) {
+          gr(ctx,cx,cy,6,0,4,2,on?'#00ffcc':'#00aa88'); gr(ctx,cx,cy,4,2,8,2,on?'#00ffcc':'#00aa88');
+          gr(ctx,cx,cy,2,4,12,4,on?'#00ffcc':'#00aa88'); gr(ctx,cx,cy,4,8,8,2,on?'#00ffcc':'#00aa88');
+          gr(ctx,cx,cy,6,10,4,2,on?'#00ffcc':'#00aa88'); gr(ctx,cx,cy,4,2,8,8,'#001a15');
+          if(on){gr(ctx,cx,cy,5,4,2,2,'#88ffee');gr(ctx,cx,cy,9,8,2,2,'#44ccaa');}
+        } else if (realm===2) {
+          gr(ctx,cx,cy,1,1,14,10,'#0a1a05'); gr(ctx,cx,cy,1,1,14,1,'#00cc33'); gr(ctx,cx,cy,1,1,1,10,'#00cc33');
+          gr(ctx,cx,cy,3,4,on?8:6,1,'#00ff44'); gr(ctx,cx,cy,3,6,on?6:9,1,'#00cc33'); gr(ctx,cx,cy,3,8,4,1,'#00ff44');
+          gr(ctx,cx,cy,5,12,6,2,'#0a1a05'); gr(ctx,cx,cy,4,11,8,2,'#00cc33');
+        } else if (realm===3) {
+          gr(ctx,cx,cy,5,5,6,6,'#220033'); gr(ctx,cx,cy,4,6,8,4,on?'#aa44ff':'#7722cc');
+          gr(ctx,cx,cy,6,4,4,8,on?'#aa44ff':'#7722cc'); gr(ctx,cx,cy,6,6,4,4,on?'#ffffff':'#cc88ff');
+          gr(ctx,cx,cy,0,7,4,2,'#440088'); gr(ctx,cx,cy,12,7,4,2,'#440088');
+          gr(ctx,cx,cy,7,0,2,4,'#440088'); gr(ctx,cx,cy,7,12,2,4,'#440088');
+          const rP=Math.floor(frame/15)%4, rR=3+rP, rX=8-rR, rY=8-rR;
+          if(rX>=0&&rY>=0&&rX+rR*2<=W) {
+            ctx.globalAlpha=0.4-rP*0.08;
+            gr(ctx,cx,cy,rX,rY,rR*2,1,'#cc88ff'); gr(ctx,cx,cy,rX,rY+rR*2-1,rR*2,1,'#cc88ff');
+            gr(ctx,cx,cy,rX,rY,1,rR*2,'#cc88ff'); gr(ctx,cx,cy,rX+rR*2-1,rY,1,rR*2,'#cc88ff');
+            ctx.globalAlpha=1;
           }
         } else {
-          // Gold altar gem
-          gr(ctx, cx, cy, 4, 8, 8, 6, '#1a1535');
-          gr(ctx, cx, cy, 4, 8, 8, 1, '#4433aa');
-          gr(ctx, cx, cy, 5, 4, 6, 6, on ? '#ffaa00' : '#cc7700');
-          gr(ctx, cx, cy, 6, 3, 4, 2, on ? '#ffdd44' : '#ffaa00');
-          gr(ctx, cx, cy, 7, 2, 2, 2, '#ffffff');
-          gr(ctx, cx, cy, 6, 4, 2, 2, '#ffee88');
+          gr(ctx,cx,cy,4,8,8,6,'#1a1535'); gr(ctx,cx,cy,4,8,8,1,'#4433aa');
+          gr(ctx,cx,cy,5,4,6,6,on?'#ffaa00':'#cc7700'); gr(ctx,cx,cy,6,3,4,2,on?'#ffdd44':'#ffaa00');
+          gr(ctx,cx,cy,7,2,2,2,'#ffffff'); gr(ctx,cx,cy,6,4,2,2,'#ffee88');
         }
-
-        if (isCompleted) {
-          // Checkmark overlay
-          gr(ctx, cx, cy, 4, 10, 4, 2, '#00ff88');
-          gr(ctx, cx, cy, 7, 8, 2, 5, '#00ff88');
-        }
+        if(isCompleted) { gr(ctx,cx,cy,4,10,4,2,'#00ff88'); gr(ctx,cx,cy,7,8,2,5,'#00ff88'); }
         break;
       }
-      gr(ctx, cx, cy, 0, 0, W, W, fl);
+      gr(ctx,cx,cy,0,0,W,W,fl);
       break;
   }
 }
@@ -1572,7 +1538,7 @@ export default function PixelWorldEngine({ realm, onEnterNode }: Props) {
   const onEnterRef = useRef(onEnterNode);
   onEnterRef.current = onEnterNode;
 
-  const { progress, avatar, setCurrentNode } = useGameStore();
+  const { progress, avatar, setCurrentNode, awardGems, awardXP } = useGameStore();
 
   // Get world data
   const world = WORLD_MAPS.find((w) => w.id === realm)!;
@@ -1625,6 +1591,14 @@ export default function PixelWorldEngine({ realm, onEnterNode }: Props) {
       cutDialogueLastChar: 0,
       nodePromptVisible: false,
       helperVisible: false,
+      nearChest: null,
+      nearSign: null,
+      signDialogueActive: false,
+      signLines: [],
+      signDialogueLine: 0,
+      signDialogueChar: 0,
+      signDialogueLastChar: 0,
+      chestPopup: null,
     };
   }, [map]);
 
@@ -1682,6 +1656,21 @@ export default function PixelWorldEngine({ realm, onEnterNode }: Props) {
         return;
       }
 
+      // Sign dialogue advance
+      if (gs.signDialogueActive && (e.key === 'e' || e.key === 'E' || e.key === 'Enter')) {
+        if (gs.signDialogueChar < (gs.signLines[gs.signDialogueLine]?.length ?? 0)) {
+          gs.signDialogueChar = gs.signLines[gs.signDialogueLine]?.length ?? 0;
+        } else if (gs.signDialogueLine < gs.signLines.length - 1) {
+          gs.signDialogueLine++;
+          gs.signDialogueChar = 0;
+          gs.signDialogueLastChar = performance.now();
+        } else {
+          gs.signDialogueActive = false;
+        }
+        e.preventDefault();
+        return;
+      }
+
       // NPC dialogue advance
       if (gs.dialogueActive && (e.key === 'e' || e.key === 'E' || e.key === 'Enter')) {
         const lines = world.npcGreeting.lines;
@@ -1725,6 +1714,35 @@ export default function PixelWorldEngine({ realm, onEnterNode }: Props) {
         gs.dialogueLine = 0;
         gs.dialogueChar = 0;
         gs.dialogueLastChar = performance.now();
+        e.preventDefault();
+        return;
+      }
+
+      // Open chest
+      if ((e.key === 'e' || e.key === 'E') && gs.nearChest && !gs.dialogueActive && !gs.signDialogueActive && !gs.onNode) {
+        const { tx, ty } = gs.nearChest;
+        const key = `${realm}-${tx}-${ty}`;
+        if (!SESSION_OPENED.has(key)) {
+          SESSION_OPENED.add(key);
+          const loot = CHEST_LOOT[key] ?? { lines: ['Hidden cache!', 'A secret stash.', '+25 XP  +5 💎'], gems: 5, xp: 25 };
+          gs.chestPopup = { text: loot.lines.join(' | '), timer: 180 };
+          if (loot.gems > 0) awardGems(loot.gems);
+          if (loot.xp > 0) awardXP(loot.xp);
+        }
+        e.preventDefault();
+        return;
+      }
+
+      // Read sign
+      if ((e.key === 'e' || e.key === 'E') && gs.nearSign && !gs.dialogueActive && !gs.signDialogueActive && !gs.onNode) {
+        const { tx, ty } = gs.nearSign;
+        const key = `${realm}-${tx}-${ty}`;
+        const text = SIGN_TEXT[key] ?? ['A worn sign.', 'The text is too faded to read.', '...'];
+        gs.signLines = text;
+        gs.signDialogueLine = 0;
+        gs.signDialogueChar = 0;
+        gs.signDialogueLastChar = performance.now();
+        gs.signDialogueActive = true;
         e.preventDefault();
         return;
       }
@@ -1850,6 +1868,30 @@ export default function PixelWorldEngine({ realm, onEnterNode }: Props) {
         for (const [ddx, ddy] of neighbors) {
           const adjTile = tileAt(map, gs.px + ddx, gs.py + ddy);
           if (npcChars.includes(adjTile)) { gs.nearNpc = adjTile; break; }
+        }
+
+        // Check adjacent tiles for chests and signs
+        gs.nearChest = null;
+        gs.nearSign  = null;
+        for (const [ddx, ddy] of neighbors) {
+          const atx = gs.px + ddx, aty = gs.py + ddy;
+          const adj = tileAt(map, atx, aty);
+          if (adj === 'C') { gs.nearChest = { tx: atx, ty: aty }; }
+          if (adj === 'S') { gs.nearSign  = { tx: atx, ty: aty }; }
+        }
+
+        // Decay chest popup
+        if (gs.chestPopup) {
+          gs.chestPopup.timer--;
+          if (gs.chestPopup.timer <= 0) gs.chestPopup = null;
+        }
+
+        // Advance sign dialogue typewriter
+        if (gs.signDialogueActive && gs.signDialogueChar < (gs.signLines[gs.signDialogueLine]?.length ?? 0)) {
+          if (now - gs.signDialogueLastChar > 30) {
+            gs.signDialogueChar++;
+            gs.signDialogueLastChar = now;
+          }
         }
       }
 
@@ -1983,6 +2025,20 @@ function render(
           ctx.fillText('▲ E', cx + TILE * SCALE / 2 - 8, cy - 4);
         }
       }
+
+      // "E" hint above nearby chest/sign
+      if ((tile === 'C' || tile === 'S') && gs.cutPhase === 'done') {
+        const nearPlayer = Math.abs(tx - gs.px) <= 1 && Math.abs(ty - gs.py) <= 1;
+        if (nearPlayer && !gs.dialogueActive && !gs.signDialogueActive) {
+          const chestKey = `${realm}-${tx}-${ty}`;
+          const alreadyOpen = tile === 'C' && SESSION_OPENED.has(chestKey);
+          if (!alreadyOpen) {
+            ctx.fillStyle = tile === 'C' ? '#ffdd55' : palette.accent;
+            ctx.font = '9px monospace';
+            ctx.fillText(tile === 'C' ? '▲ OPEN' : '▲ READ', cx + TILE * SCALE / 2 - 14, cy - 4);
+          }
+        }
+      }
     }
   }
 
@@ -2045,6 +2101,33 @@ function render(
     const NPC_NAMES: Record<string, string> = { E: 'ELLIOT', B: 'BEN', A: 'ALEX', H: 'HENRY' };
     const npcName = gs.nearNpc ? (NPC_NAMES[gs.nearNpc] ?? 'NPC') : 'NPC';
     drawDialogueBox(ctx, world.npcGreeting.lines, gs.dialogueLine, gs.dialogueChar, npcName, palette.accent, CW, CH, frame);
+  }
+
+  // Sign dialogue overlay
+  if (gs.signDialogueActive && gs.signLines.length > 0) {
+    drawDialogueBox(ctx, gs.signLines, gs.signDialogueLine, gs.signDialogueChar, '-- SIGN --', palette.accent, CW, CH, frame);
+  }
+
+  // Chest loot popup
+  if (gs.chestPopup) {
+    const alpha = Math.min(1, gs.chestPopup.timer / 30);
+    const boxW = Math.min(CW - 32, 320), boxH = 60;
+    const bx = (CW - boxW) / 2, by = CH * 0.28;
+    ctx.globalAlpha = alpha * 0.92;
+    ctx.fillStyle = '#000000'; ctx.fillRect(bx + 3, by + 3, boxW, boxH);
+    ctx.fillStyle = palette.floor; ctx.fillRect(bx, by, boxW, boxH);
+    ctx.strokeStyle = palette.accent; ctx.lineWidth = 2; ctx.strokeRect(bx, by, boxW, boxH);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#ffdd55';
+    ctx.font = 'bold 11px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CHEST OPENED!', bx + boxW / 2, by + 18);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '8px "Press Start 2P", monospace';
+    const parts = gs.chestPopup.text.split(' | ');
+    parts.forEach((p, i) => ctx.fillText(p, bx + boxW / 2, by + 35 + i * 13));
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
   }
 
   // Cutscene overlay
