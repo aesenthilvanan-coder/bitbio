@@ -207,28 +207,41 @@ function drawDialogue(
   ctx.fillRect(boxX * S, boxY * S, 2, boxH * S);
   ctx.fillRect((boxX + boxW - 1) * S, boxY * S, 2, boxH * S);
 
-  // Speaker name
+  // Speaker name tag (color-coded by speaker)
   if (speaker) {
-    ctx.fillStyle = '#ffdd44';
-    ctx.fillRect((boxX + 2) * S, (boxY + 2) * S, (speaker.length * 7 + 4) * S, 10 * S);
-    drawPixelText(ctx, speaker, boxX + 4, boxY + 3, '#111111', 1);
+    const speakerColors: Record<string, [string, string]> = {
+      'MOM':      ['#cc2244', '#ffffff'],
+      'ENZYME':   ['#00bbaa', '#000000'],
+      'NARRATOR': ['#444466', '#ffffff'],
+      'ELLIOT':   ['#00ccdd', '#000000'],
+      'BEN':      ['#44aa44', '#000000'],
+      'ALEX':     ['#aa44ff', '#ffffff'],
+      'HENRY':    ['#9966ff', '#ffffff'],
+    };
+    const [bgCol, textCol] = speakerColors[speaker.toUpperCase()] ?? ['#ffdd44', '#111111'];
+    ctx.fillStyle = bgCol;
+    ctx.fillRect((boxX + 2) * S, (boxY + 2) * S, (speaker.length * 7 + 6) * S, 10 * S);
+    drawPixelText(ctx, speaker, boxX + 4, boxY + 3, textCol, 1);
   }
 
   // Text (typewriter)
   const displayed = text.slice(0, Math.floor(progress));
-  const lines = wrapText(displayed, 55);
+  const isItalic = displayed.startsWith('(');
+  const textColor = isItalic ? '#cccccc' : '#ffffff';
+  const lines = wrapText(displayed, 54);
   for (let i = 0; i < Math.min(lines.length, 3); i++) {
-    drawPixelText(ctx, lines[i], boxX + 4, boxY + 16 + i * 8, '#ffffff', 1);
+    drawPixelText(ctx, lines[i], boxX + 4, boxY + 16 + i * 8, textColor, 1);
   }
 
-  // Subtitle (for enzyme meow translations)
+  // Subtitle / stage direction
   if (subtitle) {
-    drawPixelText(ctx, subtitle.slice(0, Math.floor(progress)), boxX + 4, boxY + 24, '#aaffcc', 1);
+    const subDisplayed = subtitle.slice(0, Math.floor(progress));
+    drawPixelText(ctx, subDisplayed, boxX + 4, boxY + 27, '#7aaabb', 1);
   }
 
   // Advance prompt
   if (blink && progress >= text.length) {
-    drawPixelText(ctx, '> SPACE', boxX + boxW - 20, boxY + boxH - 8, '#888888', 1);
+    drawPixelText(ctx, '> SPACE', boxX + boxW - 20, boxY + boxH - 8, '#555577', 1);
   }
 }
 
@@ -1243,22 +1256,57 @@ function drawVoid(
   showTunnel: boolean,
   tunnelGlow: number
 ) {
-  // Black background
-  ctx.fillStyle = '#050505';
+  // ── Deep void background ──
+  ctx.fillStyle = '#030308';
   ctx.fillRect(0, 0, GW * S, GH * S);
 
-  // Floating particles
-  for (let p = 0; p < 30; p++) {
-    const px = Math.floor((Math.sin(p * 1.7 + t * 0.3) * 0.4 + 0.5) * GW);
-    const py = Math.floor((Math.cos(p * 2.3 + t * 0.2) * 0.4 + 0.5) * GH);
-    const alpha = (Math.sin(p + t * 0.5) + 1) / 2;
-    ctx.fillStyle = `rgba(100,200,255,${alpha * 0.3})`;
-    ctx.fillRect(px * S, py * S, 2, 2);
+  // Radial depth gradient from center
+  const cx2 = GW * S / 2, cy2 = GH * S / 2;
+  const vg = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, Math.max(GW, GH) * S * 0.7);
+  vg.addColorStop(0, 'rgba(20,10,60,0.5)');
+  vg.addColorStop(0.5, 'rgba(5,3,20,0.3)');
+  vg.addColorStop(1, 'transparent');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, GW * S, GH * S);
+
+  // Starfield — tiny pinprick stars
+  for (let p = 0; p < 120; p++) {
+    const px = Math.floor(((p * 137 + 17) % GW));
+    const py = Math.floor(((p * 59 + 11) % GH));
+    const twinkle = 0.3 + 0.7 * Math.abs(Math.sin(t * 0.4 + p * 0.7));
+    ctx.fillStyle = `rgba(180,200,255,${(twinkle * 0.5).toFixed(2)})`;
+    ctx.fillRect(px * S, py * S, p % 7 === 0 ? 2 : 1, p % 7 === 0 ? 2 : 1);
   }
+
+  // Floating DNA base letters drifting upward
+  const dnaChars = ['A','T','G','C'];
+  for (let d = 0; d < 18; d++) {
+    const dx = Math.floor((d * 113 + 5) % GW);
+    const dy = Math.floor(((d * 47 + t * 6) % GH));
+    const alpha = 0.08 + 0.06 * Math.sin(t * 0.6 + d);
+    ctx.globalAlpha = alpha;
+    drawPixelText(ctx, dnaChars[d % 4], dx, dy, '#4488ff', 1);
+  }
+  ctx.globalAlpha = 1;
+
+  // Slow concentric void rings
+  for (let r = 1; r <= 4; r++) {
+    const rr = (r / 4) * Math.min(GW, GH) * 0.45 + Math.sin(t * 0.2 + r) * 4;
+    const ringAlpha = 0.04 + 0.03 * Math.sin(t * 0.3 + r * 0.8);
+    ctx.strokeStyle = `rgba(100,80,200,${ringAlpha.toFixed(2)})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx2, cy2, rr * S, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Ground line (player stands on a faint suggestion of a floor)
+  const playerY = Math.floor(GH * 0.55);
+  ctx.strokeStyle = 'rgba(80,60,160,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, (playerY + 45) * S); ctx.lineTo(GW * S, (playerY + 45) * S); ctx.stroke();
 
   // Player in center
   const playerX = Math.floor(GW * 0.4);
-  const playerY = Math.floor(GH * 0.55);
   drawPlayer(ctx, playerX, playerY, avatar, 'right', 0);
 
   // Enzyme
@@ -1357,12 +1405,18 @@ const COMPUTER_LINES = [
   { speaker: 'YOU', text: "Press E to click the link..." },
 ];
 const VOID_DIALOGUES = [
-  { speaker: 'ENZYME', text: 'Meow!', sub: '*My name is Enzyme! Welcome to BioBit!*' },
-  { speaker: 'ENZYME', text: 'Meow meow meow.', sub: "*You've been transported to a digital learning dimension.*" },
-  { speaker: 'ENZYME', text: 'Meow? Meow!', sub: '*Basically your computer is now also a universe. Normal stuff.*' },
-  { speaker: 'ENZYME', text: "Meoooow.", sub: '*Anyway! You need to learn bioinformatics and ML.*' },
-  { speaker: 'ENZYME', text: 'Meow meow.', sub: "*I'll be your guide. I'm a cat with a PhD. Again, normal stuff.*" },
-  { speaker: 'ENZYME', text: 'Meow!', sub: "*Come on then! Into the Cytoplasm!*" },
+  { speaker: 'NARRATOR', text: 'This is the Void.', sub: 'It is not nothing. Nothing is too simple for what this is.' },
+  { speaker: 'NARRATOR', text: 'This is the space between understanding.', sub: 'You have been here a while. You did not notice.' },
+  { speaker: 'ENZYME', text: 'Oh FINALLY.', sub: undefined },
+  { speaker: 'ENZYME', text: "I've been sitting here for three days.", sub: "Do you know how long three days is when you're a cat? It's forever." },
+  { speaker: 'ENZYME', text: "(She stretches, tail curling.)", sub: undefined },
+  { speaker: 'ENZYME', text: "I'm Enzyme. I'll be accompanying you.", sub: "Non-negotiable. I've already decided." },
+  { speaker: 'ENZYME', text: "Don't you want to ask why a cat is in the void?", sub: "(You don't.)" },
+  { speaker: 'ENZYME', text: "Smart. It's a long answer and also I don't fully know.", sub: undefined },
+  { speaker: 'ENZYME', text: "Anyway. Biology.", sub: "You're about to learn an enormous amount of it." },
+  { speaker: 'ENZYME', text: "Four realms. Four mentors. Approximately one cat's worth of moral support.", sub: "Also there are bosses. I'll be honest with you." },
+  { speaker: 'ENZYME', text: "Actually —", sub: "(She looks at a portal that has opened behind you.)" },
+  { speaker: 'ENZYME', text: "— I'll explain on the way. Go through the portal.", sub: "(She headbutts you through it.)" },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -2040,9 +2094,7 @@ export default function IntroEngine({ onComplete }: Props) {
           const tableY = Math.floor(GH * 0.52);
           const momState = s.dialogueIdx === 0 || s.dialogueIdx === 2 ? 'angry' : s.dialogueIdx === 1 || s.dialogueIdx === 3 ? 'idle' : 'angry';
           drawMom(ctx, tableX - 18, tableY - 34, avatar.skinTone, momState as 'idle' | 'angry' | 'talking', s.momFrame);
-          // Enzyme cat
-          drawEnzyme(ctx, Math.floor(s.playerX) + 14, Math.floor(s.playerY) + 8, s.walkFrame, 'sitting');
-          // Player at table
+          // Player at table (Enzyme is NOT here — she first appears in the Void)
           drawPlayer(ctx, Math.floor(s.playerX), Math.floor(s.playerY), avatar, s.playerDir, s.walkFrame, s.freeRoam ? false : true);
 
           if (s.freeRoam) {
