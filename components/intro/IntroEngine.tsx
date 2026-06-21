@@ -262,47 +262,112 @@ function drawPlayer(
   const hair = avatar.hairColor;
   const cloth = avatar.clothingColorPrimary;
   const eye = avatar.eyeColor;
+  const skinShadow = shiftGr(skin, -30);
+  const clothShadow = shiftGr(cloth, -28);
+  const legCol = '#2a3a50';
+  const legShadow = '#1a2a40';
 
-  // Hair (behind head)
-  gr(ctx, gx + 1, gy, 8, 3, hair);
+  // Hair behind head (wider)
+  gr(ctx, gx,     gy,     18, 4, hair);
 
-  // Head
-  gr(ctx, gx + 2, gy + 1, 6, 6, skin);
+  // Head outline
+  gr(ctx, gx + 1, gy + 1, 16, 13, skinShadow);
+  // Head fill
+  gr(ctx, gx + 2, gy + 2, 14, 11, skin);
 
-  // Eyes
-  const eyeOffset = dir === 'right' ? 4 : 1;
-  gr(ctx, gx + 2 + eyeOffset, gy + 3, 1, 1, eye);
-  gr(ctx, gx + 2 + eyeOffset + 2, gy + 3, 1, 1, eye);
-
-  // Mouth
-  gr(ctx, gx + 3, gy + 6, 3, 1, '#cc6655');
-
-  // Hair style on top
+  // Hair style on top of head
   if (avatar.hairStyle === 0) {
-    gr(ctx, gx + 1, gy, 8, 2, hair);
+    gr(ctx, gx + 1, gy,     16, 4, hair);
   } else if (avatar.hairStyle === 1) {
-    gr(ctx, gx + 1, gy - 1, 8, 3, hair);
-    gr(ctx, gx + 0, gy, 2, 4, hair);
+    gr(ctx, gx,     gy - 1, 18, 5, hair);
+    gr(ctx, gx - 1, gy + 1, 3, 6, hair);
   } else if (avatar.hairStyle === 2) {
-    gr(ctx, gx + 2, gy - 2, 6, 2, hair);
-    gr(ctx, gx + 1, gy, 8, 2, hair);
+    gr(ctx, gx + 2, gy - 3, 14, 5, hair);
+    gr(ctx, gx + 1, gy + 1, 16, 3, hair);
   } else {
-    gr(ctx, gx + 1, gy, 8, 2, hair);
-    gr(ctx, gx + 8, gy + 1, 2, 5, hair);
+    gr(ctx, gx + 1, gy,     16, 4, hair);
+    gr(ctx, gx + 14, gy + 1, 3, 8, hair);
   }
 
-  // Body
-  gr(ctx, gx + 1, gy + 7, 8, 7, cloth);
+  // Eyes (direction-aware, 2×2 px each)
+  const blinkEye = (walkFrame % 90) < 6;
+  const eyeH = blinkEye ? 1 : 2;
+  if (dir === 'right') {
+    gr(ctx, gx + 7,  gy + 5, 2, eyeH, eye);
+    gr(ctx, gx + 12, gy + 5, 2, eyeH, eye);
+    if (!blinkEye) {
+      gr(ctx, gx + 7, gy + 5, 1, 1, '#ffffff');
+      gr(ctx, gx + 12, gy + 5, 1, 1, '#ffffff');
+    }
+    gr(ctx, gx + 10, gy + 8, 3, 1, skinShadow); // nose
+    gr(ctx, gx + 7,  gy + 10, 5, 1, '#aa4433'); // mouth
+  } else {
+    gr(ctx, gx + 4,  gy + 5, 2, eyeH, eye);
+    gr(ctx, gx + 9,  gy + 5, 2, eyeH, eye);
+    if (!blinkEye) {
+      gr(ctx, gx + 4, gy + 5, 1, 1, '#ffffff');
+      gr(ctx, gx + 9, gy + 5, 1, 1, '#ffffff');
+    }
+    gr(ctx, gx + 6, gy + 8, 3, 1, skinShadow);
+    gr(ctx, gx + 5, gy + 10, 5, 1, '#aa4433');
+  }
+
+  // Neck
+  gr(ctx, gx + 7, gy + 13, 4, 3, skin);
+
+  // Shoulders
+  gr(ctx, gx + 2, gy + 16, 14, 3, cloth);
+
+  // Body / torso
+  gr(ctx, gx + 3, gy + 19, 12, 10, cloth);
+  gr(ctx, gx + 3, gy + 19, 12, 2, shiftGr(cloth, 15)); // highlight
+  gr(ctx, gx + 3, gy + 27, 12, 2, clothShadow); // bottom shadow
+
+  // Arms
+  if (dir === 'right') {
+    gr(ctx, gx,      gy + 16, 4, 12, cloth);
+    gr(ctx, gx + 14, gy + 16, 4, 12, clothShadow);
+    gr(ctx, gx - 1,  gy + 27, 5, 3, skin);
+    gr(ctx, gx + 14, gy + 27, 5, 3, skin);
+  } else {
+    gr(ctx, gx,      gy + 16, 4, 12, clothShadow);
+    gr(ctx, gx + 14, gy + 16, 4, 12, cloth);
+    gr(ctx, gx - 1,  gy + 27, 5, 3, skin);
+    gr(ctx, gx + 14, gy + 27, 5, 3, skin);
+  }
+
+  // Hips
+  gr(ctx, gx + 3, gy + 29, 12, 3, legShadow);
 
   if (!sitting) {
-    // Legs
-    const legOffset = (walkFrame % 2 === 0) ? 0 : 1;
-    gr(ctx, gx + 2, gy + 14, 3, 5, '#334455');
-    gr(ctx, gx + 5, gy + 14 + legOffset, 3, 5, '#334455');
-    // Feet
-    gr(ctx, gx + 1, gy + 19, 4, 2, '#553322');
-    gr(ctx, gx + 5, gy + 19 + (1 - legOffset), 4, 2, '#553322');
+    const legOff = (walkFrame % 2 === 0) ? 0 : 2;
+    // Left leg
+    gr(ctx, gx + 3, gy + 32 - legOff, 5, 9, legCol);
+    gr(ctx, gx + 3, gy + 32 - legOff, 5, 2, shiftGr(legCol, 12));
+    // Right leg
+    gr(ctx, gx + 10, gy + 32 + legOff, 5, 9, legCol);
+    gr(ctx, gx + 10, gy + 32 + legOff, 5, 2, shiftGr(legCol, 12));
+    // Left foot
+    gr(ctx, gx + 2,  gy + 41 - legOff, 6, 3, '#44302a');
+    gr(ctx, gx + 2,  gy + 41 - legOff, 6, 1, '#5a4038');
+    // Right foot
+    gr(ctx, gx + 9,  gy + 41 + legOff, 6, 3, '#44302a');
+    gr(ctx, gx + 9,  gy + 41 + legOff, 6, 1, '#5a4038');
+  } else {
+    gr(ctx, gx + 3, gy + 32, 5, 4, legCol);
+    gr(ctx, gx + 10, gy + 32, 5, 4, legCol);
+    gr(ctx, gx + 1,  gy + 36, 16, 3, legCol); // seated legs go forward
+    gr(ctx, gx + 1,  gy + 39, 7, 3, '#44302a');
+    gr(ctx, gx + 10, gy + 39, 7, 3, '#44302a');
   }
+}
+
+function shiftGr(hex: string, amt: number): string {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.max(0, Math.min(255, (n >> 16) + amt));
+  const g = Math.max(0, Math.min(255, ((n >> 8) & 0xff) + amt));
+  const b = Math.max(0, Math.min(255, (n & 0xff) + amt));
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
 }
 
 function drawMom(
@@ -459,46 +524,88 @@ function drawEnzyme(
   walkFrame: number,
   mood: 'happy' | 'annoyed' | 'sitting' = 'happy'
 ) {
-  // Body
-  gr(ctx, gx + 1, gy + 3, 6, 5, '#f5f5f5');
+  const W = '#f4f4f4';  // white body
+  const WS = '#d8d8d8'; // body shadow
+  const EYE = '#00bbaa'; // signature teal eyes
+  const PINK = '#ffb3c6';
+  const blink = (walkFrame % 80) < 5;
+  const tailWag = Math.round(Math.sin(walkFrame * 0.15) * 2);
 
-  // Head
-  gr(ctx, gx + 1, gy, 6, 5, '#f5f5f5');
+  // TAIL (behind body, draw first)
+  gr(ctx, gx + 14, gy + 8 + tailWag, 3, 2, W);
+  gr(ctx, gx + 16, gy + 6 + tailWag, 2, 3, W);
+  gr(ctx, gx + 17, gy + 4 + tailWag, 2, 3, WS);
 
-  // Ears
-  gr(ctx, gx + 1, gy - 2, 2, 2, '#f5f5f5');
-  gr(ctx, gx + 5, gy - 2, 2, 2, '#f5f5f5');
-  gr(ctx, gx + 2, gy - 1, 1, 1, '#ffb3c1');
-  gr(ctx, gx + 5, gy - 1, 1, 1, '#ffb3c1');
+  // BODY (12×7)
+  gr(ctx, gx + 1, gy + 7, 13, 8, W);
+  gr(ctx, gx + 2, gy + 6, 11, 2, W); // shoulder rise
+  // Body shading
+  gr(ctx, gx + 1, gy + 13, 13, 2, WS);
+  gr(ctx, gx + 12, gy + 7, 2, 8, WS);
 
-  // Eyes
+  // HEAD (11×9)
+  gr(ctx, gx + 2, gy - 1, 10, 9, W);
+  gr(ctx, gx + 1, gy,     12, 7, W);
+  // Head outline shadow
+  gr(ctx, gx + 1, gy + 7, 12, 1, WS);
+
+  // EARS
+  gr(ctx, gx + 2, gy - 4, 3, 4, W);
+  gr(ctx, gx + 9, gy - 4, 3, 4, W);
+  gr(ctx, gx + 2, gy - 4, 2, 3, PINK); // inner left ear
+  gr(ctx, gx + 9, gy - 4, 2, 3, PINK); // inner right ear
+
+  // EYES — teal with white highlight
   if (mood === 'annoyed') {
-    // Angry slant
-    gr(ctx, gx + 2, gy + 2, 2, 1, '#222');
-    gr(ctx, gx + 5, gy + 2, 2, 1, '#222');
-    gr(ctx, gx + 2, gy + 1, 1, 1, '#222');
-    gr(ctx, gx + 6, gy + 1, 1, 1, '#222');
+    gr(ctx, gx + 4, gy + 2, 3, 1, EYE);
+    gr(ctx, gx + 3, gy + 1, 1, 1, EYE);
+    gr(ctx, gx + 9, gy + 2, 3, 1, EYE);
+    gr(ctx, gx + 11, gy + 1, 1, 1, EYE);
+  } else if (!blink) {
+    gr(ctx, gx + 4, gy + 2, 3, 2, EYE);
+    gr(ctx, gx + 9, gy + 2, 3, 2, EYE);
+    gr(ctx, gx + 4, gy + 2, 1, 1, '#ffffff'); // eye shine left
+    gr(ctx, gx + 9, gy + 2, 1, 1, '#ffffff'); // eye shine right
+    gr(ctx, gx + 5, gy + 3, 1, 1, '#007a70'); // pupil depth left
+    gr(ctx, gx + 10, gy + 3, 1, 1, '#007a70');
   } else {
-    gr(ctx, gx + 2, gy + 2, 1, 1, '#111');
-    gr(ctx, gx + 5, gy + 2, 1, 1, '#111');
+    gr(ctx, gx + 4, gy + 3, 3, 1, EYE); // closed blink line
+    gr(ctx, gx + 9, gy + 3, 3, 1, EYE);
   }
 
-  // Nose
-  gr(ctx, gx + 3, gy + 3, 1, 1, '#ffb3c1');
+  // NOSE
+  gr(ctx, gx + 6, gy + 5, 2, 1, PINK);
 
-  // Tail
-  gr(ctx, gx + 7, gy + 4, 2, 1, '#e0e0e0');
-  gr(ctx, gx + 8, gy + 5, 1, 2, '#e0e0e0');
-  gr(ctx, gx + 7, gy + 7, 2, 1, '#f5f5f5');
+  // MOUTH
+  gr(ctx, gx + 5, gy + 6, 4, 1, '#cc8899');
+  if (mood === 'happy') {
+    gr(ctx, gx + 4, gy + 6, 1, 1, '#cc8899');
+    gr(ctx, gx + 9, gy + 6, 1, 1, '#cc8899');
+  }
 
-  // Legs (walking animation)
-  if (mood !== 'sitting') {
-    const legA = walkFrame % 2 === 0 ? 1 : 0;
-    gr(ctx, gx + 2, gy + 8, 2, legA + 1, '#e0e0e0');
-    gr(ctx, gx + 5, gy + 8, 2, (1 - legA) + 1, '#e0e0e0');
+  // WHISKERS (left)
+  gr(ctx, gx - 2, gy + 3, 4, 1, '#aaaaaa');
+  gr(ctx, gx - 2, gy + 5, 4, 1, '#aaaaaa');
+  // WHISKERS (right)
+  gr(ctx, gx + 12, gy + 3, 4, 1, '#aaaaaa');
+  gr(ctx, gx + 12, gy + 5, 4, 1, '#aaaaaa');
+
+  // LEGS (4 stubs with animation)
+  const legA = (walkFrame % 2 === 0) ? 0 : 1;
+  if (mood === 'sitting') {
+    gr(ctx, gx + 2,  gy + 15, 4, 3, W);
+    gr(ctx, gx + 8,  gy + 15, 4, 3, W);
+    gr(ctx, gx + 2,  gy + 17, 4, 1, PINK);
+    gr(ctx, gx + 8,  gy + 17, 4, 1, PINK);
   } else {
-    gr(ctx, gx + 2, gy + 8, 2, 1, '#e0e0e0');
-    gr(ctx, gx + 5, gy + 8, 2, 1, '#e0e0e0');
+    gr(ctx, gx + 2, gy + 15 - legA, 3, 4, W);
+    gr(ctx, gx + 7, gy + 15 + legA, 3, 4, W);
+    gr(ctx, gx + 9, gy + 15 - legA, 3, 4, WS);
+    gr(ctx, gx + 3, gy + 15 + legA, 3, 4, WS);
+    gr(ctx, gx + 2,  gy + 18 - legA, 3, 1, PINK);
+    gr(ctx, gx + 7,  gy + 18 + legA, 3, 1, PINK);
+    gr(ctx, gx + 9,  gy + 18 - legA, 3, 1, PINK);
+    gr(ctx, gx + 3,  gy + 18 + legA, 3, 1, PINK);
   }
 }
 
@@ -509,39 +616,47 @@ function drawKitchen(ctx: CanvasRenderingContext2D, GW: number, GH: number, came
   const floorY = Math.floor(GH * 0.62);
 
   // ── Undertale-dark background ──
-  // Wall (near-black warm)
-  ctx.fillStyle = '#0e0a06';
+  // Wall (dark warm tone — visible but moody)
+  ctx.fillStyle = '#2a1e12';
   ctx.fillRect(0, 0, GW * S, floorY * S);
+  // Wall texture: subtle vertical stripe variation
+  for (let wx = 0; wx < GW; wx += 8) {
+    ctx.fillStyle = wx % 16 === 0 ? 'rgba(0,0,0,0.06)' : 'rgba(255,200,100,0.02)';
+    ctx.fillRect(wx * S, 0, 8 * S, floorY * S);
+  }
 
   // Baseboard strip
-  gr(ctx, 0 + ox, floorY - 4, GW + 16, 4, '#1a1208');
-  gr(ctx, 0 + ox, floorY - 5, GW + 16, 1, '#2a1e10');
+  gr(ctx, 0 + ox, floorY - 5, GW + 16, 5, '#3a2814');
+  gr(ctx, 0 + ox, floorY - 6, GW + 16, 1, '#4e3820');
 
   // Dark wood floor planks
   for (let fy = floorY; fy < GH; fy += 6) {
-    ctx.fillStyle = fy % 12 === 0 ? '#130e04' : '#0f0a02';
+    ctx.fillStyle = fy % 12 === 0 ? '#281a08' : '#221408';
     ctx.fillRect(0, fy * S, GW * S, 6 * S);
     // Plank lines
     for (let fx = 0; fx < GW; fx += 24) {
-      ctx.fillStyle = '#0a0700';
+      ctx.fillStyle = '#160d04';
       ctx.fillRect((fx + ox) * S, fy * S, S, 6 * S);
     }
+    // Grain highlight
+    ctx.fillStyle = 'rgba(255,180,60,0.025)';
+    ctx.fillRect(0, fy * S, GW * S, 2);
   }
 
   // Wainscoting (dark wood paneling strip at bottom of wall)
-  gr(ctx, 0 + ox, floorY - 16, GW + 16, 12, '#1e1408');
-  gr(ctx, 0 + ox, floorY - 17, GW + 16, 1, '#2e1e0e');
+  gr(ctx, 0 + ox, floorY - 18, GW + 16, 13, '#362410');
+  gr(ctx, 0 + ox, floorY - 19, GW + 16, 1, '#4a3018');
   for (let px = 0; px < GW; px += 20) {
-    gr(ctx, px + ox + 1, floorY - 15, 18, 10, '#201508');
-    gr(ctx, px + ox + 2, floorY - 14, 16, 1, '#2e1e0e');
+    gr(ctx, px + ox + 1, floorY - 17, 18, 11, '#301e0c');
+    gr(ctx, px + ox + 2, floorY - 16, 16, 1, '#443018');
   }
 
   // Window (night — dark outside with stars)
   const winX = 40 + ox;
   const winY = 8;
-  gr(ctx, winX - 2, winY - 2, 28, 24, '#1e1408'); // frame
-  gr(ctx, winX, winY, 24, 20, '#050d1a');          // glass - night sky
-  gr(ctx, winX + 11, winY, 2, 20, '#1e1408');      // divider
+  gr(ctx, winX - 2, winY - 2, 28, 24, '#4a3018'); // frame
+  gr(ctx, winX, winY, 24, 20, '#091520');          // glass - night sky
+  gr(ctx, winX + 11, winY, 2, 20, '#3a2410');      // divider
   // Stars
   [[3,3],[8,6],[17,4],[21,8],[6,12],[19,14]].forEach(([sx,sy]) => {
     gr(ctx, winX + sx, winY + sy, 1, 1, '#aaccff');
@@ -556,28 +671,28 @@ function drawKitchen(ctx: CanvasRenderingContext2D, GW: number, GH: number, came
 
   // Counter (dark wood, right side)
   const ctrX = GW - 70 + ox;
-  gr(ctx, ctrX, 30, 70, 5, '#1e1408');    // counter surface
-  gr(ctx, ctrX, 30, 70, 2, '#2a1c0c');    // highlight top
-  gr(ctx, ctrX, 35, 70, 28, '#160e04');   // cabinet body
+  gr(ctx, ctrX, 30, 70, 5, '#4a3018');    // counter surface
+  gr(ctx, ctrX, 30, 70, 2, '#6a4824');    // highlight top
+  gr(ctx, ctrX, 35, 70, 28, '#362410');   // cabinet body
   // Cabinet doors
   for (let c = 0; c < 3; c++) {
-    gr(ctx, ctrX + c * 22 + 2, 37, 18, 24, '#1c1208');
-    gr(ctx, ctrX + c * 22 + 3, 38, 16, 22, '#181006');
-    gr(ctx, ctrX + c * 22 + 10, 48, 2, 4, '#2a1e0c'); // handle
-    gr(ctx, ctrX + c * 22 + 3, 38, 16, 1, '#241808'); // inner top highlight
+    gr(ctx, ctrX + c * 22 + 2, 37, 18, 24, '#3a2010');
+    gr(ctx, ctrX + c * 22 + 3, 38, 16, 22, '#301a0c');
+    gr(ctx, ctrX + c * 22 + 10, 48, 2, 4, '#5a3a1c'); // handle
+    gr(ctx, ctrX + c * 22 + 3, 38, 16, 1, '#4a2e14'); // inner top highlight
   }
 
   // Refrigerator (dark steel — not white)
   const fridgeX = GW - 18 + ox;
-  gr(ctx, fridgeX, 5, 16, 57, '#1a1a1a');
-  gr(ctx, fridgeX + 1, 6, 14, 1, '#252525');  // highlight
-  gr(ctx, fridgeX + 14, 20, 1, 10, '#0f0f0f'); // handle
-  gr(ctx, fridgeX + 4, 32, 8, 1, '#101010'); // divider line
-  gr(ctx, fridgeX + 1, 33, 14, 1, '#0d0d0d');
+  gr(ctx, fridgeX, 5, 16, 57, '#303030');
+  gr(ctx, fridgeX + 1, 6, 14, 1, '#3e3e3e');  // highlight
+  gr(ctx, fridgeX + 14, 20, 1, 10, '#222'); // handle
+  gr(ctx, fridgeX + 4, 32, 8, 1, '#1a1a1a'); // divider line
+  gr(ctx, fridgeX + 1, 33, 14, 1, '#181818');
 
   // Stove
-  gr(ctx, ctrX - 22, 30, 20, 5, '#0f0f0f');
-  gr(ctx, ctrX - 20, 24, 16, 6, '#0a0a0a');
+  gr(ctx, ctrX - 22, 30, 20, 5, '#252525');
+  gr(ctx, ctrX - 20, 24, 16, 6, '#1e1e1e');
   // Burner glow
   const heatPulse = (Math.sin(t * 3) + 1) / 2;
   gr(ctx, ctrX - 16, 27, 5, 2, `#${Math.floor(80 + heatPulse * 80).toString(16).padStart(2,'0')}2000` as string);
@@ -597,22 +712,22 @@ function drawKitchen(ctx: CanvasRenderingContext2D, GW: number, GH: number, came
   const tableX = Math.floor(GW * 0.3) + ox;
   const tableY = Math.floor(GH * 0.52);
   const tableW = 60;
-  gr(ctx, tableX, tableY, tableW, 8, '#2a1808'); // tabletop
-  gr(ctx, tableX, tableY, tableW, 2, '#3a2410'); // highlight
-  gr(ctx, tableX, tableY + 8, tableW, 1, '#1a1006'); // shadow
+  gr(ctx, tableX, tableY, tableW, 8, '#5a3418'); // tabletop
+  gr(ctx, tableX, tableY, tableW, 2, '#7a4a24'); // highlight
+  gr(ctx, tableX, tableY + 8, tableW, 1, '#3a200e'); // shadow
   // Legs
-  gr(ctx, tableX + 2, tableY + 8, 4, 12, '#1e1206');
-  gr(ctx, tableX + tableW - 6, tableY + 8, 4, 12, '#1e1206');
+  gr(ctx, tableX + 2, tableY + 8, 4, 12, '#3a2010');
+  gr(ctx, tableX + tableW - 6, tableY + 8, 4, 12, '#3a2010');
 
   // Chairs
   for (let c = 0; c < 2; c++) {
     const chX = tableX + c * (tableW - 14);
-    gr(ctx, chX + 2, tableY - 12, 10, 8, '#241808');   // seat
-    gr(ctx, chX + 2, tableY - 12, 10, 1, '#341c0c');   // seat highlight
-    gr(ctx, chX + 2, tableY - 18, 10, 6, '#1e1206');   // back
-    gr(ctx, chX + 2, tableY - 19, 10, 1, '#2a1a0a');   // back highlight
-    gr(ctx, chX + 3, tableY - 4, 3, 8, '#1a1006');     // legs
-    gr(ctx, chX + 9, tableY - 4, 3, 8, '#1a1006');
+    gr(ctx, chX + 2, tableY - 12, 10, 8, '#4a2c14');   // seat
+    gr(ctx, chX + 2, tableY - 12, 10, 1, '#6a3c1e');   // seat highlight
+    gr(ctx, chX + 2, tableY - 18, 10, 6, '#3a2010');   // back
+    gr(ctx, chX + 2, tableY - 19, 10, 1, '#4e2e16');   // back highlight
+    gr(ctx, chX + 3, tableY - 4, 3, 8, '#2e1a0c');     // legs
+    gr(ctx, chX + 9, tableY - 4, 3, 8, '#2e1a0c');
   }
 
   // Wall shelf on left
@@ -739,9 +854,14 @@ function drawBedroom(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: n
   const floorY = Math.floor(GH * 0.62);
 
   // ── Dark bedroom (Undertale-style) ──
-  // Wall: very dark blue-grey
-  ctx.fillStyle = '#07090e';
+  // Wall: dark blue-grey but visible
+  ctx.fillStyle = '#121928';
   ctx.fillRect(0, 0, GW * S, floorY * S);
+  // Subtle wallpaper texture
+  for (let wy = 0; wy < floorY; wy += 10) {
+    ctx.fillStyle = 'rgba(100,140,255,0.025)';
+    ctx.fillRect(0, wy * S, GW * S, 5 * S);
+  }
 
   // Floor: dark wood
   for (let fy = floorY; fy < GH; fy += 7) {
