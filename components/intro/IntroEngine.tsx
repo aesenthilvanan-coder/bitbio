@@ -187,7 +187,7 @@ function drawDialogue(
 ) {
   const GW = Math.floor(cw / S);
   const GH = Math.floor(ch / S);
-  const boxH = 36;
+  const boxH = subtitle ? 46 : 36;
   const boxY = GH - boxH - 4;
   const boxX = 4;
   const boxW = GW - 8;
@@ -233,10 +233,12 @@ function drawDialogue(
     drawPixelText(ctx, lines[i], boxX + 4, boxY + 16 + i * 8, textColor, 1);
   }
 
-  // Subtitle / stage direction
+  // Subtitle / English translation (shown at bottom of box, teal-italic tone)
   if (subtitle) {
     const subDisplayed = subtitle.slice(0, Math.floor(progress));
-    drawPixelText(ctx, subDisplayed, boxX + 4, boxY + 27, '#7aaabb', 1);
+    const subLines = wrapText(subDisplayed, 54);
+    drawPixelText(ctx, subLines[0] ?? '', boxX + 4, boxY + boxH - 14, '#55ddcc', 1);
+    if (subLines[1]) drawPixelText(ctx, subLines[1], boxX + 4, boxY + boxH - 7, '#55ddcc', 1);
   }
 
   // Advance prompt
@@ -1407,17 +1409,19 @@ const COMPUTER_LINES = [
 const VOID_DIALOGUES = [
   { speaker: 'NARRATOR', text: 'This is the Void.', sub: 'It is not nothing. Nothing is too simple for what this is.' },
   { speaker: 'NARRATOR', text: 'This is the space between understanding.', sub: 'You have been here a while. You did not notice.' },
-  { speaker: 'ENZYME', text: 'Oh FINALLY.', sub: undefined },
-  { speaker: 'ENZYME', text: "I've been sitting here for three days.", sub: "Do you know how long three days is when you're a cat? It's forever." },
-  { speaker: 'ENZYME', text: "(She stretches, tail curling.)", sub: undefined },
-  { speaker: 'ENZYME', text: "I'm Enzyme. I'll be accompanying you.", sub: "Non-negotiable. I've already decided." },
-  { speaker: 'ENZYME', text: "Don't you want to ask why a cat is in the void?", sub: "(You don't.)" },
-  { speaker: 'ENZYME', text: "Smart. It's a long answer and also I don't fully know.", sub: undefined },
-  { speaker: 'ENZYME', text: "Anyway. Biology.", sub: "You're about to learn an enormous amount of it." },
-  { speaker: 'ENZYME', text: "Four realms. Four mentors. Approximately one cat's worth of moral support.", sub: "Also there are bosses. I'll be honest with you." },
-  { speaker: 'ENZYME', text: "Actually —", sub: "(She looks at a portal that has opened behind you.)" },
-  { speaker: 'ENZYME', text: "— I'll explain on the way. Go through the portal.", sub: "(She headbutts you through it.)" },
+  { speaker: 'ENZYME', text: 'MROW!!', sub: "*(Oh FINALLY. I've been sitting here for three days.)*" },
+  { speaker: 'ENZYME', text: 'Mrew mrew mrew.', sub: '*(Three days is forever when you\'re a cat. Just so you know.)*' },
+  { speaker: 'ENZYME', text: '...Mrr.', sub: '*(He stretches, tail curling.)*' },
+  { speaker: 'ENZYME', text: 'Meow.', sub: "*(I'm Enzyme. I'll be accompanying you. Non-negotiable. I've already decided.)*" },
+  { speaker: 'ENZYME', text: 'Meow meow?', sub: "*(Don't you want to ask why a cat is in the Void?)*" },
+  { speaker: 'ENZYME', text: 'Mrrr. Meow.', sub: "*(Smart. It's a long answer and I don't fully know anyway.)*" },
+  { speaker: 'ENZYME', text: 'Meow meow meow.', sub: '*(This is BioBit. You\'re about to learn an enormous amount of biology.)*' },
+  { speaker: 'ENZYME', text: 'Meow. Meow meow. Meow meow meow meow.', sub: '*(Four realms. Four mentors. One cat who will be very judgmental.)*' },
+  { speaker: 'ENZYME', text: '!!', sub: '*(He looks at a portal that has opened behind you.)*' },
+  { speaker: 'ENZYME', text: 'Meow. Meow!', sub: "*(There's a portal. Go through it.)*" },
 ];
+
+const ENZYME_YEET_DIALOGUE = 'Meow meow meow... These brainrotted kids don\'t wanna learn code...';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -1710,17 +1714,22 @@ export default function IntroEngine({ onComplete }: Props) {
         });
       }, 1500);
     } else {
-      // Enzyme grabs and yeets
+      // Enzyme picks you up and throws you in
       s.choiceSelected = 1;
-      // Animate, then complete anyway
+      s.enzymeWalking = true;
+      s.enzymeDir = 'left';
+      // Show yeet dialogue, then fade
+      setTimeout(() => {
+        startDialogue(ENZYME_YEET_DIALOGUE);
+      }, 600);
       setTimeout(() => {
         fadeToBlack(1.5, () => {
           s.phase = 'complete';
           onCompleteRef.current();
         });
-      }, 3000);
+      }, 4000);
     }
-  }, [fadeToBlack]);
+  }, [fadeToBlack, startDialogue]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
