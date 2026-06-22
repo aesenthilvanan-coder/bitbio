@@ -234,11 +234,29 @@ function drawTile(
           if (ax>=0&&ax<=W-2) { const ay=8+Math.floor(Math.sin(p*0.3)*4); if(ay>=0&&ay<=W-2) gr(ctx,cx,cy,ax,ay,2,2,'#00cc88'); }
         }
       } else if (realm === 3) {
-        gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(fl, -14));
-        gr(ctx, cx, cy, 0, 0, 1, W, shiftColor(fl, -10));
-        if ((tx+ty)%5===0) {
-          gr(ctx,cx,cy,7,7,2,2,shiftColor(acc,-20));
-          if((frame+h1)%80<6) gr(ctx,cx,cy,7,7,2,2,'#ffffff');
+        // ── Grid-pattern tech floor (spec: grid lines every 8px, intersections bright) ──
+        gr(ctx, cx, cy, 0, 0, W, W, '#14083a');
+        // Grid lines at x=0,8 and y=0,8
+        gr(ctx,cx,cy,0,0,W,1,'#1a0840'); gr(ctx,cx,cy,0,8,W,1,'#1a0840');
+        gr(ctx,cx,cy,0,0,1,W,'#1a0840'); gr(ctx,cx,cy,8,0,1,W,'#1a0840');
+        // Grid intersections: 2×2 bright squares at (0,0),(8,0),(0,8),(8,8)
+        gr(ctx,cx,cy,0,0,2,2,'#2a1060'); gr(ctx,cx,cy,7,0,2,2,'#2a1060');
+        gr(ctx,cx,cy,0,7,2,2,'#2a1060'); gr(ctx,cx,cy,7,7,2,2,'#2a1060');
+        // Occasional bright intersection pulse
+        if((frame+h1)%80<6) gr(ctx,cx,cy,7,7,2,2,'#ffffff');
+        // ── Metallic platform edge treatment for tiles adjacent to void (~) ──
+        if (map.length > 0) {
+          const below = tileAt(map,tx,ty+1);
+          const above = tileAt(map,tx,ty-1);
+          const lft   = tileAt(map,tx-1,ty);
+          const rgt   = tileAt(map,tx+1,ty);
+          if(below==='~') gr(ctx,cx,cy,0,W-1,W,1,'#4a2880');
+          if(above==='~') gr(ctx,cx,cy,0,0,W,1,'#0a0420');
+          if(lft  ==='~') gr(ctx,cx,cy,0,0,1,W,'#0a0420');
+          if(rgt  ==='~') gr(ctx,cx,cy,W-1,0,1,W,'#0a0420');
+          // Corner bright pixel
+          if((below==='~'||lft==='~')&&(below==='~'||lft==='~')) gr(ctx,cx,cy,0,W-1,1,1,'#6a3a90');
+          if((below==='~'||rgt==='~')&&(below==='~'||rgt==='~')) gr(ctx,cx,cy,W-1,W-1,1,1,'#6a3a90');
         }
       } else {
         const mX=tx%2===0?0:8;
@@ -405,13 +423,22 @@ function drawTile(
         ctx.globalAlpha=0.2+0.1*Math.sin(t*2+tx); gr(ctx,cx,cy,4,12,8,4,tH); ctx.globalAlpha=1;
 
       } else {
-        // ── PROTEIN CATHEDRAL: Gothic pillar with stained-glass ──────────
+        // ── PROTEIN CATHEDRAL: Gothic pillar with alpha-helix spiral highlight ──
         gr(ctx,cx,cy,3,W-1,10,1,'#000000');
         gr(ctx,cx,cy,4,0,8,W,wl); gr(ctx,cx,cy,4,0,2,W,shiftColor(wl,22)); gr(ctx,cx,cy,10,0,2,W,shiftColor(wl,-12));
+        // Alpha-helix spiral: alternating left/right 1px bright pixels winding up column
+        for(let sY=2;sY<W;sY+=2) {
+          const isLeft=Math.floor(sY/2)%2===0;
+          gr(ctx,cx,cy,isLeft?4:10,sY,1,1,'#4a40a0');
+        }
+        // Capital (pillar top) + gold accent line
         gr(ctx,cx,cy,1,0,14,4,shiftColor(wl,14)); gr(ctx,cx,cy,0,0,16,2,shiftColor(fl,5)); gr(ctx,cx,cy,1,0,14,1,acc);
+        // Base + gold accent bottom
         gr(ctx,cx,cy,1,13,14,3,shiftColor(wl,10)); gr(ctx,cx,cy,0,14,16,2,shiftColor(fl,5)); gr(ctx,cx,cy,1,W-1,14,1,acc);
         gr(ctx,cx,cy,4,6,8,1,shiftColor(wl,-18)); gr(ctx,cx,cy,4,9,8,1,shiftColor(wl,-18));
         gr(ctx,cx,cy,2,3,12,1,acc+'88'); gr(ctx,cx,cy,2,12,12,1,acc+'88');
+        // Top glow (spec: #ffaa00 at 20% alpha, radius 12px from top)
+        ctx.globalAlpha=0.2; gr(ctx,cx,cy,2,0,12,4,'#ffaa00'); ctx.globalAlpha=1;
         const bP=(frame+tx*23+ty*7)%150;
         if(bP<60) { ctx.globalAlpha=0.22; gr(ctx,cx,cy,4+(bP>>3)%7,0,2,W,'#ffe44c'); ctx.globalAlpha=1; }
       }
@@ -432,12 +459,24 @@ function drawTile(
         gr(ctx,cx,cy,0,0,2,2,'#cc0000'); gr(ctx,cx,cy,W-2,0,2,2,'#cc0000');
         gr(ctx,cx,cy,0,0,W,1,'#330044'); gr(ctx,cx,cy,0,W-1,W,1,'#330044');
       } else if (realm===2) {
-        gr(ctx,cx,cy,0,0,W,W,'#0a1828'); gr(ctx,cx,cy,2,0,12,W,'#081220');
-        const rOff=Math.floor(t*3)%W;
-        gr(ctx,cx,cy,1,rOff%W,W-2,1,'#1a3a5a'); gr(ctx,cx,cy,2,(rOff+6)%W,W-4,1,'#1a4868'); gr(ctx,cx,cy,4,(rOff+11)%W,W-8,1,'#224d6a');
-        for(let col=1;col<W-1;col+=3) gr(ctx,cx,cy,col,(frame+col*3)%W,1,2,'#4499cc');
-        if(animFrame%2===0) gr(ctx,cx,cy,(h1%10)+3,(h2%8)+2,2,1,'#aaddff');
-        if(h1%5===0) { gr(ctx,cx,cy,5,6,6,5,'#1a4018'); gr(ctx,cx,cy,7,7,2,2,'#ee4466'); gr(ctx,cx,cy,8,7,1,1,'#ff88aa'); }
+        // ── RNA River: data packets with correct nucleotide colors A/U/G/C at 3 row offsets ──
+        gr(ctx,cx,cy,0,0,W,W,'#051a2a'); gr(ctx,cx,cy,2,0,12,W,'#081220');
+        // River bank scatter
+        gr(ctx,cx,cy,0,0,W,1,'#0a2a0a'); gr(ctx,cx,cy,0,W-1,W,1,'#0a2a0a');
+        // Three rows of packets at y=3,8,12 with speeds 0.3/0.5/0.7 gp/frame
+        const nucCols=['#ff6644','#ffaa00','#44aaff','#44ff88'] as const;
+        const rowDefs=[[3,frame*0.4],[8,frame*0.7],[12,frame*0.9]] as [number,number][];
+        for (const [rowY,speed] of rowDefs) {
+          for(let pi=0;pi<5;pi++) {
+            const pOff=Math.floor((speed+pi*4+tx*3)%(W+6));
+            const pX=pOff%W;
+            if(pX>=0&&pX<=W-3) {
+              const nc=nucCols[(pi+tx+ty)%4];
+              gr(ctx,cx,cy,pX,rowY,3,2,nc);
+              gr(ctx,cx,cy,pX,rowY,1,1,'#ffffff');
+            }
+          }
+        }
       } else if (realm===3) {
         gr(ctx,cx,cy,0,0,W,W,'#03000a');
         [[2,3],[7,1],[12,5],[4,10],[14,8],[9,14],[1,13],[11,2],[5,7],[13,11],[3,15],[10,4]].forEach(([sx,sy])=>{
@@ -459,12 +498,17 @@ function drawTile(
     // ─────────────────────────────────────────────────────────────────────────
     case '=': {
       if (realm===1) {
-        gr(ctx,cx,cy,0,0,W,W,'#04080f');
-        ([[1,3,'#7a2200'],[6,3,'#993300'],[11,3,'#7a2200']] as [number,number,string][]).forEach(([y,h,c])=>{
-          gr(ctx,cx,cy,0,y,W,h,c); gr(ctx,cx,cy,0,y,W,1,'#ff8833'); gr(ctx,cx,cy,0,y+2,W,1,'#441100');
-        });
-        const mX=Math.floor(((t*35+ty*16)%(TILE*SCALE))/SCALE);
-        if(mX>=0&&mX<=W-3) { gr(ctx,cx,cy,mX,7,3,3,'#ff9900'); gr(ctx,cx,cy,mX+1,7,1,1,'#ffee00'); }
+        // ── Dual-track Microtubule Highway: #0d2040 base, #00ffcc tracks at y=4+y=12, cargo dots ──
+        gr(ctx,cx,cy,0,0,W,W,'#0d2040');
+        gr(ctx,cx,cy,0,5,W,7,'#08162a');
+        gr(ctx,cx,cy,0,4,W,1,'#00ffcc'); gr(ctx,cx,cy,0,12,W,1,'#00ffcc');
+        gr(ctx,cx,cy,0,5,W,1,'#00ccaa'); gr(ctx,cx,cy,0,13,W,1,'#00ccaa');
+        gr(ctx,cx,cy,0,3,1,3,'#00ffcc'); gr(ctx,cx,cy,W-1,3,1,3,'#00ffcc');
+        gr(ctx,cx,cy,0,11,1,3,'#00ffcc'); gr(ctx,cx,cy,W-1,11,1,3,'#00ffcc');
+        const cX1=Math.floor((frame*2+tx*7)%(W*2))%W;
+        const cX2=Math.floor((frame*3+ty*11)%(W*2))%W;
+        if(cX1<=W-2) { gr(ctx,cx,cy,cX1,2,2,2,'#00ffee'); gr(ctx,cx,cy,cX1+1,3,1,1,'#ffffff'); }
+        if(cX2<=W-2) { gr(ctx,cx,cy,cX2,10,2,2,'#00ffee'); gr(ctx,cx,cy,cX2+1,11,1,1,'#ffffff'); }
       } else if (realm===2) {
         // Wooden bridge planks (Omori-style)
         gr(ctx,cx,cy,0,0,W,W,'#7a4a1a');
@@ -504,8 +548,29 @@ function drawTile(
       const aOn=animFrame%2===0;
       gr(ctx,cx,cy,6,0,4,W,aOn?shiftColor(fl,15):fl); gr(ctx,cx,cy,0,6,W,4,aOn?shiftColor(fl,15):fl);
       gr(ctx,cx,cy,6,6,4,4,aOn?acc:shiftColor(acc,-40));
-      if(realm===4) { const sY=(frame*2)%W; gr(ctx,cx,cy,0,sY,W,1,'#ffcc8844'); if(aOn) gr(ctx,cx,cy,7,7,2,2,'#ffdd55'); }
-      else if(realm===1) { ctx.globalAlpha=0.4+0.3*Math.sin(t*2); gr(ctx,cx,cy,6,6,4,4,tH); ctx.globalAlpha=1; }
+      if(realm===4) {
+        // Gold diamond-inlaid altar with diamond grid pattern (spec)
+        gr(ctx,cx,cy,0,0,W,W,'#1e1438');
+        // Diamond grid: gold lines every 8px forming diamond (rotated-square) pattern
+        const dAlpha=0.7+0.1*Math.sin(t*0.035); // candle-flicker period ~180f
+        ctx.globalAlpha=dAlpha;
+        gr(ctx,cx,cy,0,7,W,1,'#ffaa00'); gr(ctx,cx,cy,7,0,1,W,'#ffaa00');
+        // Diamond center inlays
+        gr(ctx,cx,cy,6,6,2,2,'#ffaa00'); gr(ctx,cx,cy,14,6,2,2,'#ffaa00');
+        gr(ctx,cx,cy,6,14,2,2,'#ffaa00'); gr(ctx,cx,cy,14,14,2,2,'#ffaa00');
+        ctx.globalAlpha=1;
+        // Tarnished gold dots between diamonds
+        gr(ctx,cx,cy,3,3,1,1,'#aa7700'); gr(ctx,cx,cy,11,3,1,1,'#aa7700');
+        gr(ctx,cx,cy,3,11,1,1,'#aa7700'); gr(ctx,cx,cy,11,11,1,1,'#aa7700');
+        // Shimmer sweep
+        const sY=(frame*2)%W; gr(ctx,cx,cy,0,sY,W,1,'#ffcc8844');
+        if(aOn) gr(ctx,cx,cy,7,7,2,2,'#ffdd55');
+        // Henry proximity glow: gold tint at 10% alpha when within 3 tiles
+        if(henryPos) {
+          const dist=Math.abs(tx-henryPos.tx)+Math.abs(ty-henryPos.ty);
+          if(dist<=3) { ctx.globalAlpha=0.1*(1-dist/4); gr(ctx,cx,cy,0,0,W,W,'#ffaa00'); ctx.globalAlpha=1; }
+        }
+      } else if(realm===1) { ctx.globalAlpha=0.4+0.3*Math.sin(t*2); gr(ctx,cx,cy,6,6,4,4,tH); ctx.globalAlpha=1; }
       break;
     }
 
@@ -606,149 +671,196 @@ function drawTile(
 // ─── NPC Sprites ─────────────────────────────────────────────────────────────
 
 function drawElliot(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, globalFrame: number) {
-  // Elliot: Cell Biology Guide — 32×32 sprite, lab coat, curly dark hair, cyan glasses, mismatched socks
+  // Elliot: Cell Biology Guide — per CHARACTER_DESIGN.md spec
+  // Skin #f4c08a, lab coat #d8e0f0, glasses #00ccdd, LEFT sock RED #cc2200, RIGHT sock YELLOW #ddcc00
   const ox = cx - 8 * SCALE;
   const oy = cy - 16 * SCALE;
 
   const legShift = globalFrame % 2 === 1 ? 1 : 0;
   const headBob  = (globalFrame % 90) < 45 ? 0 : -1;
-  const eyeH     = (globalFrame % 120) < 6 ? 1 : 2; // blink
+  const eyeH     = (globalFrame % 120) < 6 ? 1 : 2;
 
-  // HEAD (skin — draw first so hair can overlay top rows)
-  gr2(ctx, ox, oy, 10, 0 + headBob, 12, 12, '#c68642');
+  // HEAD — warm tan skin #f4c08a
+  gr2(ctx, ox, oy, 10, 0 + headBob, 12, 12, '#f4c08a');
+  // Skin shadow on sides
+  gr2(ctx, ox, oy, 10, 2 + headBob, 2, 8, '#c88040');
+  gr2(ctx, ox, oy, 20, 2 + headBob, 2, 8, '#c88040');
 
-  // HAIR — curly dark brown: base covers top of head, poofs extend beyond
-  gr2(ctx, ox, oy, 10,  0 + headBob, 12,  4, '#2a1a0a'); // hair base top
-  gr2(ctx, ox, oy,  8, -2 + headBob,  4,  2, '#2a1a0a'); // upper-left poof
-  gr2(ctx, ox, oy, 20, -2 + headBob,  4,  2, '#2a1a0a'); // upper-right poof
-  gr2(ctx, ox, oy,  6,  2 + headBob,  4,  2, '#2a1a0a'); // left-mid poof
-  gr2(ctx, ox, oy, 22,  2 + headBob,  4,  2, '#2a1a0a'); // right-mid poof
+  // HAIR — dark brown #2a1a0a, curly. Crown base + two 3×3 poofs upward
+  gr2(ctx, ox, oy, 10,  0 + headBob, 12,  4, '#2a1a0a'); // crown base
+  gr2(ctx, ox, oy,  8, -3 + headBob,  3,  3, '#2a1a0a'); // upper-left poof (3×3)
+  gr2(ctx, ox, oy, 21, -3 + headBob,  3,  3, '#2a1a0a'); // upper-right poof (3×3)
+  gr2(ctx, ox, oy,  8,  0 + headBob,  2,  4, '#5a3a18'); // left-side curl
+  gr2(ctx, ox, oy, 22,  0 + headBob,  2,  4, '#5a3a18'); // right-side curl
 
-  // GLASSES (cyan lenses + gray bridge)
-  gr2(ctx, ox, oy, 11, 5 + headBob, 4, 2, '#00cccc'); // left lens
-  gr2(ctx, ox, oy, 17, 5 + headBob, 4, 2, '#00cccc'); // right lens
-  gr2(ctx, ox, oy, 15, 5 + headBob, 2, 1, '#888888'); // bridge
+  // GLASSES — cyan #00ccdd, 3×2 each lens, bridge 1×1 center
+  gr2(ctx, ox, oy, 11, 5 + headBob, 3, 2, '#00ccdd'); // left lens
+  gr2(ctx, ox, oy, 18, 5 + headBob, 3, 2, '#00ccdd'); // right lens
+  gr2(ctx, ox, oy, 14, 5 + headBob, 4, 1, '#00ccdd'); // frame top
+  gr2(ctx, ox, oy, 15, 5 + headBob, 2, 1, '#888888'); // nose bridge center
 
-  // EYES (inside lens area, one row above glasses)
+  // EYES behind glasses — dark pupils with 1×1 white highlight
   gr2(ctx, ox, oy, 12, 4 + headBob, 2, eyeH, '#1a1a1a');
   gr2(ctx, ox, oy, 18, 4 + headBob, 2, eyeH, '#1a1a1a');
+  gr2(ctx, ox, oy, 13, 4 + headBob, 1, 1, '#ffffff'); // left highlight
+  gr2(ctx, ox, oy, 19, 4 + headBob, 1, 1, '#ffffff'); // right highlight
+
+  // EYEBROWS — 1px lines, slightly angled inward toward center
+  gr2(ctx, ox, oy, 12, 3 + headBob, 2, 1, '#2a1a0a');
+  gr2(ctx, ox, oy, 18, 3 + headBob, 2, 1, '#2a1a0a');
+  gr2(ctx, ox, oy, 11, 4 + headBob, 1, 1, '#2a1a0a'); // angled outer
 
   // NOSE & MOUTH
-  gr2(ctx, ox, oy, 15, 7 + headBob, 2, 1, '#b07050');
-  gr2(ctx, ox, oy, 14, 9 + headBob, 4, 1, '#8b4513');
+  gr2(ctx, ox, oy, 15, 7 + headBob, 2, 1, '#c88040');
+  gr2(ctx, ox, oy, 14, 9 + headBob, 4, 1, '#8b4513'); // small 2px smile
 
-  // NECK (under-coat shirt visible in bright blue)
-  gr2(ctx, ox, oy, 14, 12, 4, 3, '#4488cc');
+  // NECK — pale yellow shirt visible #f8f0c8
+  gr2(ctx, ox, oy, 14, 12, 4, 3, '#f8f0c8');
 
-  // SHOULDERS (lab coat)
-  gr2(ctx, ox, oy, 6, 15, 20, 3, '#e8e8f0');
+  // SHOULDERS (lab coat #d8e0f0)
+  gr2(ctx, ox, oy, 6, 14, 20, 4, '#d8e0f0');
+  gr2(ctx, ox, oy, 6, 14, 3, 4, '#a0aac0'); // left shoulder shadow
+  gr2(ctx, ox, oy, 23, 14, 3, 4, '#a0aac0'); // right shoulder shadow
 
   // TORSO (lab coat)
-  gr2(ctx, ox, oy,  8, 17, 16, 10, '#e8e8f0');
-  // Lapels — 2×5 gray each side of center
-  gr2(ctx, ox, oy, 12, 17,  2,  5, '#aaaaaa');
-  gr2(ctx, ox, oy, 18, 17,  2,  5, '#aaaaaa');
+  gr2(ctx, ox, oy, 8, 17, 16, 10, '#d8e0f0');
+  gr2(ctx, ox, oy, 8, 17, 2, 10, '#a0aac0');  // left edge shadow
+  gr2(ctx, ox, oy, 22, 17, 2, 10, '#a0aac0'); // right edge shadow
+  // Coat lapels — V-shape, pale yellow shirt visible in V
+  gr2(ctx, ox, oy, 12, 17, 4, 5, '#f8f0c8'); // V shirt visible
+  gr2(ctx, ox, oy, 11, 17, 2, 5, '#f0f8ff'); // left lapel white
+  gr2(ctx, ox, oy, 19, 17, 2, 5, '#f0f8ff'); // right lapel white
   // Buttons down center
-  gr2(ctx, ox, oy, 15, 19, 2, 1, '#666666');
-  gr2(ctx, ox, oy, 15, 22, 2, 1, '#666666');
-  gr2(ctx, ox, oy, 15, 25, 2, 1, '#666666');
-  // Chest pocket with pen
-  gr2(ctx, ox, oy, 10, 20, 4, 4, '#d8d8e4');
-  gr2(ctx, ox, oy, 11, 20, 1, 3, '#4466aa');
+  gr2(ctx, ox, oy, 15, 19, 2, 1, '#a0aac0');
+  gr2(ctx, ox, oy, 15, 22, 2, 1, '#a0aac0');
+  gr2(ctx, ox, oy, 15, 25, 2, 1, '#a0aac0');
+  // Chest pocket (left breast, 4×3) with blue pen #0044aa
+  gr2(ctx, ox, oy, 10, 20, 4, 3, '#a0aac0');
+  gr2(ctx, ox, oy, 11, 19, 1, 4, '#0044aa'); // blue pen visible above pocket
 
-  // ARMS (coat sleeves)
-  gr2(ctx, ox, oy,  4, 15, 4, 13, '#e8e8f0');
-  gr2(ctx, ox, oy, 24, 15, 4, 13, '#e8e8f0');
+  // ARMS (lab coat sleeves)
+  gr2(ctx, ox, oy,  4, 15, 4, 14, '#d8e0f0');
+  gr2(ctx, ox, oy, 24, 15, 4, 14, '#d8e0f0');
 
-  // HANDS
-  gr2(ctx, ox, oy,  3, 28, 5, 3, '#c68642');
-  gr2(ctx, ox, oy, 24, 28, 5, 3, '#c68642');
+  // HANDS (skin #f4c08a, 4×3 mitten)
+  gr2(ctx, ox, oy,  3, 28, 5, 3, '#f4c08a');
+  gr2(ctx, ox, oy, 24, 28, 5, 3, '#f4c08a');
 
-  // HIPS
-  gr2(ctx, ox, oy, 9, 27, 14, 3, '#2233aa');
+  // BELT at waist — dark line #4a3020 with 3×2 buckle
+  gr2(ctx, ox, oy, 9, 27, 14, 2, '#4a3020');
+  gr2(ctx, ox, oy, 14, 27, 3, 2, '#888866'); // buckle
 
-  // LEGS — mismatched socks (left=red, right=yellow)
-  gr2(ctx, ox, oy,  9, 30 - legShift, 6, 5, '#2233aa'); // left leg upper
-  gr2(ctx, ox, oy,  9, 35 - legShift, 6, 3, '#ff4444'); // left sock
-  gr2(ctx, ox, oy, 17, 30 + legShift, 6, 5, '#2233aa'); // right leg upper
-  gr2(ctx, ox, oy, 17, 35 + legShift, 6, 3, '#ffee44'); // right sock
+  // HIPS (gray-blue pants #6a7888)
+  gr2(ctx, ox, oy, 9, 29, 14, 2, '#6a7888');
 
-  // SHOES
-  gr2(ctx, ox, oy,  8, 38 - legShift, 7, 3, '#222222');
-  gr2(ctx, ox, oy, 16, 38 + legShift, 7, 3, '#222222');
+  // LEGS — gray-blue pants #6a7888
+  gr2(ctx, ox, oy,  9, 30 - legShift, 6, 5, '#6a7888'); // left upper leg
+  gr2(ctx, ox, oy, 17, 30 + legShift, 6, 5, '#6a7888'); // right upper leg
+  gr2(ctx, ox, oy,  9, 33 - legShift, 6, 2, '#4a5868'); // left shadow
+  gr2(ctx, ox, oy, 17, 33 + legShift, 6, 2, '#4a5868'); // right shadow
+
+  // SOCKS — LEFT=RED #cc2200, RIGHT=YELLOW #ddcc00 (non-negotiable per spec)
+  gr2(ctx, ox, oy,  9, 35 - legShift, 6, 3, '#cc2200'); // LEFT SOCK RED
+  gr2(ctx, ox, oy, 17, 35 + legShift, 6, 3, '#ddcc00'); // RIGHT SOCK YELLOW
+
+  // SHOES — dark gray #2a2a36
+  gr2(ctx, ox, oy,  8, 38 - legShift, 7, 3, '#2a2a36');
+  gr2(ctx, ox, oy, 16, 38 + legShift, 7, 3, '#2a2a36');
 }
 
 function drawBen(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, frame: number) {
-  // Ben: Bioinformatics Guide — 32×32 sprite, dark green hoodie, cargo pants, sandwich
+  // Ben: Bioinformatics Guide — per CHARACTER_DESIGN.md spec
+  // Skin #c89060, hoodie #2a6020, flat-top hair #1a0a00, sandwich in RIGHT hand, cargo pants #6a7030, shoes #3a1e0a
   const ox = cx - 8 * SCALE;
   const oy = cy - 16 * SCALE;
 
-  const legShift    = frame === 1 ? 1 : 0;
-  const sandwichBob = frame === 1 ? 1 : 0;
+  const legShift    = frame % 2 === 1 ? 1 : 0;
+  const sandwichBob = frame % 2 === 1 ? -1 : 0; // sandwich bobs up on frame 1
 
-  // HEAD
-  gr2(ctx, ox, oy, 10, 0, 12, 12, '#d4956a');
+  // HEAD — warm medium brown #c89060, slightly square 11×12
+  gr2(ctx, ox, oy, 10, 0, 11, 12, '#c89060');
+  gr2(ctx, ox, oy, 10, 2, 2, 8, '#9a6030'); // left shadow
+  gr2(ctx, ox, oy, 19, 2, 2, 8, '#9a6030'); // right shadow
 
-  // HAIR (short flat-top, light brown, 14 wide)
-  gr2(ctx, ox, oy, 9, 0, 14, 3, '#8b5e3c');
+  // HAIR — near-black #1a0a00, flat-top: perfectly flat 6×2 block on crown, short sides
+  gr2(ctx, ox, oy, 10, 0, 11, 3, '#1a0a00'); // full top
+  gr2(ctx, ox, oy, 12, 0,  7, 2, '#1a0a00'); // flat-top block (perfectly flat top)
+  gr2(ctx, ox, oy, 10, 0,  2, 4, '#1a0a00'); // left short side
+  gr2(ctx, ox, oy, 19, 0,  2, 4, '#1a0a00'); // right short side
 
-  // EYEBROWS
-  gr2(ctx, ox, oy, 11, 4, 3, 1, '#6b3e1c');
-  gr2(ctx, ox, oy, 18, 4, 3, 1, '#6b3e1c');
+  // EYEBROWS — flat, slightly thick 2×1
+  gr2(ctx, ox, oy, 11, 4, 2, 1, '#1a0a00');
+  gr2(ctx, ox, oy, 18, 4, 2, 1, '#1a0a00');
 
-  // EYES (warm brown, 3×2)
-  gr2(ctx, ox, oy, 11, 5, 3, 2, '#3a2a1a');
-  gr2(ctx, ox, oy, 18, 5, 3, 2, '#3a2a1a');
+  // EYES — relaxed squinting (always smiling look), 2×2
+  gr2(ctx, ox, oy, 11, 5, 2, 2, '#2a1a0a');
+  gr2(ctx, ox, oy, 18, 5, 2, 2, '#2a1a0a');
+  gr2(ctx, ox, oy, 12, 5, 1, 1, '#ffffff'); // left highlight
+  gr2(ctx, ox, oy, 19, 5, 1, 1, '#ffffff'); // right highlight
 
   // NOSE
-  gr2(ctx, ox, oy, 15, 7, 2, 2, '#c07050');
+  gr2(ctx, ox, oy, 15, 7, 2, 2, '#9a6030');
 
-  // MOUTH (big smile, 6×2)
-  gr2(ctx, ox, oy, 13, 9, 6, 2, '#a06040');
+  // MOUTH — relaxed wide smile
+  gr2(ctx, ox, oy, 13, 9, 5, 1, '#2a1a00'); // base
+  gr2(ctx, ox, oy, 12, 9, 1, 1, '#2a1a00'); // left corner
+  gr2(ctx, ox, oy, 18, 9, 1, 1, '#2a1a00'); // right corner
 
   // NECK
-  gr2(ctx, ox, oy, 14, 12, 4, 3, '#d4956a');
+  gr2(ctx, ox, oy, 14, 12, 4, 3, '#c89060');
 
-  // SHOULDERS (hoodie)
-  gr2(ctx, ox, oy, 6, 15, 20, 3, '#2d5a27');
+  // SHOULDERS (hoodie #2a6020)
+  gr2(ctx, ox, oy, 6, 14, 20, 4, '#2a6020');
+  gr2(ctx, ox, oy, 6, 14, 3, 4, '#1a4010'); // left shadow
+  gr2(ctx, ox, oy, 23, 14, 3, 4, '#1a4010'); // right shadow
 
-  // TORSO (hoodie)
-  gr2(ctx, ox, oy, 8, 17, 16, 10, '#2d5a27');
-  // Kangaroo pocket
-  gr2(ctx, ox, oy, 11, 20, 10, 5, '#1a3a17');
-  // Drawstrings
-  gr2(ctx, ox, oy, 14, 16, 1, 3, '#eeeeee');
-  gr2(ctx, ox, oy, 17, 16, 1, 3, '#eeeeee');
+  // TORSO (hoodie #2a6020)
+  gr2(ctx, ox, oy, 8, 17, 16, 10, '#2a6020');
+  gr2(ctx, ox, oy, 8, 17, 2, 10, '#1a4010'); // left shadow
+  gr2(ctx, ox, oy, 22, 17, 2, 10, '#1a4010'); // right shadow
+  // Kangaroo pocket — 10×4, same green with 1px darker border
+  gr2(ctx, ox, oy, 11, 20, 10, 4, '#1a4010'); // pocket border
+  gr2(ctx, ox, oy, 12, 21,  8, 2, '#2a6020'); // pocket interior
+  // Drawstrings — two 1px vertical lines, light green #44aa44
+  gr2(ctx, ox, oy, 14, 16, 1, 6, '#44aa44');
+  gr2(ctx, ox, oy, 17, 16, 1, 6, '#44aa44');
 
   // ARMS (hoodie sleeves)
-  gr2(ctx, ox, oy,  4, 15, 4, 13, '#2d5a27');
-  gr2(ctx, ox, oy, 24, 15, 4, 13, '#2d5a27');
+  gr2(ctx, ox, oy,  4, 15, 4, 14, '#2a6020');
+  gr2(ctx, ox, oy, 24, 15, 4, 14, '#2a6020');
 
-  // HANDS
-  gr2(ctx, ox, oy,  3, 28, 5, 3, '#d4956a');
-  gr2(ctx, ox, oy, 24, 28, 5, 3, '#d4956a');
+  // HANDS (skin #c89060)
+  gr2(ctx, ox, oy,  3, 28, 5, 3, '#c89060'); // left hand
+  gr2(ctx, ox, oy, 24, 28, 5, 3, '#c89060'); // right hand
 
-  // SANDWICH — right hand, 3 layers of 5×2, bobs on frame 1
-  const sandY = 24 + sandwichBob;
-  gr2(ctx, ox, oy, 26, sandY,     5, 2, '#f5d78a'); // top bread
-  gr2(ctx, ox, oy, 26, sandY + 2, 5, 2, '#4aaa44'); // lettuce
-  gr2(ctx, ox, oy, 26, sandY + 4, 5, 2, '#f5d78a'); // bottom bread
+  // SANDWICH — RIGHT hand, per spec: bread #c89040, lettuce #44aa00, tomato #cc2222, cheese #eecc22, top bread #c89040
+  const sandY = 22 + sandwichBob;
+  gr2(ctx, ox, oy, 25, sandY,     10, 1, '#c89040'); // top bread
+  gr2(ctx, ox, oy, 25, sandY + 1, 10, 1, '#44aa00'); // lettuce
+  gr2(ctx, ox, oy, 25, sandY + 2, 10, 1, '#cc2222'); // tomato
+  gr2(ctx, ox, oy, 25, sandY + 3, 10, 1, '#eecc22'); // cheese
+  gr2(ctx, ox, oy, 25, sandY + 4, 10, 1, '#c89040'); // bottom bread
 
-  // HIPS (cargo pants) + BELT on top
-  gr2(ctx, ox, oy, 9, 27, 14, 3, '#7a5c3a');
-  gr2(ctx, ox, oy, 9, 27, 14, 2, '#4a2c0e');
+  // HIPS (olive cargo pants #6a7030) + belt
+  gr2(ctx, ox, oy, 9, 27, 14, 2, '#2a1a00'); // belt
+  gr2(ctx, ox, oy, 9, 29, 14, 2, '#6a7030'); // hips
 
-  // LEGS
-  gr2(ctx, ox, oy,  9, 30 - legShift, 6, 8, '#7a5c3a');
-  gr2(ctx, ox, oy, 17, 30 + legShift, 6, 8, '#7a5c3a');
-  // Cargo pocket on left leg
-  gr2(ctx, ox, oy, 9, 31 - legShift, 3, 4, '#5a3c1e');
+  // LEGS — olive green cargo pants #6a7030
+  gr2(ctx, ox, oy,  9, 30 - legShift, 6, 8, '#6a7030');
+  gr2(ctx, ox, oy, 17, 30 + legShift, 6, 8, '#6a7030');
+  // Cargo pocket on right leg — 4×5 with 1px border
+  gr2(ctx, ox, oy, 18, 31 + legShift, 4, 5, '#4a5018'); // border
+  gr2(ctx, ox, oy, 19, 32 + legShift, 2, 3, '#6a7030'); // interior
+  // Left leg shadow
+  gr2(ctx, ox, oy,  9, 34 - legShift, 6, 2, '#4a5018');
+  gr2(ctx, ox, oy, 17, 34 + legShift, 6, 2, '#4a5018');
 
-  // FEET (white sneakers + gray sole)
-  gr2(ctx, ox, oy,  8, 38 - legShift, 7, 2, '#dddddd');
-  gr2(ctx, ox, oy,  8, 40 - legShift, 7, 1, '#999999');
-  gr2(ctx, ox, oy, 16, 38 + legShift, 7, 2, '#dddddd');
-  gr2(ctx, ox, oy, 16, 40 + legShift, 7, 1, '#999999');
+  // SHOES — dark brown #3a1e0a (NOT white — spec is very clear)
+  gr2(ctx, ox, oy,  8, 38 - legShift, 7, 3, '#3a1e0a');
+  gr2(ctx, ox, oy, 16, 38 + legShift, 7, 3, '#3a1e0a');
+  // Slight toe rounding
+  gr2(ctx, ox, oy,  8, 38 - legShift, 1, 1, '#4a2e1a');
+  gr2(ctx, ox, oy, 16, 38 + legShift, 1, 1, '#4a2e1a');
 }
 
 function drawAlex(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, frame: number) {
@@ -2136,6 +2248,16 @@ function render(
   const interpPX = gs.prevPx + (gs.px - gs.prevPx) * (gs.moving ? Math.min(1, gs.pfx) : 1);
   const interpPY = gs.prevPy + (gs.py - gs.prevPy) * (gs.moving ? Math.min(1, gs.pfy) : 1);
 
+  // Precompute Henry position for altar proximity glow (realm 4)
+  let henryPos: { tx: number; ty: number } | null = null;
+  if (realm === 4) {
+    outer: for (let ry = 0; ry < MAP_H; ry++) {
+      for (let rx = 0; rx < MAP_W; rx++) {
+        if (tileAt(map, rx, ry) === 'H') { henryPos = { tx: rx, ty: ry }; break outer; }
+      }
+    }
+  }
+
   for (let row = -1; row <= VP_H + 1; row++) {
     for (let col = -1; col <= VP_W + 1; col++) {
       const tx = camTileX + col;
@@ -2151,10 +2273,10 @@ function render(
 
       if (isNpcTile) {
         // Draw floor beneath NPC
-        drawTile(ctx, cx, cy, '.', gs.animFrame, palette, realm, false, t, tx, ty, frame);
+        drawTile(ctx, cx, cy, '.', gs.animFrame, palette, realm, false, t, tx, ty, frame, map, henryPos);
       } else {
         const isComplete = completedNodeTiles.has(tile);
-        drawTile(ctx, cx, cy, tile, gs.animFrame, palette, realm, isComplete, t, tx, ty, frame);
+        drawTile(ctx, cx, cy, tile, gs.animFrame, palette, realm, isComplete, t, tx, ty, frame, map, henryPos);
       }
 
       // Draw NPC sprite
