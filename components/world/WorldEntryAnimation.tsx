@@ -146,13 +146,13 @@ function drawEnzyme(
   facing: 'right'|'left' = 'right',
 ) {
   const C = CS;
-  const body = '#f8f8f8';
-  const shad = '#d4d4e8';
-  const nose = '#ffb3c1';
+  const body = '#f0f0f0';   // spec: white fur main
+  const shad = '#d8d8d8';   // spec: fur shadow
+  const nose = '#ff8899';   // spec: inner ear, nose, toe-beans
   const eye = '#111111';
   const hi = '#ffffff';
   const outl = '#0a0a0a';
-  const ear = '#ffccdd';
+  const ear = '#ff8899';    // spec: inner ear pink (same as nose)
 
   if (pose === 'fly') {
     // Stretched horizontal body flying
@@ -223,7 +223,7 @@ function drawEnzyme(
     // Eyes (big expressive)
     const blink = (Math.floor(phase * 0.4) % 12 === 0);
     if (pose === 'sit' && !blink) {
-      ctx.fillStyle = '#2244cc'; ctx.fillRect(cx - C*2, cy - C*6 + bob, C*3, C*3);
+      ctx.fillStyle = '#00ddcc'; ctx.fillRect(cx - C*2, cy - C*6 + bob, C*3, C*3);   // spec: teal iris
       ctx.fillRect(cx + C*1, cy - C*6 + bob, C*3, C*3);
       ctx.fillStyle = eye; ctx.fillRect(cx - C*2, cy - C*5 + bob, C*3, C*2);
       ctx.fillRect(cx + C*1, cy - C*5 + bob, C*3, C*2);

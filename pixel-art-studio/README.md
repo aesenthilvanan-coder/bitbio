@@ -70,6 +70,36 @@ pixel-art-studio/
 
 ---
 
+## Structured Reference Directories (Sprint 5 Addition)
+
+The following directories contain the formal, structured knowledge base and production system (added Sprint 5). These complement the existing `knowledge-base/`, `tools/`, and `departments/` directories above:
+
+```
+KNOWLEDGE_BASE/
+├── SPRITE_DESIGN.md         ← Exhaustive sprite principles (silhouette, anatomy, dithering, game refs)
+├── ANIMATION.md             ← 12 principles, frame timing tables, walk cycles, VFX patterns
+├── COLOR_THEORY.md          ← HSB, hue shifting, 5-step ramps, game palette analysis
+├── ENVIRONMENT_DESIGN.md    ← Tile systems, layer separation, all 4 realm specs
+└── TECHNICAL_SPECS.md       ← Canvas API, SCALE system, tile coordinates, frame budgets
+
+BITBIO_SPECS/
+├── CHARACTER_DESIGN.md      ← Full design spec for all 6 characters (Elliot, Ben, Alex, Henry, Enzyme, Player)
+└── REALM_DESIGN.md          ← Detailed 5-element spec for all 4 realm environments
+
+TOOLS/
+├── sprite_validator.ts      ← Validates SpriteDescriptor, returns 0-100 score
+├── palette_analyzer.ts      ← Analyzes hex palette, detects issues, returns 0-100 score
+└── animation_scorer.ts      ← Scores AnimationDescriptor against best practices, returns 0-100
+
+PRODUCTION/
+├── STUDIO_ORG.md            ← All 7 departments with backlogs, sprint status, milestone tracker
+└── PIPELINE.md              ← 8-stage production workflow (Concept → Polish Loop)
+```
+
+**Minimum ship scores:** sprite_validator ≥ 75 · palette_analyzer ≥ 75 · animation_scorer ≥ 75
+
+---
+
 ## Quick Start — Using the Tools
 
 ### Install and run from project root

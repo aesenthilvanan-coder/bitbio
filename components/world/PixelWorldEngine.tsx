@@ -162,7 +162,9 @@ function drawTile(
   t: number,
   tx: number,
   ty: number,
-  frame: number
+  frame: number,
+  map: string[] = [],
+  henryPos: {tx: number; ty: number} | null = null
 ) {
   const W = TILE; // 16 game pixels per tile
 
@@ -255,6 +257,21 @@ function drawTile(
     // WALL — raised terrain with cliff-edge depth
     // ─────────────────────────────────────────────────────────────────────────
     case '#': {
+      // ── Realm 4 Forbidden Sanctum: cols 11-19 render darker ──
+      const isSanctum = realm === 4 && tx >= 11 && tx <= 19 && ty <= 11;
+      if (isSanctum) {
+        gr(ctx, cx, cy, 0, 0, W, W, '#100826');
+        // Gold carvings on top edge of sanctum boundary
+        if (ty <= 1) {
+          const notchOff = tx % 3;
+          gr(ctx, cx, cy, 0, 0, W, 1, '#ffaa0033');
+          if (notchOff === 0) { gr(ctx, cx, cy, 4, 0, 2, 2, '#ffaa0055'); }
+        }
+        // Side face depth lines
+        if (tx === 11) gr(ctx, cx, cy, 0, 0, 1, W, '#3a2060');
+        if (tx === 19) gr(ctx, cx, cy, W-1, 0, 1, W, '#3a2060');
+        break;
+      }
       gr(ctx, cx, cy, 0, 0, W, W, wl);
       gr(ctx, cx, cy, 0, 0, W, 3, wlT);
       gr(ctx, cx, cy, 0, 0, W, 1, shiftColor(wlT, 30));
@@ -269,6 +286,21 @@ function drawTile(
       } else if (realm===1) {
         gr(ctx,cx,cy,0,5,W,1,shiftColor(wl,20)); gr(ctx,cx,cy,0,7,W,1,shiftColor(wl,12)); gr(ctx,cx,cy,0,9,W,1,shiftColor(wl,8));
         if(h1%7===0) { const pY=5+(h2%5); gr(ctx,cx,cy,6,pY,4,3,acc+'44'); gr(ctx,cx,cy,7,pY+1,2,1,acc); }
+        // ── Outer membrane glow (boundary walls at row 0, row 27, col 0, col 39) ──
+        const isOuterMembrane = ty === 0 || ty === 27 || tx === 0 || tx === 39;
+        if (isOuterMembrane) {
+          const glowAlpha = 0.15 + 0.15 * Math.sin(frame * 0.04);
+          ctx.globalAlpha = glowAlpha;
+          gr(ctx, cx, cy, 0, 0, W, W, '#00ffcc');
+          ctx.globalAlpha = 1;
+          // Membrane protein decoration every 8th tile along inner face
+          if (tx % 8 === 0 || ty % 8 === 0) {
+            // Hexagonal decoration: 3x3 cross pattern
+            gr(ctx, cx, cy, 6, 5, 4, 1, '#00ffcc');
+            gr(ctx, cx, cy, 7, 4, 2, 3, '#00ffcc');
+            gr(ctx, cx, cy, 7, 4, 2, 1, '#aaffee');
+          }
+        }
       } else if (realm===3) {
         gr(ctx,cx,cy,0,W>>1,W,1,shiftColor(wl,22));
         if(tx%2===0) gr(ctx,cx,cy,W>>1,0,1,W,shiftColor(wl,16));
@@ -287,65 +319,77 @@ function drawTile(
       if (realm===2&&h1%7===0) { gr(ctx,cx,cy,1,14,1,1,flw); gr(ctx,cx,cy,14,13,1,1,flw); }
 
       if (realm === 2) {
-        // ── GENOME FOREST: Omori round fluffy tree ────────────────────────
-        // Circle canopy: center (8,7), radius ~7, scanline rows
-        const rows:[number,number,number][] = [
-          [1,4,8],[2,2,12],[3,1,14],[4,1,14],[5,1,14],[6,1,14],
-          [7,1,14],[8,1,14],[9,2,12],[10,3,10],[11,5,6]
-        ];
+        // ── GENOME FOREST: DNA Double Helix Tree ──────────────────────────
+        // Floor base
+        gr(ctx,cx,cy,0,0,W,W,fl);
         // Ground shadow
-        rows.slice(7).forEach(([row,x1,w])=>{
-          if(x1+w<=W) gr(ctx,cx,cy,x1+1,row+1,w,1,'#000000');
-        });
-        // Dark outline ring
-        rows.forEach(([row,x1,w])=>{
-          if(x1>0) gr(ctx,cx,cy,x1-1,row,1,1,shiftColor(tc,-30));
-          gr(ctx,cx,cy,x1+w,row,1,1,shiftColor(tc,-30));
-        });
-        gr(ctx,cx,cy,3,0,10,1,shiftColor(tc,-30));
-        gr(ctx,cx,cy,4,12,8,1,shiftColor(tc,-30));
-        // Main canopy fill
-        rows.forEach(([row,x1,w])=>gr(ctx,cx,cy,x1,row,w,1,tc));
-        // Shadow bottom-right quadrant
-        [[8,5,8],[9,5,7],[10,5,5],[11,5,3]].forEach(([row,x1,w])=>gr(ctx,cx,cy,x1,row,w,1,tS));
-        // Top-left highlight (light source)
-        gr(ctx,cx,cy,3,2,5,1,tH); gr(ctx,cx,cy,2,3,4,1,tH);
-        gr(ctx,cx,cy,2,4,3,1,tH); gr(ctx,cx,cy,2,5,2,1,shiftColor(tH,-15));
-        gr(ctx,cx,cy,3,2,2,1,'#ffffff');
-        // Scattered flower dots on canopy surface
-        [[5,4],[10,3],[4,7],[11,6],[7,10],[3,8],[12,5]].forEach(([dx,dy],i)=>{
+        gr(ctx,cx,cy,3,W-1,10,1,shiftColor(fl,-18));
+
+        // DNA Helix trunks (two vertical strands with base pair connections)
+        // Left strand at x=3, Right strand at x=10, each 3px wide, full height
+        const dnaH = 14; // helix zone rows 0-13
+        for (let row = 0; row < dnaH; row++) {
+          gr(ctx,cx,cy,2,row,3,1,'#1a4010');   // left trunk strand
+          gr(ctx,cx,cy,11,row,3,1,'#1a4010');  // right trunk strand
+        }
+        // Base pair connections every 4px with alternating ATGC colors
+        const bpColors: Record<string,string> = { A:'#ff6644', T:'#ff6644', G:'#44aaff', C:'#44aaff' };
+        const bpPattern = ['A','T','G','C','A','T','G','C','A','T','G','C','A','T'];
+        for (let row = 1; row < dnaH; row += 4) {
+          const bp = bpPattern[Math.floor(row/2) % bpPattern.length];
+          gr(ctx,cx,cy,5,row,6,1,bpColors[bp]);    // connection bar
+          gr(ctx,cx,cy,5,row,1,1,'#ffffff');        // highlight left end
+        }
+        // Left strand highlight
+        for (let row = 0; row < dnaH; row += 2) gr(ctx,cx,cy,2,row,1,1,shiftColor('#1a4010',20));
+
+        // Canopy blob (14×6, top of tile)
+        // Dark outline
+        gr(ctx,cx,cy,1,0,14,1,shiftColor('#00ff44',-40));
+        gr(ctx,cx,cy,0,1,16,1,shiftColor('#00ff44',-40));
+        // Main canopy
+        gr(ctx,cx,cy,1,1,14,5,'#00ff44');
+        gr(ctx,cx,cy,2,0,12,1,'#00ff44');
+        // Interior darker
+        gr(ctx,cx,cy,3,2,10,3,'#00aa22');
+        // Top highlight
+        gr(ctx,cx,cy,4,1,5,1,'#88ff88'); gr(ctx,cx,cy,3,2,2,1,'#88ff88');
+        gr(ctx,cx,cy,4,1,2,1,'#ffffff');
+        // Scattered dots (flower-like)
+        [[5,4],[9,3],[4,6],[11,5],[7,4]].forEach(([dx,dy],i)=>{
           if((h1+i*11)%3!==0) gr(ctx,cx,cy,dx,dy,1,1,flw);
         });
         if((h1+animFrame)%5===0) gr(ctx,cx,cy,8,2,1,1,'#ffffff');
-        // Trunk
-        gr(ctx,cx,cy,6,12,4,4,tR); gr(ctx,cx,cy,7,12,2,4,shiftColor(tR,18));
-        gr(ctx,cx,cy,9,12,1,4,shiftColor(tR,-15)); gr(ctx,cx,cy,5,14,6,2,shiftColor(tR,-8));
-        // Ground shadow
-        gr(ctx,cx,cy,4,W-1,8,1,shiftColor(fl,-18));
-        // Breathing: bright pixel alternates
-        if(animFrame%2===0) { gr(ctx,cx,cy,2,6,1,1,tH); gr(ctx,cx,cy,13,4,1,1,tH); }
+        // Trunk connector between helix and canopy
+        gr(ctx,cx,cy,6,5,4,2,tR); gr(ctx,cx,cy,7,5,2,2,shiftColor(tR,18));
 
       } else if (realm === 1) {
-        // ── CYTOPLASM: bioluminescent vesicle ────────────────────────────
-        const glow=(frame%60)/60, bright=Math.sin(glow*Math.PI*2)>0;
-        const gA=0.15+0.15*Math.sin(glow*Math.PI*2);
-        gr(ctx,cx,cy,4,W-1,8,1,'#000000');
-        // Interior fill
-        [[2,4,8],[3,2,12],[4,1,14],[5,1,14],[6,1,14],[7,1,14],[8,1,14],[9,1,14],[10,1,14],[11,2,12],[12,4,8]]
-          .forEach(([row,x1,w])=>gr(ctx,cx,cy,x1,row,w,1,'#001a22'));
-        // Outer membrane ring
-        gr(ctx,cx,cy,3,2,10,1,tc); gr(ctx,cx,cy,2,3,1,10,tc); gr(ctx,cx,cy,13,3,1,10,tc); gr(ctx,cx,cy,3,13,10,1,tc);
-        gr(ctx,cx,cy,4,1,8,1,tH); gr(ctx,cx,cy,1,4,1,8,tH); gr(ctx,cx,cy,14,4,1,8,tH); gr(ctx,cx,cy,4,14,8,1,tH);
-        ctx.globalAlpha=gA; gr(ctx,cx,cy,3,2,10,12,tH); ctx.globalAlpha=1;
-        // Dark interior matrix
-        gr(ctx,cx,cy,4,4,8,8,'#001a22'); gr(ctx,cx,cy,5,5,6,6,'#002233');
-        gr(ctx,cx,cy,4,7,8,1,'#003344'); gr(ctx,cx,cy,4,9,8,1,'#003344');
-        // ATP synthase spots
-        [[3,7],[7,2],[11,7],[7,12]].forEach(([ax,ay])=>{
-          gr(ctx,cx,cy,ax,ay,2,2,bright?'#ffcc00':'#aa8800');
-          if(bright) gr(ctx,cx,cy,ax,ay,1,1,'#ffee44');
-        });
-        gr(ctx,cx,cy,5,2,3,1,'#ffffff'); gr(ctx,cx,cy,2,5,1,2,'#ffffff');
+        // ── CYTOPLASM: Elongated mitochondria (horizontal oval, 12×8 game px) ──
+        const gA = 0.15 + 0.15 * Math.sin(frame * 0.04);
+        const bright = Math.sin(frame * 0.06) > 0;
+        // Floor under mitochondria
+        gr(ctx,cx,cy,0,0,W,W,fl);
+        gr(ctx,cx,cy,2,W-2,12,2,'#001a10'); // ground shadow
+        // Outer oval body (12×8, centered at x=2,y=5)
+        gr(ctx,cx,cy,3,5,10,6,'#2a4020');   // outer
+        gr(ctx,cx,cy,2,6,12,4,'#2a4020');   // wider middle
+        gr(ctx,cx,cy,3,5,10,1,'#3a6030');   // inner top
+        gr(ctx,cx,cy,3,10,10,1,'#1a2810');  // inner bottom shadow
+        // Inner membrane folds
+        gr(ctx,cx,cy,3,7,10,1,'#1a3018');   // fold 1 at y+2
+        gr(ctx,cx,cy,3,9,10,1,'#1a3018');   // fold 2 at y+4
+        // Accent glow at tips
+        ctx.globalAlpha = gA;
+        gr(ctx,cx,cy,2,6,2,3,'#00ffcc');    // left tip glow
+        gr(ctx,cx,cy,12,6,2,3,'#00ffcc');   // right tip glow
+        ctx.globalAlpha = 1;
+        // ATP synthase bright dots on membrane
+        if (bright) {
+          gr(ctx,cx,cy,4,5,2,1,'#ffcc00'); gr(ctx,cx,cy,10,5,2,1,'#ffcc00');
+          gr(ctx,cx,cy,4,10,2,1,'#ffcc00'); gr(ctx,cx,cy,10,10,2,1,'#ffcc00');
+        }
+        // Highlight top-left
+        gr(ctx,cx,cy,4,6,2,1,'#ffffff');
 
       } else if (realm === 3) {
         // ── NEURAL NEBULA: Crystal neural spire ──────────────────────────
@@ -1054,6 +1098,114 @@ interface Petal {
   timer: number;            // increments each frame
 }
 const blossomPetals: Petal[] = [];
+
+// ─── Acid Bubble System (Realm 1 ~) ──────────────────────────────────────────
+interface AcidBubble {
+  wx: number; wy: number;   // canvas px, absolute
+  r: number;                // radius in canvas px
+  age: number;              // 0 → 20
+  maxAge: number;
+}
+const acidBubbles: AcidBubble[] = [];
+let acidBubbleTimer = 0;
+
+function updateAcidBubbles(acidTileCanvasPositions: Array<{cx:number;cy:number}>, frame: number) {
+  // Spawn a bubble every 30 frames if there are acid tiles visible
+  acidBubbleTimer++;
+  if (acidBubbleTimer >= 30 && acidTileCanvasPositions.length > 0) {
+    acidBubbleTimer = 0;
+    const tile = acidTileCanvasPositions[Math.floor(Math.random() * acidTileCanvasPositions.length)];
+    acidBubbles.push({
+      wx: tile.cx + 2 + Math.random() * (TILE * SCALE - 4),
+      wy: tile.cy + TILE * SCALE - 4,
+      r: 2 + Math.floor(Math.random() * 3),
+      age: 0,
+      maxAge: 20,
+    });
+    if (acidBubbles.length > 20) acidBubbles.shift();
+  }
+  // Move bubbles up
+  for (const b of acidBubbles) b.age++;
+  // Remove finished bubbles
+  for (let i = acidBubbles.length - 1; i >= 0; i--) {
+    if (acidBubbles[i].age >= acidBubbles[i].maxAge) acidBubbles.splice(i, 1);
+  }
+  // Green flash every 45 frames
+  if (frame % 45 === 0) {
+    const flashTile = acidTileCanvasPositions[Math.floor(Math.random() * acidTileCanvasPositions.length)];
+    if (flashTile) {
+      acidBubbles.push({ wx: flashTile.cx + 4 + Math.random() * (TILE*SCALE-8), wy: flashTile.cy + 2, r: 1, age: 0, maxAge: 3 });
+    }
+  }
+}
+
+function drawAcidBubbles(ctx: CanvasRenderingContext2D) {
+  for (const b of acidBubbles) {
+    const progress = b.age / b.maxAge;
+    const y = b.wy - progress * (TILE * SCALE - 4);
+    const alpha = progress < 0.8 ? 0.6 : 0.6 * (1 - (progress - 0.8) / 0.2);
+    if (b.age === b.maxAge - 1) {
+      // Pop: draw star burst
+      ctx.fillStyle = `rgba(136,255,0,${alpha})`;
+      ctx.fillRect(b.wx - 3, y - 3, 3, 3); ctx.fillRect(b.wx + 1, y - 3, 3, 3);
+      ctx.fillRect(b.wx - 3, y + 1, 3, 3); ctx.fillRect(b.wx + 1, y + 1, 3, 3);
+    } else {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#55ff55';
+      ctx.beginPath(); ctx.arc(b.wx, y, b.r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.strokeStyle = '#88ff88'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(b.wx, y, b.r, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─── Nebula Drift Particles (Realm 3 void) ───────────────────────────────────
+interface DriftParticle {
+  x: number; y: number;     // canvas px
+  vx: number; vy: number;   // canvas px/frame
+  trailX: number[]; trailY: number[];
+}
+const nebulaDrift: DriftParticle[] = [];
+
+function initNebulaDrift(CW: number, CH: number) {
+  if (nebulaDrift.length > 0) return;
+  for (let i = 0; i < 18; i++) {
+    nebulaDrift.push({
+      x: Math.random() * CW,
+      y: Math.random() * CH,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      trailX: [], trailY: [],
+    });
+  }
+}
+
+function updateNebulaDrift(CW: number, CH: number) {
+  for (const p of nebulaDrift) {
+    p.trailX.push(p.x); p.trailY.push(p.y);
+    if (p.trailX.length > 3) { p.trailX.shift(); p.trailY.shift(); }
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0 || p.x > CW) p.vx *= -1;
+    if (p.y < 0 || p.y > CH) p.vy *= -1;
+  }
+}
+
+function drawNebulaDrift(ctx: CanvasRenderingContext2D) {
+  const alphas = [0.10, 0.20, 0.30];
+  for (const p of nebulaDrift) {
+    for (let t = 0; t < p.trailX.length; t++) {
+      ctx.globalAlpha = alphas[t] ?? 0.10;
+      ctx.fillStyle = '#aa44ff';
+      ctx.fillRect(Math.round(p.trailX[t]) - 1, Math.round(p.trailY[t]) - 1, 4, 4);
+    }
+    ctx.globalAlpha = 0.40;
+    ctx.fillStyle = '#aa44ff';
+    ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+}
 
 // ─── Enzyme overworld companion ────────────────────────────────────────────────
 // Rolling position history so Enzyme trails the player naturally
