@@ -287,8 +287,9 @@ function drawDialogue(
   speaker: 'enzyme'|'player',
   CW: number, CH: number,
   accentColor: string,
+  subtitle?: string,      // teal English translation for Enzyme meows
 ) {
-  const panH = 140;
+  const panH = subtitle ? 160 : 140;
   const panY = CH - panH - 10;
 
   // Panel bg
@@ -378,6 +379,22 @@ function drawDialogue(
     }
   }
   if (line) ctx.fillText(line, textX, lineY);
+
+  // Subtitle (teal English translation for Enzyme meows)
+  if (subtitle) {
+    const subX = portX + portW + 20;
+    const subY = panY + panH - 28;
+    ctx.fillStyle = '#55ddcc';
+    ctx.font = 'italic 11px "Courier New", monospace';
+    // Typewriter the subtitle based on how far main text has progressed
+    const subProg = Math.max(0, charProgress - text.length * 0.6);
+    const subVisible = subtitle.slice(0, Math.floor(subProg * 3));
+    ctx.fillText(subVisible, subX, subY);
+    if (subProg > 0) {
+      ctx.fillStyle = 'rgba(85,221,204,0.15)';
+      ctx.fillRect(subX - 4, subY - 14, CW - subX - 20, 16);
+    }
+  }
 
   // Blinking prompt if done
   if (charProgress >= text.length && Math.floor(Date.now() / 500) % 2 === 0) {
@@ -1338,6 +1355,7 @@ interface AnimState {
   dialogueChar: number;
   dialogueSpeaker: 'enzyme'|'player';
   dialogueVisible: boolean;
+  dialogueSub: string;
   signAlpha: number;
   terminalLines: number;
   fadeAlpha: number;
@@ -1361,7 +1379,7 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
     enzymeX: -80, enzymeY: 0,
     enzymePose: 'walk', enzymeFacing: 'right',
     enzymePhase: 0,
-    dialogueText: '', dialogueChar: 0, dialogueSpeaker: 'enzyme', dialogueVisible: false,
+    dialogueText: '', dialogueChar: 0, dialogueSpeaker: 'enzyme', dialogueVisible: false, dialogueSub: '',
     signAlpha: 0, terminalLines: 0, fadeAlpha: 1,
     impactFlash: 0, canSkip: false, done: false, rafId: 0,
   });
@@ -1434,25 +1452,29 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
         s.enzymeFacing = 'right'; // facing player's direction, smug
       }
 
-      // Enzyme speaks first — proud of himself (2.8–4.8s)
-      if (t >= 2.8 && t < 4.8) {
+      // Enzyme speaks — smug meow (2.8–4.6s)
+      if (t >= 2.8 && t < 4.6) {
         s.dialogueVisible = true;
         s.dialogueSpeaker = 'enzyme';
-        s.dialogueText = 'See?! That was a GREAT entrance. You\'re welcome, by the way.';
+        s.dialogueText = 'Meow!';
+        s.dialogueSub = "*(See?! That was a GREAT entrance. You're welcome.)*";
         s.dialogueChar = Math.min(s.dialogueText.length, (t - 2.8) * 22);
       }
-      // Player responds — not amused (4.8–7.2s)
-      if (t >= 4.8 && t < 7.2) {
+      // Player responds (4.6–6.5s)
+      if (t >= 4.6 && t < 6.5) {
         s.dialogueSpeaker = 'player';
         s.dialogueText = '...you threw me through a portal.';
-        s.dialogueChar = Math.min(s.dialogueText.length, (t - 4.8) * 18);
+        s.dialogueSub = '';
+        s.dialogueChar = Math.min(s.dialogueText.length, (t - 4.6) * 18);
       }
-      // Enzyme's final word (7.2s+)
-      if (t >= 7.2 && t < 8.8) {
+      // Enzyme final (6.5–8.2s)
+      if (t >= 6.5 && t < 8.2) {
         s.dialogueSpeaker = 'enzyme';
-        s.dialogueText = '...Yes. Anyway! Welcome to the Cytoplasm!';
-        s.dialogueChar = Math.min(s.dialogueText.length, (t - 7.2) * 20);
+        s.dialogueText = 'Meow.';
+        s.dialogueSub = '*(I told you the portal was fine.)*';
+        s.dialogueChar = Math.min(s.dialogueText.length, (t - 6.5) * 20);
       }
+      if (t >= 8.2) { s.dialogueVisible = false; }
 
       // Sign + terminal
       if (t >= 7.0) s.signAlpha = Math.min(1, (t - 7.0) / 1.2);
@@ -1465,7 +1487,7 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
       if (t < 0.8) s.fadeAlpha = Math.max(0, 1 - t / 0.8);
       else s.fadeAlpha = 0;
 
-      // Both walk in together from left (0.8–2.2s)
+      // Both walk in from left (0.8–2.2s)
       if (t >= 0.8 && t < 2.2) {
         const prog = (t - 0.8) / 1.4;
         s.playerX = -60 + prog * (CW * 0.25 + 60);
@@ -1474,45 +1496,48 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
         s.playerPose = 'walk'; s.enzymePose = 'walk';
         s.enzymeFacing = 'right';
       }
-      // Both stand and look at each other (2.2–3.0s)
-      if (t >= 2.2 && t < 3.0) {
+      // Both slow and stop — looking up at the DNA trees in awe (2.2–3.4s)
+      if (t >= 2.2 && t < 3.4) {
         s.playerX = CW * 0.25; s.enzymeX = CW * 0.37;
-        s.playerPose = 'stand'; s.enzymePose = 'sit'; s.enzymePhase = t;
+        s.playerPose = 'stand'; s.enzymePhase = t;
+        // Enzyme looks UP with excited pose
+        s.enzymePose = 'excited'; s.enzymeFacing = 'right';
       }
-      // Dialogue (2.5–4.0s)
-      if (t >= 2.5 && t < 4.0) {
+      // Enzyme meow — awe at DNA trees (2.6–4.3s)
+      if (t >= 2.6 && t < 4.3) {
         s.dialogueVisible = true; s.dialogueSpeaker = 'enzyme';
-        s.dialogueText = 'Ready? On 3... 2... 1... TOGETHER!!';
-        s.dialogueChar = Math.min(s.dialogueText.length, (t - 2.5) * 20);
+        s.dialogueText = 'Meow meow!';
+        s.dialogueSub = "*(Trees made of DNA. I've wanted to see this.)*";
+        s.dialogueChar = Math.min(s.dialogueText.length, (t - 2.6) * 20);
       }
-      // Both RUN right (3.8–5.0s)
-      if (t >= 3.8 && t < 5.0) {
+      // Both RUN right — can't contain excitement (4.2–5.5s)
+      if (t >= 4.2 && t < 5.5) {
         s.dialogueVisible = false;
-        const prog = (t - 3.8) / 1.2;
+        const prog = (t - 4.2) / 1.3;
         s.playerX = CW * 0.25 + prog * CW * 0.45;
         s.enzymeX = CW * 0.37 + prog * CW * 0.45;
         s.playerPhase = t * 14; s.enzymePhase = t * 16;
         s.playerPose = 'run'; s.enzymePose = 'excited';
       }
-      // JUMP (5.0–5.8s)
-      if (t >= 5.0 && t < 5.8) {
-        const prog = Math.sin(((t - 5.0) / 0.8) * Math.PI);
-        s.playerX = CW * 0.68 + (t - 5.0) * CW * 0.1;
+      // JUMP together over first DNA branch (5.5–6.3s)
+      if (t >= 5.5 && t < 6.3) {
+        const prog = Math.sin(((t - 5.5) / 0.8) * Math.PI);
+        s.playerX = CW * 0.68 + (t - 5.5) * CW * 0.1;
         s.enzymeX = s.playerX + 60;
         s.playerY = -prog * 80;
         s.enzymeY = -prog * 100;
         s.playerPose = 'jump'; s.enzymePose = 'fly';
         s.enzymeFacing = 'right';
       }
-      // Disappear into world (5.8s+)
-      if (t >= 5.8) {
+      // Disappear into world (6.3s+)
+      if (t >= 6.3) {
         s.playerX = CW + 100; s.enzymeX = CW + 200;
         s.playerY = 0; s.enzymeY = 0;
       }
 
-      if (t >= 5.5) s.signAlpha = Math.min(1, (t - 5.5) / 1.2);
-      if (t >= 6.5) s.terminalLines = Math.floor((t - 6.5) / 0.3) + 1;
-      if (t >= 8.5 && !s.done) { s.done = true; onCompleteRef.current(); return; }
+      if (t >= 6.0) s.signAlpha = Math.min(1, (t - 6.0) / 1.2);
+      if (t >= 7.0) s.terminalLines = Math.floor((t - 7.0) / 0.3) + 1;
+      if (t >= 9.0 && !s.done) { s.done = true; onCompleteRef.current(); return; }
     }
 
     else if (realm === 3) {
@@ -1555,12 +1580,14 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
       // Dialogue (4.5–7.5s) — 2 lines
       if (t >= 4.5 && t < 6.2) {
         s.dialogueVisible = true; s.dialogueSpeaker = 'enzyme';
-        s.dialogueText = 'I CALL THAT A SHORTCUT.';
+        s.dialogueText = 'Meow!';
+        s.dialogueSub = '*(Sorry. I got excited. You\'re fine.)*';
         s.dialogueChar = Math.min(s.dialogueText.length, (t - 4.5) * 18);
       }
       if (t >= 6.2 && t < 8.0) {
         s.dialogueSpeaker = 'player';
         s.dialogueText = '...you had ONE job.';
+        s.dialogueSub = '';
         s.dialogueChar = Math.min(s.dialogueText.length, (t - 6.2) * 18);
       }
 
@@ -1597,10 +1624,11 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
         s.enzymePhase = t;
       }
 
-      // Dialogue (4.6–7.5s)
+      // Dialogue (4.6–7.5s) — canon: meow with subtitle "This is the last one. I know."
       if (t >= 4.6) {
         s.dialogueVisible = true; s.dialogueSpeaker = 'enzyme';
-        s.dialogueText = 'I shall serve as your guide. Also your hat.';
+        s.dialogueText = 'Mrow.';
+        s.dialogueSub = '*(This is the last one. I know.)*';
         s.dialogueChar = Math.min(s.dialogueText.length, (t - 4.6) * 16);
       }
 
@@ -1654,7 +1682,8 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
 
     // Dialogue
     if (s.dialogueVisible) {
-      drawDialogue(ctx, s.dialogueText, s.dialogueChar, s.dialogueSpeaker, CW, CH, accentColor);
+      drawDialogue(ctx, s.dialogueText, s.dialogueChar, s.dialogueSpeaker, CW, CH, accentColor,
+        s.dialogueSpeaker === 'enzyme' && s.dialogueSub ? s.dialogueSub : undefined);
     }
 
     // Welcome sign
