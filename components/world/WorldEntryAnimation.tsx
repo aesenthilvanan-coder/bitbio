@@ -234,12 +234,16 @@ function drawEnzyme(
       ctx.fillRect(cx + C*1, cy - C*5 + bob, C*3, C*1);
     }
     ctx.fillStyle = nose; ctx.fillRect(cx - C*1, cy - C*4 + bob, C*2, C*1);
-    // Paws
+    // Paws + toe-beans (spec: pink #ff8899)
     ctx.fillStyle = body; ctx.fillRect(cx - C*4, cy - C*1, C*3, C*3);
     ctx.fillRect(cx + C*2, cy - C*1, C*3, C*3);
-    // Tail
-    ctx.fillStyle = body; ctx.fillRect(cx + C*4, cy - C*5 + bob, C*2, C*7);
-    ctx.fillRect(cx + C*3, cy + C*1 + bob, C*3, C*2);
+    ctx.fillStyle = '#ff8899';   // toe-beans
+    ctx.fillRect(cx - C*3, cy + C*1, C*1, C*1);
+    ctx.fillRect(cx + C*3, cy + C*1, C*1, C*1);
+    // Tail (spec: sin(frame*0.1)*3 wag)
+    const tailWag = Math.sin(phase * 0.1) * (C * 0.6);
+    ctx.fillStyle = body; ctx.fillRect(cx + C*4, cy - C*5 + bob + tailWag, C*2, C*7);
+    ctx.fillRect(cx + C*3, cy + C*1 + bob + tailWag, C*3, C*2);
     return;
   }
 
@@ -269,14 +273,21 @@ function drawEnzyme(
   ctx.fillStyle = hi; ctx.fillRect(cx + C*3*dir, ey, C*1, C*1);
   // Nose
   ctx.fillStyle = nose; ctx.fillRect(cx + C*4*dir, cy - C*7 + bob, C*2, C*1);
-  // Legs
+  // Legs + toe-beans (spec: pink #ff8899)
   ctx.fillStyle = body;
   ctx.fillRect(cx - C*1, cy - C*2 + bob + legOff, C*2, C*3);
   ctx.fillRect(cx + C*1, cy - C*2 + bob - legOff, C*2, C*3);
-  // Tail
+  ctx.fillStyle = '#ff8899';   // toe-beans on front paws
+  ctx.fillRect(cx - C*1, cy + bob + legOff, C*1, C*1);
+  ctx.fillRect(cx + C*1, cy + bob - legOff, C*1, C*1);
+  // Tail (spec: sin(frame*0.1)*3 wag amplitude)
+  const tailWag2 = Math.sin(phase * 0.1) * (C * 0.6);
   ctx.fillStyle = body;
-  ctx.fillRect(cx - C*3*dir, cy - C*6 + bob, C*2, C*6);
-  ctx.fillRect(cx - C*4*dir, cy - C*2 + bob, C*3, C*2);
+  ctx.fillRect(cx - C*3*dir, cy - C*6 + bob + tailWag2, C*2, C*6);
+  ctx.fillRect(cx - C*4*dir, cy - C*2 + bob + tailWag2, C*3, C*2);
+  // Tail tip curl
+  ctx.fillStyle = shad;
+  ctx.fillRect(cx - C*5*dir, cy - C*2 + bob + tailWag2, C*2, C*2);
 }
 
 // ─── Dialogue box (Undertale-style bottom panel) ──────────────────────────────
@@ -331,17 +342,17 @@ function drawDialogue(
     ctx.fillStyle = '#f8f8f8';
     ctx.fillRect(px - 16, py - 26, 6, 8);
     ctx.fillRect(px + 10, py - 26, 6, 8);
-    ctx.fillStyle = '#ffccdd';
+    ctx.fillStyle = '#ff8899';   // spec: inner ear pink
     ctx.fillRect(px - 14, py - 24, 4, 6);
     ctx.fillRect(px + 10, py - 24, 4, 6);
-    // Big eyes
-    ctx.fillStyle = '#2244cc'; ctx.fillRect(px - 12, py - 16, 10, 10);
+    // Big eyes — spec: teal iris #00ddcc
+    ctx.fillStyle = '#00ddcc'; ctx.fillRect(px - 12, py - 16, 10, 10);
     ctx.fillRect(px + 2, py - 16, 10, 10);
     ctx.fillStyle = '#0a0a0a'; ctx.fillRect(px - 10, py - 14, 6, 6);
     ctx.fillRect(px + 4, py - 14, 6, 6);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(px - 10, py - 14, 3, 3);
     ctx.fillRect(px + 4, py - 14, 3, 3);
-    ctx.fillStyle = '#ffb3c1'; ctx.fillRect(px - 2, py - 5, 6, 3);
+    ctx.fillStyle = '#ff8899'; ctx.fillRect(px - 2, py - 5, 6, 3);   // spec: nose pink
     // Whiskers
     ctx.fillStyle = '#aaaaaa';
     ctx.fillRect(px - 22, py - 10, 10, 1);
@@ -1675,6 +1686,15 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
       drawEnzyme(ctx, s.enzymeX, py - CS * 26, s.enzymePhase, 'onhead', s.enzymeFacing);
       drawPlayer(ctx, s.playerX, py, s.playerPhase, avatar, 'walk');
     } else if (s.enzymeX > -120 && s.enzymeX < CW + 120) {
+      // Smear ghost trail for Enzyme fly-in (realm 3 high-speed pounce) — ANIMATION.md smear technique
+      if (s.enzymePose === 'fly') {
+        const dir = s.enzymeFacing === 'right' ? -1 : 1;
+        ctx.globalAlpha = 0.2;
+        drawEnzyme(ctx, s.enzymeX + dir * 24, ez, s.enzymePhase, 'fly', s.enzymeFacing);
+        ctx.globalAlpha = 0.1;
+        drawEnzyme(ctx, s.enzymeX + dir * 48, ez, s.enzymePhase, 'fly', s.enzymeFacing);
+        ctx.globalAlpha = 1;
+      }
       drawEnzyme(ctx, s.enzymeX, ez, s.enzymePhase, s.enzymePose, s.enzymeFacing);
     }
 
