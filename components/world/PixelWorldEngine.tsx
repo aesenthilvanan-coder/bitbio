@@ -864,165 +864,195 @@ function drawBen(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir
 }
 
 function drawAlex(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, frame: number) {
-  // Alex: ML/AI Guide — 32×32 sprite, black turtleneck, slim gray pants, coffee cup
+  // Alex: ML/AI Guide — per CHARACTER_DESIGN.md spec
+  // Skin #e8b888, turtleneck #0a0a14, angular hair #0a0610, coffee cup in RIGHT hand with steam
+  // Everything below turtleneck is black. Spec: "unified dark lower body"
   const ox = cx - 8 * SCALE;
   const oy = cy - 16 * SCALE;
 
-  const legShift = frame === 1 ? 1 : 0;
-  const eyeH     = frame % 2 === 0 ? 1 : 2; // squint effect on even frames
+  const legShift = frame % 2 === 1 ? 1 : 0;
+  const steamOff = Math.floor(frame * 0.12) % 3;
 
-  // HEAD
-  gr2(ctx, ox, oy, 10, 0, 12, 12, '#d4a07a');
+  // HEAD — light warm #e8b888, angular 11×13 (slightly longer face)
+  gr2(ctx, ox, oy, 10, 0, 11, 13, '#e8b888');
+  gr2(ctx, ox, oy, 10, 2, 2, 9, '#b87840');
+  gr2(ctx, ox, oy, 19, 2, 2, 9, '#b87840');
 
-  // HAIR (sleek black, flat smooth, 14×4, high hairline at dy=-1)
-  gr2(ctx, ox, oy, 9, -1, 14, 4, '#1a1a1a');
+  // HAIR — very dark brown #0a0610, swept-back angular, forward bang
+  gr2(ctx, ox, oy,  9, -1, 13, 4, '#0a0610');
+  gr2(ctx, ox, oy,  9,  0,  4, 5, '#0a0610');
+  gr2(ctx, ox, oy,  9,  3,  5, 2, '#0a0610'); // forward bang over left eye
+  gr2(ctx, ox, oy, 10, -1,  8, 1, '#1a1a2a'); // highlight
 
-  // EYEBROWS (angular)
-  gr2(ctx, ox, oy, 12, 3, 3, 1, '#1a1a1a');
-  gr2(ctx, ox, oy, 17, 3, 3, 1, '#1a1a1a');
+  // EYEBROWS — thick, angled inward, 3×1 each
+  gr2(ctx, ox, oy, 11, 4, 3, 1, '#0a0610');
+  gr2(ctx, ox, oy, 17, 4, 3, 1, '#0a0610');
+  gr2(ctx, ox, oy, 13, 3, 1, 1, '#0a0610');
+  gr2(ctx, ox, oy, 17, 3, 1, 1, '#0a0610');
 
-  // EYES (sharp, positioned close together)
-  gr2(ctx, ox, oy, 13, 5, 2, eyeH, '#2a2a4a');
-  gr2(ctx, ox, oy, 17, 5, 2, eyeH, '#2a2a4a');
+  // EYES — sharp pupils with eye specular #c0d0ff
+  gr2(ctx, ox, oy, 11, 5, 3, 2, '#0a0610');
+  gr2(ctx, ox, oy, 17, 5, 3, 2, '#0a0610');
+  gr2(ctx, ox, oy, 12, 5, 1, 1, '#c0d0ff');
+  gr2(ctx, ox, oy, 18, 5, 1, 1, '#c0d0ff');
 
   // NOSE
-  gr2(ctx, ox, oy, 15, 7, 2, 1, '#c08060');
+  gr2(ctx, ox, oy, 15, 8, 2, 1, '#b87840');
 
-  // MOUTH (subtle, slightly pursed)
-  gr2(ctx, ox, oy, 15, 9, 3, 1, '#8a6050');
+  // MOUTH — thin pursed line
+  gr2(ctx, ox, oy, 14, 10, 3, 1, '#1a0800');
 
-  // TURTLENECK COLLAR (rises over chin, dy=10 inside head)
-  gr2(ctx, ox, oy, 11, 10, 10, 4, '#111111');
+  // TURTLENECK COLLAR — high, rises to chin
+  gr2(ctx, ox, oy, 11, 10, 10, 5, '#0a0a14');
+  gr2(ctx, ox, oy, 12, 10,  8, 2, '#1a1a2a');
 
   // NECK
-  gr2(ctx, ox, oy, 14, 12, 4, 3, '#111111');
+  gr2(ctx, ox, oy, 14, 12, 4, 3, '#0a0a14');
 
   // SHOULDERS
-  gr2(ctx, ox, oy, 6, 15, 20, 3, '#1a1a1a');
-  gr2(ctx, ox, oy, 8, 15,  3,  1, '#333333'); // shoulder highlight
+  gr2(ctx, ox, oy, 6, 14, 20, 4, '#0a0a14');
+  gr2(ctx, ox, oy, 8, 14,  3, 2, '#1a1a2a');
 
-  // TORSO (turtleneck)
-  gr2(ctx, ox, oy, 8, 17, 16, 10, '#1a1a1a');
+  // TORSO — clean minimal silhouette
+  gr2(ctx, ox, oy, 8, 17, 16, 10, '#0a0a14');
+  gr2(ctx, ox, oy, 8, 17,  2, 10, '#000000');
+  gr2(ctx, ox, oy, 22, 17, 2, 10, '#000000');
 
-  // ARMS (left arm stays still — coffee; right arm barely swings)
-  gr2(ctx, ox, oy,  4, 15, 4, 13, '#111111');
-  gr2(ctx, ox, oy, 24, 15, 4, 13, '#111111');
+  // ARMS
+  gr2(ctx, ox, oy,  4, 15, 4, 14, '#0a0a14');
+  gr2(ctx, ox, oy, 24, 15, 4, 14, '#0a0a14');
 
   // HANDS
-  gr2(ctx, ox, oy,  3, 28, 5, 3, '#d4a07a');
-  gr2(ctx, ox, oy, 24, 28, 5, 3, '#d4a07a');
+  gr2(ctx, ox, oy,  3, 28, 5, 3, '#e8b888');
+  gr2(ctx, ox, oy, 24, 28, 5, 3, '#e8b888');
 
-  // COFFEE CUP — left hand, dx=1, dy=24
-  gr2(ctx, ox, oy,  1, 24, 5, 8, '#e8d5b0'); // paper cup body
-  gr2(ctx, ox, oy,  1, 25, 5, 1, '#c4a882'); // coffee ring
-  gr2(ctx, ox, oy,  1, 24, 5, 1, '#2a1a0a'); // dark coffee at top
-  gr2(ctx, ox, oy,  6, 26, 2, 3, '#bbbb99'); // handle
+  // COFFEE CUP — RIGHT hand per spec, white #f0f0f0 body, black band #303040, handle #909090
+  const cupX = 25;
+  const cupY = 19;
+  gr2(ctx, ox, oy, cupX,     cupY,     8, 1, '#909090'); // lid
+  gr2(ctx, ox, oy, cupX + 1, cupY,     6, 1, '#606060');
+  gr2(ctx, ox, oy, cupX,     cupY + 1, 8, 4, '#f0f0f0'); // upper body
+  gr2(ctx, ox, oy, cupX + 2, cupY + 2, 4, 1, '#e8a000'); // coffee at top
+  gr2(ctx, ox, oy, cupX,     cupY + 5, 8, 1, '#303040'); // black band
+  gr2(ctx, ox, oy, cupX,     cupY + 6, 8, 3, '#f0f0f0'); // lower body
+  gr2(ctx, ox, oy, cupX + 8, cupY + 2, 3, 1, '#909090'); // handle top
+  gr2(ctx, ox, oy, cupX + 8, cupY + 5, 3, 1, '#909090'); // handle bottom
+  gr2(ctx, ox, oy, cupX + 10, cupY + 2, 1, 4, '#909090'); // handle right
+  // Steam — animated 1px lines
+  gr2(ctx, ox, oy, cupX + 2 + steamOff, cupY - 2, 1, 2, '#ffffff');
+  gr2(ctx, ox, oy, cupX + 5 - steamOff, cupY - 3, 1, 2, '#ffffff');
+  gr2(ctx, ox, oy, cupX + 4,            cupY - 1 - steamOff, 1, 1, '#ffffff');
 
-  // HIPS
-  gr2(ctx, ox, oy, 9, 27, 14, 3, '#606070');
-
-  // LEGS (slim, 5 wide each)
-  gr2(ctx, ox, oy, 10, 30 - legShift, 5, 8, '#606070');
-  gr2(ctx, ox, oy, 17, 30 + legShift, 5, 8, '#606070');
-
-  // FEET (white low-tops)
-  gr2(ctx, ox, oy,  9, 38 - legShift, 7, 3, '#f0f0f0');
-  gr2(ctx, ox, oy, 16, 38 + legShift, 7, 3, '#f0f0f0');
+  // HIPS + LEGS + SHOES — all black per spec
+  gr2(ctx, ox, oy, 9, 27, 14, 3, '#0a0a14');
+  gr2(ctx, ox, oy, 10, 30 - legShift, 5, 8, '#0a0a14');
+  gr2(ctx, ox, oy, 17, 30 + legShift, 5, 8, '#0a0a14');
+  gr2(ctx, ox, oy,  9, 38 - legShift, 7, 3, '#1a0800');
+  gr2(ctx, ox, oy, 16, 38 + legShift, 7, 3, '#1a0800');
 }
 
 function drawHenry(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir: Dir, frame: number) {
-  // Henry: Holographic Final Mentor — 32×32 sprite, translucent teal, flickering
+  // Henry: Holographic AI Mentor — per CHARACTER_DESIGN.md spec
+  // Base #d0f0ff, jacket #b0d8f8, circuit traces #00aaff, 4 orbiting orbs #44ddff with #aaffff inner
+  // Alpha 0.7 + sin(frame*0.05)*0.125, scanline glitch random column every 4 frames, orbs at 0.03 speed
   const ox = cx - 8 * SCALE;
   const oy = cy - 16 * SCALE;
 
-  const flicker = frame % 3 === 0 ? 0.4 : frame % 3 === 1 ? 0.65 : 0.55;
+  const baseAlpha = 0.7 + Math.sin(frame * 0.05) * 0.125;
 
-  // OUTER GLOW (very faint wider silhouette)
-  ctx.globalAlpha = flicker * 0.2;
-  gr2(ctx, ox, oy, 7, -3, 18, 46, '#00ffffff');
+  // OUTER GLOW
+  ctx.globalAlpha = baseAlpha * 0.15;
+  gr2(ctx, ox, oy, 6, -2, 20, 47, '#44ddff');
 
-  // MAIN HOLOGRAPHIC BODY
-  ctx.globalAlpha = flicker;
+  ctx.globalAlpha = baseAlpha;
 
-  // HEAD
-  gr2(ctx, ox, oy, 10, 0, 12, 12, '#00ffcc');
+  // HEAD — blue-white holographic #d0f0ff, perfectly symmetrical
+  gr2(ctx, ox, oy, 11, 0, 10, 11, '#d0f0ff');
+  gr2(ctx, ox, oy, 11, 1,  2,  9, '#90b8e8');
+  gr2(ctx, ox, oy, 19, 1,  2,  9, '#90b8e8');
+  // Circuit traces on scalp #00aaff (right-angle patterns)
+  gr2(ctx, ox, oy, 13, 0, 4, 1, '#00aaff');
+  gr2(ctx, ox, oy, 16, 0, 1, 3, '#00aaff');
+  gr2(ctx, ox, oy, 11, 2, 3, 1, '#00aaff');
+  // L-shaped trace on left cheek
+  gr2(ctx, ox, oy, 12, 7, 2, 1, '#00aaff');
+  gr2(ctx, ox, oy, 12, 7, 1, 2, '#00aaff');
 
-  // HAIR (distinguished silver/white, short and neat)
-  gr2(ctx, ox, oy, 10, 0, 12, 3, '#e0e0ff');
+  // EYES — white circles #ffffff, no pupils at rest
+  gr2(ctx, ox, oy, 12, 4, 3, 3, '#ffffff');
+  gr2(ctx, ox, oy, 17, 4, 3, 3, '#ffffff');
+  gr2(ctx, ox, oy, 13, 5, 1, 1, '#60c8f8');
+  gr2(ctx, ox, oy, 18, 5, 1, 1, '#60c8f8');
 
-  // Circuit trace on forehead
-  gr2(ctx, ox, oy, 10, 3, 12, 1, '#00ffffff');
-
-  // EYES (bright white, 3×3)
-  gr2(ctx, ox, oy, 11, 5, 3, 3, '#ffffff');
-  gr2(ctx, ox, oy, 18, 5, 3, 3, '#ffffff');
-
-  // SMILE (white teeth)
-  gr2(ctx, ox, oy, 12, 9, 8, 1, '#ffffff');
+  // MOUTH — white line, slightly upturned (almost always smiling)
+  gr2(ctx, ox, oy, 13, 9, 6, 1, '#ffffff');
+  gr2(ctx, ox, oy, 12, 8, 1, 1, '#ffffff');
+  gr2(ctx, ox, oy, 19, 8, 1, 1, '#ffffff');
 
   // NECK
-  gr2(ctx, ox, oy, 14, 12, 4, 3, '#00cccc');
+  gr2(ctx, ox, oy, 14, 11, 4, 4, '#b0d8f8');
 
-  // SHOULDERS (lab coat silhouette, teal)
-  gr2(ctx, ox, oy, 6, 15, 20, 3, '#00cccc');
+  // SHOULDERS + JACKET #b0d8f8, lapels
+  gr2(ctx, ox, oy, 6, 14, 20, 4, '#b0d8f8');
+  gr2(ctx, ox, oy, 6, 14,  3, 4, '#90b8e8');
+  gr2(ctx, ox, oy, 23, 14, 3, 4, '#90b8e8');
+  gr2(ctx, ox, oy, 12, 14, 3, 5, '#d0f0ff'); // left lapel
+  gr2(ctx, ox, oy, 17, 14, 3, 5, '#d0f0ff'); // right lapel
 
-  // TORSO
-  gr2(ctx, ox, oy, 8, 17, 16, 10, '#00cccc');
-
-  // Hexagonal grid texture on torso (4×4 grid of 1×1 dots)
-  for (let hgx = 0; hgx < 4; hgx++) {
-    for (let hgy = 0; hgy < 4; hgy++) {
-      gr2(ctx, ox, oy, 9 + hgx * 3, 18 + hgy * 2, 1, 1, '#00ffffff');
-    }
-  }
-
-  // CIRCUIT TRACES (8 total — thin 1×3 and 3×1 lines)
-  gr2(ctx, ox, oy,  9, 19, 3, 1, '#00ffffff');
-  gr2(ctx, ox, oy, 15, 21, 1, 3, '#00ffffff');
-  gr2(ctx, ox, oy, 18, 22, 3, 1, '#00ffffff');
-  gr2(ctx, ox, oy, 10, 24, 1, 3, '#00ffffff');
-  gr2(ctx, ox, oy, 13, 18, 3, 1, '#00ffffff');
-  gr2(ctx, ox, oy, 20, 19, 1, 3, '#00ffffff');
-  gr2(ctx, ox, oy,  9, 25, 3, 1, '#00ffffff');
-  gr2(ctx, ox, oy, 17, 24, 1, 3, '#00ffffff');
+  // TORSO — jacket
+  gr2(ctx, ox, oy, 8, 17, 16, 10, '#b0d8f8');
+  gr2(ctx, ox, oy, 8, 17,  2, 10, '#90b8e8');
+  gr2(ctx, ox, oy, 22, 17, 2, 10, '#90b8e8');
+  // Circuit traces on chest #00aaff
+  gr2(ctx, ox, oy,  9, 19, 4, 1, '#00aaff');
+  gr2(ctx, ox, oy,  9, 19, 1, 4, '#00aaff');
+  gr2(ctx, ox, oy, 12, 22, 4, 1, '#00aaff');
+  gr2(ctx, ox, oy, 15, 20, 1, 3, '#00aaff');
+  gr2(ctx, ox, oy, 18, 18, 4, 1, '#00aaff');
+  gr2(ctx, ox, oy, 21, 18, 1, 4, '#00aaff');
+  gr2(ctx, ox, oy, 10, 24, 3, 1, '#00aaff');
+  gr2(ctx, ox, oy, 17, 24, 1, 3, '#00aaff');
 
   // ARMS
-  gr2(ctx, ox, oy,  4, 15, 4, 13, '#00aaaa');
-  gr2(ctx, ox, oy, 24, 15, 4, 13, '#00aaaa');
+  gr2(ctx, ox, oy,  4, 15, 4, 14, '#90b8e8');
+  gr2(ctx, ox, oy, 24, 15, 4, 14, '#90b8e8');
 
   // HANDS
-  gr2(ctx, ox, oy,  3, 28, 5, 3, '#00cccc');
-  gr2(ctx, ox, oy, 24, 28, 5, 3, '#00cccc');
+  gr2(ctx, ox, oy,  3, 28, 5, 3, '#d0f0ff');
+  gr2(ctx, ox, oy, 24, 28, 5, 3, '#d0f0ff');
 
-  // HIPS
-  gr2(ctx, ox, oy, 9, 27, 14, 3, '#00cccc');
+  // HIPS + LEGS
+  gr2(ctx, ox, oy, 9, 27, 14, 3, '#b0d8f8');
+  gr2(ctx, ox, oy,  9, 30, 6, 8, '#b0d8f8');
+  gr2(ctx, ox, oy, 17, 30, 6, 8, '#b0d8f8');
 
-  // LEGS
-  gr2(ctx, ox, oy,  9, 30, 6, 8, '#00cccc');
-  gr2(ctx, ox, oy, 17, 30, 6, 8, '#00cccc');
+  // FEET — lower alpha (fade at extremities per spec)
+  ctx.globalAlpha = baseAlpha * 0.5;
+  gr2(ctx, ox, oy,  8, 38, 7, 3, '#90b8e8');
+  gr2(ctx, ox, oy, 16, 38, 7, 3, '#90b8e8');
+  ctx.globalAlpha = baseAlpha;
 
-  // FEET
-  gr2(ctx, ox, oy,  8, 38, 7, 3, '#00aaaa');
-  gr2(ctx, ox, oy, 16, 38, 7, 3, '#00aaaa');
-
-  // SCANLINE GLITCH at frame%4===0
+  // SCANLINE GLITCH — every 4 frames, random column, alpha 0.3 per spec
   if (frame % 4 === 0) {
-    ctx.globalAlpha = flicker * 0.8;
-    gr2(ctx, ox, oy, 12, 0, 1, 41, '#ffffff');
-    gr2(ctx, ox, oy, 19, 0, 1, 41, '#ffffff');
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#ffffff';
+    const glitchCol = (Math.floor(frame * 7.3) % 10) * SCALE;
+    ctx.fillRect(ox + glitchCol, oy, SCALE, 42 * SCALE);
+    ctx.globalAlpha = baseAlpha;
   }
 
-  // ORBITING PARTICLES (4 teal orbs, positions based on sin/cos of frame*0.1)
-  ctx.globalAlpha = flicker * 0.7;
-  const t = frame * 0.1;
-  const orbs = [
-    { dx: Math.round(16 + 10 * Math.cos(t)),                   dy: Math.round(20 + 8 * Math.sin(t)) },
-    { dx: Math.round(16 + 10 * Math.cos(t + Math.PI)),         dy: Math.round(20 + 8 * Math.sin(t + Math.PI)) },
-    { dx: Math.round(16 + 10 * Math.cos(t + Math.PI / 2)),     dy: Math.round(20 + 8 * Math.sin(t + Math.PI / 2)) },
-    { dx: Math.round(16 + 10 * Math.cos(t + 3 * Math.PI / 2)), dy: Math.round(20 + 8 * Math.sin(t + 3 * Math.PI / 2)) },
+  // 4 ORBITING ORBS — #44ddff (3×3), inner #aaffff (1×1), speed 0.03 per spec
+  const ht = frame * 0.03;
+  const henryOrbs = [
+    { dx: Math.round(16 + 10 * Math.cos(ht)),                   dy: Math.round(20 + 8 * Math.sin(ht)) },
+    { dx: Math.round(16 + 10 * Math.cos(ht + Math.PI)),         dy: Math.round(20 + 8 * Math.sin(ht + Math.PI)) },
+    { dx: Math.round(16 + 10 * Math.cos(ht + Math.PI / 2)),     dy: Math.round(20 + 8 * Math.sin(ht + Math.PI / 2)) },
+    { dx: Math.round(16 + 10 * Math.cos(ht + 3 * Math.PI / 2)), dy: Math.round(20 + 8 * Math.sin(ht + 3 * Math.PI / 2)) },
   ];
-  for (const orb of orbs) {
-    gr2(ctx, ox, oy, orb.dx, orb.dy, 2, 2, '#00ffcc');
+  ctx.globalAlpha = 0.8;
+  for (const orb of henryOrbs) {
+    gr2(ctx, ox, oy, orb.dx, orb.dy, 3, 3, '#44ddff');
+    gr2(ctx, ox, oy, orb.dx + 1, orb.dy + 1, 1, 1, '#aaffff');
   }
 
   ctx.globalAlpha = 1;
