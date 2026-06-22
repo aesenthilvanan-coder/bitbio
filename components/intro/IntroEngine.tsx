@@ -65,7 +65,11 @@ interface IntroState {
   nearComputer: boolean;
   inMomsRoom: boolean;
   interactDialogue: boolean;
-  upstairsSubPhase: 'hall' | 'momsroom' | 'yourroom';
+  upstairsSubPhase: 'hall' | 'momsroom' | 'bathroom' | 'yourroom';
+  momsRoomItemIdx: number;
+  bathroomInteractIdx: number;
+  textbookFalling: boolean;
+  textbookFallY: number;
   computerPhase: number;
   computerEmailOpen: boolean;
   computerLinkClicked: boolean;
@@ -523,14 +527,21 @@ function drawDevilEyes(
     }
   }
 
-  // Tiny horrified player at bottom
+  // Caption: "The Mom-Demon of Incomplete Science Projects"
+  const caption = 'The Mom-Demon of Incomplete Science Projects';
+  const capY = Math.floor(GH * 0.68);
+  gr(ctx, 2, capY - 2, GW - 4, 10, '#0a0005');
+  drawPixelText(ctx, caption, Math.floor(GW / 2) - Math.floor(caption.length * 3.5), capY, '#cc3344', 1);
+
+  // Tiny horrified player at bottom center
   const px = Math.floor(GW / 2) - 6;
   const py = Math.floor(GH * 0.78);
   drawPlayer(ctx, px, py, avatar, 'right', 0);
 
-  // HORROR text
-  const horrText = 'O---OK...';
-  drawPixelText(ctx, horrText, Math.floor(GW / 2) - pixelTextWidth(horrText) / 2, py + 25, '#ffffff', 1);
+  // Player look: camera → mom → camera (text toggle)
+  const lookPhase = Math.floor(t * 0.8) % 3;
+  const lookText = lookPhase === 0 ? '(looks at camera)' : lookPhase === 1 ? '(looks at mom-demon)' : '(looks at camera again)';
+  drawPixelText(ctx, lookText, Math.floor(GW / 2) - Math.floor(lookText.length * 3.5), py + 26, '#888888', 1);
 }
 
 function drawEnzyme(
@@ -952,12 +963,19 @@ function drawBedroom(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: n
   ctx.fillRect(0, 3 * S, GW * S, 20 * S);
 }
 
-function drawMomsRoom(ctx: CanvasRenderingContext2D, GW: number, GH: number) {
+function drawMomsRoom(ctx: CanvasRenderingContext2D, GW: number, GH: number, itemIdx: number) {
   const floorY = Math.floor(GH * 0.62);
 
   // ── Mom's room: dark warm walls ──
-  ctx.fillStyle = '#0e0906';
+  ctx.fillStyle = '#100a06';
   ctx.fillRect(0, 0, GW * S, floorY * S);
+  // Subtle wallpaper — tiny diamond pattern
+  for (let wy = 4; wy < floorY; wy += 10) {
+    for (let wx = 0; wx < GW; wx += 10) {
+      ctx.fillStyle = 'rgba(120,60,20,0.04)';
+      ctx.fillRect(wx * S, wy * S, 5 * S, 5 * S);
+    }
+  }
   // Dark floor
   for (let fy = floorY; fy < GH; fy += 7) {
     ctx.fillStyle = fy % 14 === 0 ? '#120e04' : '#0e0b02';
@@ -969,30 +987,143 @@ function drawMomsRoom(ctx: CanvasRenderingContext2D, GW: number, GH: number) {
   // Bed
   const bedX = Math.floor(GW * 0.3);
   gr(ctx, bedX, floorY - 26, 38, 28, '#8B7355');
-  gr(ctx, bedX + 2, floorY - 24, 34, 22, '#c41e3a');
+  gr(ctx, bedX + 2, floorY - 24, 34, 22, '#8b1a2a');
   gr(ctx, bedX + 4, floorY - 24, 14, 5, '#f0f0f0');
+  // Pillow
+  gr(ctx, bedX + 4, floorY - 24, 14, 5, '#f8f8f8');
 
-  // Bookshelf
-  const sx = GW - 34;
-  gr(ctx, sx, floorY - 44, 28, 46, '#5a3e1a');
+  // ── Diary on desk (item 0) ──
+  const deskX = Math.floor(GW * 0.6);
+  gr(ctx, deskX, floorY - 16, 34, 4, '#6b4a1a');
+  gr(ctx, deskX + 2, floorY - 28, 26, 12, '#3a1800');
+  gr(ctx, deskX + 4, floorY - 26, 22, 10, '#4a2000');
+  drawPixelText(ctx, 'DIARY', deskX + 5, floorY - 24, '#cc8844', 1);
+  drawPixelText(ctx, 'VOL.47', deskX + 4, floorY - 18, '#aa6633', 1);
+  // highlight if currently reading
+  if (itemIdx === 0) {
+    ctx.fillStyle = 'rgba(255,200,80,0.12)';
+    ctx.fillRect((deskX - 2) * S, (floorY - 30) * S, 30 * S, 18 * S);
+  }
+
+  // ── Trophy cabinet (JEFFERY'S ACHIEVEMENTS) (item 1) ──
+  const trophyX = 8;
+  gr(ctx, trophyX, floorY - 50, 28, 52, '#5a3e1a');
+  gr(ctx, trophyX + 1, floorY - 49, 26, 50, '#4a2e0a');
+  // Label
+  drawPixelText(ctx, "JEFF'S", trophyX + 2, floorY - 48, '#ffcc44', 1);
+  drawPixelText(ctx, 'TROPHIES', trophyX + 1, floorY - 42, '#ffcc44', 1);
+  // Trophies on shelves
+  for (let sh = 0; sh < 3; sh++) {
+    gr(ctx, trophyX + 2, floorY - 50 + sh * 16 + 14, 24, 1, '#3a2008');
+    // Trophy shape
+    const tx2 = trophyX + 4 + sh * 6;
+    gr(ctx, tx2, floorY - 50 + sh * 16 + 4, 4, 6, '#ffaa00');
+    gr(ctx, tx2 - 2, floorY - 50 + sh * 16 + 7, 8, 2, '#ffcc44');
+    gr(ctx, tx2 + 1, floorY - 50 + sh * 16 + 9, 2, 4, '#cc8800');
+    gr(ctx, tx2 - 1, floorY - 50 + sh * 16 + 12, 6, 1, '#cc8800');
+  }
+  // Player's name area — empty with sticky note
+  gr(ctx, trophyX + 2, floorY - 18, 24, 14, '#0a0804');
+  drawPixelText(ctx, 'Potential', trophyX + 3, floorY - 15, '#aaaa44', 1);
+  drawPixelText(ctx, '(pending)', trophyX + 3, floorY - 9, '#888833', 1);
+  if (itemIdx === 1) {
+    ctx.fillStyle = 'rgba(255,200,80,0.12)';
+    ctx.fillRect(trophyX * S, (floorY - 52) * S, 30 * S, 54 * S);
+  }
+
+  // ── Photo on wall (item 2) ──
+  const photoX = Math.floor(GW * 0.5);
+  gr(ctx, photoX, 8, 24, 18, '#2a2018');
+  gr(ctx, photoX + 2, 9, 20, 16, '#1a140c');
+  // Mom and baby silhouettes
+  gr(ctx, photoX + 4, 12, 5, 10, '#3a2a1a');
+  gr(ctx, photoX + 4, 10, 5, 3, '#3a2a1a');
+  gr(ctx, photoX + 11, 14, 3, 6, '#2a1e12');
+  gr(ctx, photoX + 11, 13, 3, 2, '#2a1e12');
+  // "Looking proud" expression — tiny white smile dots
+  gr(ctx, photoX + 5, 11, 1, 1, '#aa8866');
+  gr(ctx, photoX + 7, 11, 1, 1, '#aa8866');
+  if (itemIdx === 2) {
+    ctx.fillStyle = 'rgba(255,200,80,0.12)';
+    ctx.fillRect((photoX - 1) * S, 7 * S, 26 * S, 20 * S);
+  }
+
+  // Item labels
+  drawPixelText(ctx, `[${itemIdx + 1}/${MOMS_ROOM_ITEMS.length}] ${MOMS_ROOM_ITEMS[itemIdx]?.label ?? ''}`, 4, GH - 18, '#886644', 1);
+}
+
+function drawBathroom(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: number, interactIdx: number) {
+  const floorY = Math.floor(GH * 0.62);
+
+  // Tiled bathroom walls — pale greenish
+  ctx.fillStyle = '#0c1210';
+  ctx.fillRect(0, 0, GW * S, floorY * S);
+  // Tile grid
+  for (let ty = 0; ty < floorY; ty += 12) {
+    for (let tx = 0; tx < GW; tx += 10) {
+      ctx.strokeStyle = 'rgba(100,160,120,0.08)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tx * S, ty * S, 10 * S, 12 * S);
+    }
+  }
+  // Floor tiles
+  for (let fy = floorY; fy < GH; fy += 8) {
+    ctx.fillStyle = fy % 16 === 0 ? '#0e1208' : '#0b0f06';
+    ctx.fillRect(0, fy * S, GW * S, 8 * S);
+  }
+  gr(ctx, 0, floorY - 3, GW, 3, '#0d150d');
+
+  // ── Mirror above sink ──
+  const mirrorX = Math.floor(GW * 0.3);
+  const mirrorY = 10;
+  gr(ctx, mirrorX, mirrorY, 28, 22, '#1a2a22');
+  gr(ctx, mirrorX + 1, mirrorY + 1, 26, 20, '#d0e0d8'); // reflective surface
+  // Reflection — player silhouette (very faint)
+  ctx.globalAlpha = 0.15;
+  gr(ctx, mirrorX + 8, mirrorY + 6, 12, 14, '#888888');
+  ctx.globalAlpha = 1;
+  // Mirror frame glow
+  const mg = (Math.sin(t * 1.5) + 1) * 0.02;
+  ctx.fillStyle = `rgba(200,255,220,${0.05 + mg})`;
+  ctx.fillRect((mirrorX - 2) * S, (mirrorY - 2) * S, 32 * S, 26 * S);
+  if (interactIdx === 0) {
+    ctx.fillStyle = 'rgba(200,255,220,0.1)';
+    ctx.fillRect((mirrorX - 2) * S, (mirrorY - 2) * S, 32 * S, 26 * S);
+  }
+
+  // Sink
+  gr(ctx, mirrorX + 4, floorY - 20, 20, 20, '#1a2820');
+  gr(ctx, mirrorX + 6, floorY - 18, 16, 14, '#0a1410');
+  // Faucet
+  gr(ctx, mirrorX + 13, floorY - 22, 4, 4, '#334433');
+  gr(ctx, mirrorX + 14, floorY - 24, 2, 3, '#445544');
+
+  // Medicine cabinet (right wall)
+  const cabX = Math.floor(GW * 0.65);
+  gr(ctx, cabX, 8, 26, 28, '#162014');
+  gr(ctx, cabX + 1, 9, 24, 26, '#1e2c1a');
+  drawPixelText(ctx, 'CABINET', cabX + 2, 10, '#446644', 1);
+  // Little pill bottles inside
   for (let i = 0; i < 3; i++) {
-    gr(ctx, sx + 2, floorY - 44 + i * 14 + 12, 24, 2, '#4a2e0a');
-    drawPixelText(ctx, 'F', sx + 4 + i * 6, floorY - 44 + i * 14 + 1, '#ff4444', 1);
-    drawPixelText(ctx, 'F', sx + 12 + i * 2, floorY - 44 + i * 14 + 2, '#ff6644', 1);
+    gr(ctx, cabX + 3 + i * 7, 15, 5, 10, i === 0 ? '#446688' : i === 1 ? '#884444' : '#664422');
+    gr(ctx, cabX + 4 + i * 7, 14, 3, 2, '#888888');
+  }
+  // Highlight the mysterious book on bottom shelf
+  gr(ctx, cabX + 2, 25, 22, 9, '#110e08');
+  drawPixelText(ctx, '"HOW TO', cabX + 3, 26, '#886644', 1);
+  drawPixelText(ctx, 'PARENT"', cabX + 3, 31, '#886644', 1);
+  if (interactIdx === 1) {
+    ctx.fillStyle = 'rgba(255,200,80,0.12)';
+    ctx.fillRect(cabX * S, 8 * S, 26 * S, 28 * S);
   }
 
-  // Letters floating
-  for (let i = 0; i < 2; i++) {
-    const lx = 20 + i * 40;
-    gr(ctx, lx, floorY - 34, 28, 18, '#fffde0');
-    gr(ctx, lx + 2, floorY - 32, 24, 14, '#fffff0');
-    drawPixelText(ctx, i === 0 ? 'GRADE: F' : 'REJECTION', lx + 2, floorY - 30, '#cc0000', 1);
-  }
+  // Toilet (right side)
+  const toiX = GW - 28;
+  gr(ctx, toiX, floorY - 22, 22, 24, '#1a2218');
+  gr(ctx, toiX + 2, floorY - 24, 18, 4, '#222e20');
+  gr(ctx, toiX + 4, floorY - 20, 14, 18, '#0e1810');
 
-  // Exit door
-  gr(ctx, 4, floorY - 40, 22, 42, '#8B7355');
-  gr(ctx, 6, floorY - 38, 18, 38, '#111');
-  drawPixelText(ctx, 'EXIT', 6, floorY - 48, '#ffffff', 1);
+  drawPixelText(ctx, `[${interactIdx + 1}/${BATHROOM_LINES.length}] ${BATHROOM_LINES[interactIdx]?.label ?? ''}`, 4, GH - 18, '#446644', 1);
 }
 
 function drawCloset(
@@ -1060,6 +1191,48 @@ function drawCloset(
     if (stage >= 3) {
       drawPixelText(ctx, '4500 PAGES', Math.floor(GW / 2) - 30, Math.floor(GH * 0.88), '#ff8888', 1);
     }
+
+    // ── Cosmic zoom stage: planet orbiting + heat death ──
+    if (zoomLevel > 1.5) {
+      const cosmicAlpha = Math.min(1, (zoomLevel - 1.5) / 1.0);
+      // Starfield background
+      ctx.globalAlpha = cosmicAlpha * 0.6;
+      for (let s2 = 0; s2 < 60; s2++) {
+        const sx = (s2 * 137) % GW;
+        const sy = (s2 * 73) % GH;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(sx * S, sy * S, 1, 1);
+      }
+      ctx.globalAlpha = cosmicAlpha;
+
+      // Orbiting planet
+      const orbAngle = t * 0.8;
+      const orbRX = Math.floor(bookW * 0.55);
+      const orbRY = Math.floor(bookH * 0.35);
+      const planetX = Math.floor(GW / 2) + Math.floor(Math.cos(orbAngle) * orbRX);
+      const planetY = Math.floor(GH / 2) + Math.floor(Math.sin(orbAngle) * orbRY);
+      // Planet body
+      gr(ctx, planetX - 4, planetY - 4, 8, 8, '#3355aa');
+      gr(ctx, planetX - 3, planetY - 3, 6, 6, '#4466cc');
+      gr(ctx, planetX - 2, planetY - 4, 4, 2, '#7799ee'); // highlight
+      // Planet ring
+      const ringW = 14;
+      ctx.globalAlpha = cosmicAlpha * 0.5;
+      ctx.fillStyle = '#8899aa';
+      ctx.fillRect((planetX - ringW / 2) * S, (planetY - 1) * S, ringW * S, 1 * S);
+      ctx.globalAlpha = cosmicAlpha;
+
+      // Heat death text (at extreme zoom)
+      if (zoomLevel > 2.3) {
+        const heatAlpha = Math.min(1, (zoomLevel - 2.3) / 0.5);
+        ctx.globalAlpha = heatAlpha * cosmicAlpha;
+        const heatY = Math.floor(GH * 0.05);
+        drawPixelText(ctx, 'HEAT DEATH OF THE UNIVERSE', Math.floor(GW / 2) - 55, heatY, '#334', 1);
+        drawPixelText(ctx, '(estimated 10^100 years from now)', Math.floor(GW / 2) - 65, heatY + 8, '#223', 1);
+        ctx.globalAlpha = cosmicAlpha;
+      }
+    }
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -1162,15 +1335,22 @@ function drawComputerScreen(
   }
 
   if (phase >= 3) {
-    // Email content
+    // Email open — exact content from Game Design Bible
     gr(ctx, sx, sy, sw, sh, '#050510');
-    drawPixelText(ctx, 'FROM: DR.HENRY LACKS', sx + 2, sy + 2, '#8888ff', 1);
-    drawPixelText(ctx, 'SUBJ: YOU HAVE POTENTIAL.', sx + 2, sy + 8, '#aaaaff', 1);
-    gr(ctx, sx + 1, sy + 13, sw - 2, 1, '#334');
-    drawPixelText(ctx, "I'VE BEEN WATCHING YOU.", sx + 2, sy + 15, '#cccccc', 1);
-    drawPixelText(ctx, 'I KNOW WHAT YOU CAN DO.', sx + 2, sy + 22, '#cccccc', 1);
-    const linkColor = Math.sin(t * 5) > 0 ? '#00ff44' : '#00cc33';
-    drawPixelText(ctx, '>> ENTER BIOBIT <<', sx + 4, sy + 30, linkColor, 1);
+    // Header bar
+    gr(ctx, sx + 1, sy + 1, sw - 2, 4, '#0a0a22');
+    drawPixelText(ctx, 'FROM: dr.h.lacks@biobit.edu', sx + 2, sy + 2, '#6666bb', 1);
+    drawPixelText(ctx, 'SUBJ: [no subject]', sx + 2, sy + 7, '#555588', 1);
+    gr(ctx, sx + 1, sy + 12, sw - 2, 1, '#1a1a33');
+    drawPixelText(ctx, 'I heard you need help.', sx + 2, sy + 14, '#cccccc', 1);
+    drawPixelText(ctx, 'Everyone does.', sx + 2, sy + 20, '#cccccc', 1);
+    drawPixelText(ctx, 'Click the link.', sx + 2, sy + 26, '#cccccc', 1);
+    drawPixelText(ctx, '-H', sx + 2, sy + 32, '#888888', 1);
+    // The link — pulsing blue
+    const linkColor2 = `rgba(80,120,255,${0.7 + Math.sin(t * 4) * 0.3})`;
+    ctx.fillStyle = linkColor2;
+    ctx.fillRect((sx + 2) * S, (sy + 38) * S, 14 * S, 6 * S);
+    drawPixelText(ctx, 'START', sx + 4, sy + 39, '#ffffff', 1);
   }
 }
 
@@ -1180,70 +1360,174 @@ function drawSuckAnimation(
   progress: number,
   t: number,
   avatar: AvatarConfig,
-  distort: number
+  _distort: number
 ) {
-  // Background: room fading to white
-  const bgAlpha = Math.min(1, progress * 2);
-  ctx.fillStyle = `rgba(255,255,255,${bgAlpha})`;
-  ctx.fillRect(0, 0, GW * S, GH * S);
-
-  // Monitor position
+  // Monitor (suction point)
   const monX = Math.floor(GW * 0.75) + 14;
   const monY = Math.floor(GH * 0.38) - 20;
 
-  // Spiral rings
-  const rings = 8;
-  for (let r = 0; r < rings; r++) {
-    const ringProgress = (t * 1.5 + r / rings) % 1;
-    const maxR = Math.floor(Math.min(GW, GH) * 0.5 * (1 - progress * 0.5));
-    const ringR = Math.floor(maxR * ringProgress);
-    const alpha = (1 - ringProgress) * (1 - progress);
-    if (alpha > 0 && ringR > 0) {
-      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-      for (let a = 0; a < 32; a++) {
-        const angle = (a / 32) * Math.PI * 2 + t * 2;
-        const px2 = monX + Math.floor(Math.cos(angle) * ringR);
-        const py2 = monY + Math.floor(Math.sin(angle) * ringR);
-        ctx.fillRect(px2 * S, py2 * S, 2 * S, 2 * S);
+  // ── Phase 0 (0–0.35): Desk grab + finger slip ──────────────────────────────
+  // Player tries to hold on to desk edge while being pulled
+  if (progress < 0.35) {
+    const gripPhase = progress / 0.35;
+    // Player at desk edge, arm extended (finger on desk)
+    const playerX = Math.floor(GW * 0.4) + Math.floor(gripPhase * 20);
+    const playerY = Math.floor(GH * 0.55);
+    drawPlayer(ctx, playerX, playerY, avatar, 'right', Math.floor(t * 4));
+    // Desk edge — player gripping it
+    gr(ctx, playerX + 10, playerY + 8, 16, 3, '#5a3e1a'); // desk edge
+    gr(ctx, playerX + 11, playerY + 7, 4, 2, '#f4c08a'); // finger on edge
+    // Slip marks at end of phase 0
+    if (gripPhase > 0.8) {
+      const slipA = (gripPhase - 0.8) / 0.2;
+      gr(ctx, playerX + 11, playerY + 6, Math.floor(slipA * 8), 1, '#e0a060'); // slip trail
+    }
+    // Suction vortex starting at monitor
+    const vortexA = gripPhase * 0.3;
+    ctx.globalAlpha = vortexA;
+    gr(ctx, monX - 4, monY - 4, 8, 8, '#00ffcc');
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Phase 1 (0.35–0.65): RGB channel split + floating furniture ────────────
+  if (progress >= 0.35 && progress < 0.85) {
+    const midPhase = (progress - 0.35) / 0.5;
+    const splitAmt = Math.floor(midPhase * 8);
+
+    // RGB channel split effect — draw player 3 times offset in R/G/B
+    const playerX = Math.floor(GW * 0.4) + Math.floor(midPhase * (monX - Math.floor(GW * 0.4)) * 0.6);
+    const playerY = Math.floor(GH * 0.55) - Math.floor(midPhase * 20);
+
+    // Red channel (left offset)
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.7;
+    ctx.save();
+    ctx.translate(-splitAmt * S, 0);
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(playerX * S, playerY * S, 12 * S, 18 * S);
+    ctx.restore();
+    // Green channel (center)
+    ctx.save();
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect((playerX + 1) * S, playerY * S, 10 * S, 18 * S);
+    ctx.restore();
+    // Blue channel (right offset)
+    ctx.save();
+    ctx.translate(splitAmt * S, 0);
+    ctx.fillStyle = '#0000ff';
+    ctx.fillRect((playerX + 2) * S, playerY * S, 10 * S, 18 * S);
+    ctx.restore();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+
+    // Draw the actual player on top (slightly transparent)
+    ctx.globalAlpha = 0.85;
+    drawPlayer(ctx, playerX, playerY, avatar, 'right', Math.floor(t * 10));
+    ctx.globalAlpha = 1;
+
+    // Floating books — pulled toward monitor
+    const bookPositions = [
+      { startX: 5, startY: 40, seed: 0 },
+      { startX: 8, startY: 35, seed: 3 },
+      { startX: 3, startY: 45, seed: 7 },
+    ];
+    for (const bk of bookPositions) {
+      const bProgress = Math.min(1, midPhase * 1.4);
+      const bx = Math.floor(bk.startX + (monX - bk.startX) * Math.pow(bProgress, 1.5));
+      const by = Math.floor(bk.startY + (monY - bk.startY) * Math.pow(bProgress, 1.5));
+      const bScale = Math.max(0.1, 1 - bProgress * 0.8);
+      ctx.save();
+      ctx.translate((bx + 6) * S, (by + 4) * S);
+      ctx.rotate(bk.seed + midPhase * Math.PI * 1.5);
+      ctx.scale(bScale, bScale);
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(-4 * S, -5 * S, 8 * S, 10 * S);
+      ctx.fillStyle = '#fffff0';
+      ctx.fillRect(2 * S, -4 * S, 2 * S, 8 * S);
+      ctx.restore();
+    }
+
+    // Chair floating (heavy — lags behind)
+    const chairProgress = Math.min(1, midPhase * 0.9);
+    const chairX = Math.floor(GW * 0.42 + (monX - GW * 0.42) * Math.pow(chairProgress, 2));
+    const chairY = Math.floor(GH * 0.7 + (monY - GH * 0.7) * Math.pow(chairProgress, 2));
+    const chairScale = Math.max(0.1, 1 - chairProgress * 0.85);
+    ctx.save();
+    ctx.translate((chairX + 8) * S, (chairY + 8) * S);
+    ctx.rotate(midPhase * Math.PI * 2);
+    ctx.scale(chairScale, chairScale);
+    ctx.fillStyle = '#5a3e1a';
+    ctx.fillRect(-8 * S, -4 * S, 16 * S, 8 * S); // seat
+    ctx.fillRect(-8 * S, -10 * S, 3 * S, 6 * S); // back
+    ctx.fillRect(5 * S, -10 * S, 3 * S, 6 * S);
+    ctx.restore();
+
+    // Suction vortex rings
+    for (let r = 0; r < 6; r++) {
+      const rp = (midPhase * 2 + r / 6) % 1;
+      const ringR = Math.floor(Math.min(GW, GH) * 0.4 * (1 - rp));
+      const alpha = (1 - rp) * 0.5 * midPhase;
+      if (alpha > 0.01 && ringR > 1) {
+        ctx.globalAlpha = alpha;
+        for (let a2 = 0; a2 < 16; a2++) {
+          const angle = (a2 / 16) * Math.PI * 2 + midPhase * 4;
+          const px2 = monX + Math.floor(Math.cos(angle) * ringR);
+          const py2 = monY + Math.floor(Math.sin(angle) * ringR);
+          ctx.fillStyle = '#00ffcc';
+          ctx.fillRect(px2 * S, py2 * S, 2 * S, 2 * S);
+        }
+        ctx.globalAlpha = 1;
       }
     }
   }
 
-  // Player sliding toward monitor
-  const slideX = Math.floor(GW * 0.4) + Math.floor((monX - Math.floor(GW * 0.4)) * Math.pow(progress, 2));
-  const slideY = Math.floor(GH * 0.55) + Math.floor((monY - Math.floor(GH * 0.55)) * Math.pow(progress, 2));
-  const playerScale = Math.max(0.1, 1 - progress * 0.7);
-
-  ctx.save();
-  ctx.translate(slideX * S, slideY * S);
-  ctx.scale(playerScale, playerScale);
-  ctx.translate(-6 * S, -9 * S);
-  drawPlayer(ctx, 0, 0, avatar, 'right', Math.floor(t * 8));
-  ctx.restore();
-
-  // Data particles
-  const particleColors = ['#0044ff', '#00ccff', '#00ff88', '#aa00ff'];
-  for (let p = 0; p < 20; p++) {
-    const pa = (p / 20 + t * 0.5) % 1;
-    const angle = pa * Math.PI * 2 * 3 + t;
-    const dist = Math.floor(60 * (1 - progress) * pa);
-    const px2 = monX + Math.floor(Math.cos(angle) * dist);
-    const py2 = monY + Math.floor(Math.sin(angle) * dist);
-    gr(ctx, px2, py2, 1, 1, particleColors[p % particleColors.length]);
+  // ── Phase 2 (0.65–0.85): Player sucked in — shrinking fast ─────────────────
+  if (progress >= 0.65 && progress < 0.85) {
+    const endPhase = (progress - 0.65) / 0.2;
+    const slideX = Math.floor(GW * 0.4) + Math.floor((monX - Math.floor(GW * 0.4)) * Math.pow(endPhase, 1.5));
+    const slideY = Math.floor(GH * 0.55) + Math.floor((monY - Math.floor(GH * 0.55)) * Math.pow(endPhase, 1.5));
+    const pScale = Math.max(0.05, 1 - endPhase * 0.95);
+    ctx.save();
+    ctx.translate(slideX * S, slideY * S);
+    ctx.scale(pScale, pScale);
+    ctx.translate(-6 * S, -9 * S);
+    drawPlayer(ctx, 0, 0, avatar, 'right', Math.floor(t * 14));
+    ctx.restore();
   }
 
-  // WHOOOOSH text
-  if (progress > 0.5) {
-    const wAlpha = (progress - 0.5) * 2;
-    ctx.fillStyle = `rgba(255,255,255,${wAlpha})`;
-    const whText = 'WHOOOOSH';
-    for (let ci = 0; ci < whText.length; ci++) {
-      const cAngle = (ci / whText.length) * Math.PI * 2 + t * 3;
-      const cr = Math.floor(30 * wAlpha);
-      const cpx = monX + Math.floor(Math.cos(cAngle) * cr);
-      const cpy = monY + Math.floor(Math.sin(cAngle) * cr);
-      drawPixelText(ctx, whText[ci], cpx, cpy, `rgba(255,255,255,${wAlpha})`, 1);
+  // ── Phase 3 (0.85–1.0): White CRACK flash ──────────────────────────────────
+  if (progress >= 0.85) {
+    const crackPhase = (progress - 0.85) / 0.15;
+    // Flash
+    ctx.fillStyle = `rgba(255,255,255,${Math.pow(crackPhase, 0.5)})`;
+    ctx.fillRect(0, 0, GW * S, GH * S);
+    // "CRACK" pixel text radiating outward
+    if (crackPhase < 0.6) {
+      const cAlpha = 1 - crackPhase / 0.6;
+      const cScale = 1 + Math.floor(crackPhase * 8);
+      ctx.save();
+      ctx.translate(monX * S, monY * S);
+      ctx.scale(cScale, cScale);
+      drawPixelText(ctx, 'CRACK', -15, -4, `rgba(0,255,204,${cAlpha})`, 1);
+      ctx.restore();
     }
+    // Crack lines radiating from monitor
+    ctx.globalAlpha = 1 - crackPhase;
+    const crackColors = ['#00ffcc', '#44aaff', '#ff88ff'];
+    for (let cl = 0; cl < 8; cl++) {
+      const angle = (cl / 8) * Math.PI * 2 + 0.2;
+      const len = Math.floor(crackPhase * 50 + 5);
+      const ex = monX + Math.floor(Math.cos(angle) * len);
+      const ey = monY + Math.floor(Math.sin(angle) * len);
+      for (let step = 0; step < len; step++) {
+        const fx = monX + Math.floor(Math.cos(angle) * step);
+        const fy = monY + Math.floor(Math.sin(angle) * step);
+        ctx.fillStyle = crackColors[cl % crackColors.length];
+        ctx.fillRect(fx * S, fy * S, S, S);
+      }
+      void ex; void ey;
+    }
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -1375,25 +1659,36 @@ function drawChoice(
 // ─── Dialogue Data (outside component to avoid re-render issues) ──────────────
 
 const DARKNESS_LINES = [
-  { speaker: "MOM'S VOICE", text: "YOU'RE A FAILURE!!!!!" },
-  { speaker: "MOM'S VOICE", text: "YOU DIDN'T EVEN QUALIFY FOR THE INTERNATIONAL SCIENCE FAIR..." },
-  { speaker: "MOM'S VOICE", text: "...BECAUSE YOU DON'T KNOW HOW TO CODE!!!" },
+  { speaker: "MOM'S VOICE", text: "You know what your problem is?" },
+  { speaker: "MOM'S VOICE", text: "You don't try." },
+  { speaker: "MOM'S VOICE", text: "Your cousin Jeffrey got into a science fair. JEFFERY." },
+  { speaker: "MOM'S VOICE", text: "You know what Jeffrey had that you don't?" },
+  { speaker: "MOM'S VOICE", text: "COMMITMENT." },
+  { speaker: "MOM'S VOICE", text: "Also, he could code." },
+  { speaker: "MOM'S VOICE", text: "Also his science project worked." },
+  { speaker: "MOM'S VOICE", text: "Also he didn't eat my good cereal." },
 ] as const;
 
-const KITCHEN_LINES: { speaker: string; text: string; isDevil?: boolean; isDevilScreen?: boolean }[] = [
-  { speaker: 'MOM', text: "DON'T YOU KNOW AI IS THE FUTURE?!" },
-  { speaker: 'YOU', text: "U-uh... I was... gonna study... eventually...?" },
-  { speaker: 'MOM', text: "EVENTUALLY?! THE FUTURE IS NOW! You HAVE to learn to code!" },
-  { speaker: 'YOU', text: "Okay but like... I'm kinda... mid." },
+const KITCHEN_LINES: { speaker: string; text: string; isDevil?: boolean; isDevilScreen?: boolean; shakeHigh?: boolean }[] = [
+  { speaker: 'MOM', text: "YOU ARE GOING TO THAT SCIENCE FAIR IF I HAVE TO BUILD THE PROJECT MYSELF.", shakeHigh: true },
+  { speaker: 'MOM', text: "NOW GO UPSTAIRS. CODE. LEARN. BECOME SOMEONE." },
+  { speaker: 'MOM', text: "Also put your dish in the sink." },
   { speaker: 'MOM', text: '*turns slowly to face camera*', isDevil: true },
-  { speaker: 'YOU', text: "o---ok... i suppose i'll go try to learn...", isDevilScreen: true },
+  { speaker: 'YOU', text: "...okay.", isDevilScreen: true },
   { speaker: '', text: '' },
 ];
 
-const BLOCKED_EXIT_LINE = { speaker: 'MOM', text: "WHERE DO YOU THINK YOU'RE GOING?! UPSTAIRS! NOW!" };
-const UPSTAIRS_MOMS_ROOM_LINES = [
-  { speaker: 'MOM', text: "Your grade: F. As expected." },
-  { speaker: 'MOM', text: "College rejection #47 arrived today. Progress!" },
+const BLOCKED_EXIT_LINE = { speaker: 'MOM', text: "WHERE DO YOU THINK YOU'RE GOING." };
+
+const MOMS_ROOM_ITEMS = [
+  { label: "Mom's Diary Vol. 47: Today's Grievances", text: "Long list of parental concerns. #47 is 'child can't code'. #48 is 'too much gaming'. #49 is 'ate leftover pasta without asking'." },
+  { label: "JEFFERY'S ACHIEVEMENTS (trophy cabinet)", text: "Full shelf. Your name space is empty except for a sticky note: 'Potential (pending)'" },
+  { label: "Photo on the wall", text: "This was before I knew about the cereal situation." },
+];
+
+const BATHROOM_LINES = [
+  { label: 'Mirror', text: "You look at yourself. You look fine. This doesn't help." },
+  { label: 'Medicine cabinet', text: "Cold medicine, heartburn pills, and a book titled 'How to Parent a Disappointment'." },
 ];
 const BEDROOM_LINES = [{ speaker: 'YOU', text: "Maybe I should grab my coding textbooks..." }];
 const CLOSET_LINES = [
@@ -1401,10 +1696,10 @@ const CLOSET_LINES = [
   { speaker: 'YOU', text: "Man, frick this." },
 ];
 const COMPUTER_LINES = [
-  { speaker: 'YOU', text: "I guess I'll find something online. nothing is any good though..." },
-  { speaker: 'YOU', text: "Hm... Dr. Henry Lacks? The name sounds... familiar somehow..." },
-  { speaker: 'YOU', text: "Whatever. I'll click it." },
-  { speaker: 'YOU', text: "Press E to click the link..." },
+  { speaker: 'YOU', text: "Let's see what's online..." },
+  { speaker: 'YOU', text: "An email? From... dr.h.lacks@biobit.edu? The name sounds... familiar somehow..." },
+  { speaker: 'YOU', text: "This is obviously a phishing email. I'm not falling for—" },
+  { speaker: 'YOU', text: "...okay." }, // link clicked itself
 ];
 const VOID_DIALOGUES = [
   { speaker: 'NARRATOR', text: 'This is the Void.', sub: 'It is not nothing. Nothing is too simple for what this is.' },
@@ -1481,6 +1776,10 @@ export default function IntroEngine({ onComplete }: Props) {
     inMomsRoom: false,
     interactDialogue: false,
     upstairsSubPhase: 'hall',
+    momsRoomItemIdx: 0,
+    bathroomInteractIdx: 0,
+    textbookFalling: false,
+    textbookFallY: 0,
     computerPhase: 0,
     computerEmailOpen: false,
     computerLinkClicked: false,
@@ -1626,7 +1925,10 @@ export default function IntroEngine({ onComplete }: Props) {
         s.dialogueIdx = nextIdx;
         const line = KITCHEN_LINES[nextIdx];
 
-        if (line.isDevil) {
+        if (line.shakeHigh) {
+          s.shakeTimer = 1.2;
+          startDialogue(line.text);
+        } else if (line.isDevil) {
           s.devilEyeMode = false;
           startDialogue(line.text);
         } else if (line.isDevilScreen) {
@@ -1645,6 +1947,34 @@ export default function IntroEngine({ onComplete }: Props) {
     }
 
     if (s.phase === 'upstairs') {
+      if (s.upstairsSubPhase === 'momsroom') {
+        const nextIdx = s.momsRoomItemIdx + 1;
+        if (nextIdx < MOMS_ROOM_ITEMS.length) {
+          s.momsRoomItemIdx = nextIdx;
+          startDialogue(MOMS_ROOM_ITEMS[nextIdx].text);
+        } else {
+          // Done reading, back to hall
+          s.upstairsSubPhase = 'hall';
+          s.freeRoam = true;
+          s.playerX = 40;
+          s.dialogueText = '';
+        }
+        return;
+      }
+      if (s.upstairsSubPhase === 'bathroom') {
+        const nextIdx = s.bathroomInteractIdx + 1;
+        if (nextIdx < BATHROOM_LINES.length) {
+          s.bathroomInteractIdx = nextIdx;
+          startDialogue(BATHROOM_LINES[nextIdx].text);
+        } else {
+          // Done, back to hall
+          s.upstairsSubPhase = 'hall';
+          s.freeRoam = true;
+          s.playerX = Math.floor(GW * 0.8);
+          s.dialogueText = '';
+        }
+        return;
+      }
       if (s.upstairsSubPhase === 'yourroom') {
         initPhase('bedroom');
       }
@@ -1946,28 +2276,47 @@ export default function IntroEngine({ onComplete }: Props) {
           s.playerDir = 'right';
         }
 
-        // Door zones
-        const yourRoomX = Math.floor(GW / 2) - 14;
-        const momsRoomX = 10;
+        // Door zones — Mom's Room (far left), Your Room (center), Bathroom (far right)
+        const momsRoomX = 14;
+        const yourRoomX = Math.floor(GW / 2) - 16;
+        const bathroomX = GW - 46;
 
-        if (s.playerX < momsRoomX + 30 && s.playerDir === 'left') {
-          s.upstairsSubPhase = 'momsroom';
-          startDialogue(UPSTAIRS_MOMS_ROOM_LINES[0].text);
+        // E to enter rooms when near a door
+        if (s.keys['KeyE']) {
+          if (s.playerX < momsRoomX + 38) {
+            s.upstairsSubPhase = 'momsroom';
+            s.momsRoomItemIdx = 0;
+            s.freeRoam = false;
+            startDialogue(MOMS_ROOM_ITEMS[0].text);
+          } else if (s.playerX > bathroomX - 20 && s.playerX < bathroomX + 30) {
+            s.upstairsSubPhase = 'bathroom';
+            s.bathroomInteractIdx = 0;
+            s.freeRoam = false;
+            startDialogue(BATHROOM_LINES[0].text);
+          } else if (s.playerX > yourRoomX - 5 && s.playerX < yourRoomX + 40) {
+            s.upstairsSubPhase = 'yourroom';
+            s.freeRoam = false;
+            startDialogue(BEDROOM_LINES[0].text);
+          }
         }
 
-        if (s.playerX > yourRoomX - 5 && s.playerX < yourRoomX + 30 && s.playerDir === 'right') {
-          s.upstairsSubPhase = 'yourroom';
-          s.freeRoam = false;
-          startDialogue(BEDROOM_LINES[0].text);
+        // Auto-enter your room if walked all the way right
+        if (s.playerX > yourRoomX + 18 && !s.keys['ArrowLeft'] && !s.keys['KeyA']) {
+          const nearYour = s.playerX > yourRoomX - 5 && s.playerX < yourRoomX + 40;
+          if (nearYour && s.playerDir === 'right') {
+            s.upstairsSubPhase = 'yourroom';
+            s.freeRoam = false;
+            startDialogue(BEDROOM_LINES[0].text);
+          }
         }
       }
 
       if (s.phase === 'upstairs' && s.upstairsSubPhase === 'momsroom') {
-        // Let player read letters, exit on E
-        if (s.keys['KeyE'] && !s.dialogueText) {
-          s.upstairsSubPhase = 'hall';
-          s.playerX = Math.floor(GW * 0.15);
-        }
+        // Cycle through mom's room items on E/Space
+      }
+
+      if (s.phase === 'upstairs' && s.upstairsSubPhase === 'bathroom') {
+        // Handled by advanceDialogue
       }
 
       if (s.phase === 'bedroom' && s.freeRoam) {
@@ -2123,9 +2472,13 @@ export default function IntroEngine({ onComplete }: Props) {
             drawPixelText(ctx, '< > MOVE  E ENTER ROOM', Math.floor(GW / 2) - 40, GH - 8, '#888888', 1);
           }
         } else if (s.upstairsSubPhase === 'momsroom') {
-          drawMomsRoom(ctx, GW, GH);
-          drawPlayer(ctx, Math.floor(s.playerX), floorY, avatar, 'right', 0);
-          drawPixelText(ctx, 'E EXIT', Math.floor(GW / 2) - 10, GH - 8, '#888888', 1);
+          drawMomsRoom(ctx, GW, GH, s.momsRoomItemIdx);
+          drawPlayer(ctx, Math.floor(GW * 0.5), floorY, avatar, 'left', 0);
+          drawPixelText(ctx, 'SPACE to continue', Math.floor(GW / 2) - 30, GH - 8, '#666688', 1);
+        } else if (s.upstairsSubPhase === 'bathroom') {
+          drawBathroom(ctx, GW, GH, s.t, s.bathroomInteractIdx);
+          drawPlayer(ctx, Math.floor(GW * 0.5), floorY, avatar, 'right', 0);
+          drawPixelText(ctx, 'SPACE to continue', Math.floor(GW / 2) - 30, GH - 8, '#666688', 1);
         }
       }
 
