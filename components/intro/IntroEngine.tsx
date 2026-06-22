@@ -35,6 +35,7 @@ interface IntroState {
   zoomLevel: number;
   zoomDir: number;
   suckProgress: number;
+  suckDone: boolean;
   enzymeX: number;
   enzymeDir: 'left' | 'right';
   enzymeWalking: boolean;
@@ -1745,6 +1746,7 @@ export default function IntroEngine({ onComplete }: Props) {
     zoomLevel: 1,
     zoomDir: 1,
     suckProgress: 0,
+    suckDone: false,
     enzymeX: 0,
     enzymeDir: 'left',
     enzymeWalking: false,
@@ -1873,6 +1875,7 @@ export default function IntroEngine({ onComplete }: Props) {
       startDialogue(COMPUTER_LINES[0].text);
     } else if (phase === 'sucked-in') {
       s.suckProgress = 0;
+      s.suckDone = false;
       s.suckFurnitureDistort = 0;
       s.fadeAlpha = 0;
     } else if (phase === 'void') {
@@ -2384,7 +2387,8 @@ export default function IntroEngine({ onComplete }: Props) {
 
       if (s.phase === 'sucked-in') {
         s.suckProgress = Math.min(s.suckProgress + dt * 0.35, 1);
-        if (s.suckProgress >= 1) {
+        if (s.suckProgress >= 1 && !s.suckDone) {
+          s.suckDone = true;
           fadeToBlack(0.3, () => initPhase('void'));
         }
       }
