@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body style={{ background: '#000', overflow: 'hidden' }} className="text-gray-200 min-h-screen antialiased">
+      <body style={{ background: '#000', overflowX: 'hidden' }} className="text-gray-200 min-h-screen antialiased">
         {children}
       </body>
     </html>
