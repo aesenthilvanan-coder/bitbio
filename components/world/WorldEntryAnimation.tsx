@@ -1485,12 +1485,32 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
         s.dialogueSub = '*(I told you the portal was fine.)*';
         s.dialogueChar = Math.min(s.dialogueText.length, (t - 6.5) * 20);
       }
-      if (t >= 8.2) { s.dialogueVisible = false; }
+      if (t >= 8.2 && t < 8.6) { s.dialogueVisible = false; }
+
+      // ── LAB COAT GIFTING (8.6–11.0s) ──────────────────────────────────────────
+      // Enzyme trots toward player, pauses, then "drops" coat at their feet
+      if (t >= 8.6 && t < 9.2) {
+        s.enzymeX = CW * 0.52 - (t - 8.6) / 0.6 * (CW * 0.52 - CW * 0.45);
+        s.enzymePose = 'walk'; s.enzymePhase = t * 10; s.enzymeFacing = 'right';
+      }
+      if (t >= 9.2) {
+        s.enzymeX = CW * 0.45;
+        s.enzymePose = 'sit'; s.enzymePhase = t;
+      }
+      // Enzyme speaks — lab coat line (9.4–11.0s)
+      if (t >= 9.4 && t < 11.0) {
+        s.dialogueVisible = true;
+        s.dialogueSpeaker = 'enzyme';
+        s.dialogueText = 'Mrow. Meow meow.';
+        s.dialogueSub = '*(This will help you survive at these levels.)*';
+        s.dialogueChar = Math.min(s.dialogueText.length, (t - 9.4) * 18);
+      }
+      if (t >= 11.0) { s.dialogueVisible = false; }
 
       // Sign + terminal
-      if (t >= 7.0) s.signAlpha = Math.min(1, (t - 7.0) / 1.2);
-      if (t >= 8.0) s.terminalLines = Math.floor((t - 8.0) / 0.3) + 1;
-      if (t >= 10.5 && !s.done) { s.done = true; onCompleteRef.current(); return; }
+      if (t >= 10.0) s.signAlpha = Math.min(1, (t - 10.0) / 1.2);
+      if (t >= 11.2) s.terminalLines = Math.floor((t - 11.2) / 0.3) + 1;
+      if (t >= 13.8 && !s.done) { s.done = true; onCompleteRef.current(); return; }
     }
 
     else if (realm === 2) {
@@ -1677,6 +1697,30 @@ export default function WorldEntryAnimation({ realm, onComplete }: Props) {
     // Player
     if (s.playerX > -120 && s.playerX < CW + 120) {
       drawPlayer(ctx, s.playerX, py, s.playerPhase, avatar, s.playerPose);
+      // Realm 1: lab coat materializes on player after Enzyme gifts it (t >= 10.0)
+      if (realm === 1 && t >= 10.0) {
+        const coatAlpha = Math.min(1, (t - 10.0) / 0.8);
+        const px = s.playerX;
+        ctx.globalAlpha = coatAlpha;
+        // Lab coat over torso — white with #d8e0f0 tint (matches CHARACTER_DESIGN spec)
+        ctx.fillStyle = '#d8e0f0';
+        ctx.fillRect((px - 1) * CS, (py + 6) * CS, 14 * CS, 18 * CS);   // coat body
+        ctx.fillRect((px - 5) * CS, (py + 8) * CS, 5 * CS, 14 * CS);   // left lapel/sleeve
+        ctx.fillRect((px + 13) * CS, (py + 8) * CS, 5 * CS, 14 * CS);  // right sleeve
+        // Coat highlights
+        ctx.fillStyle = '#eef4ff';
+        ctx.fillRect((px) * CS, (py + 7) * CS, 4 * CS, 16 * CS);       // left chest highlight
+        // Coat seam down center
+        ctx.fillStyle = '#c0ccdf';
+        ctx.fillRect((px + 5) * CS, (py + 8) * CS, 2 * CS, 16 * CS);
+        // Left red sock flash (Elliot spec — RED left sock)
+        ctx.fillStyle = '#cc2200';
+        ctx.fillRect((px - 1) * CS, (py + 24) * CS, 4 * CS, 3 * CS);
+        // Right yellow sock (YELLOW right sock)
+        ctx.fillStyle = '#ddcc00';
+        ctx.fillRect((px + 9) * CS, (py + 24) * CS, 4 * CS, 3 * CS);
+        ctx.globalAlpha = 1;
+      }
     }
 
     // Enzyme

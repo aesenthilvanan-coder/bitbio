@@ -884,337 +884,342 @@ function drawKitchen(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: n
 }
 
 function drawUpstairs(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: number) {
-  const floorY = Math.floor(GH * 0.65);
-
-  // ── Undertale-dark hallway ──
-  // Near-black purple wall
-  ctx.fillStyle = '#080610';
-  ctx.fillRect(0, 0, GW * S, floorY * S);
-
-  // Dark floor
-  for (let fy = floorY; fy < GH; fy += 8) {
-    ctx.fillStyle = fy % 16 === 0 ? '#0d0a02' : '#0a0800';
-    ctx.fillRect(0, fy * S, GW * S, 8 * S);
-    // Floor grain lines
-    for (let fx = 0; fx < GW; fx += 20) {
-      gr(ctx, fx, fy, 1, 8, '#070500');
+  // ── TOP-DOWN HALLWAY (bird's eye view) ────────────────────────────────────────
+  // Full floor: dark purple carpet
+  ctx.fillStyle = '#1a1228';
+  ctx.fillRect(0, 0, GW * S, GH * S);
+  // Carpet texture: small dot pattern
+  for (let fy = 0; fy < GH; fy += 4) {
+    for (let fx = 0; fx < GW; fx += 6) {
+      ctx.fillStyle = (fy + fx) % 8 === 0 ? 'rgba(80,50,120,0.18)' : 'rgba(50,30,80,0.10)';
+      ctx.fillRect(fx * S, fy * S, 3 * S, 2 * S);
     }
   }
 
-  // Baseboard
-  gr(ctx, 0, floorY - 3, GW, 3, '#100c14');
-  gr(ctx, 0, floorY - 4, GW, 1, '#181220');
+  // Walls: top wall thick (the room's north wall)
+  gr(ctx, 0, 0, GW, 10, '#0f0a18'); // north wall
+  gr(ctx, 0, 0, 6, GH, '#0f0a18'); // west wall
+  gr(ctx, GW - 6, 0, 6, GH, '#0f0a18'); // east wall
+  gr(ctx, 0, 10, GW, 1, '#2a1a3a'); // wall-floor edge
 
-  // Ceiling line
-  gr(ctx, 0, 0, GW, 4, '#040308');
-  gr(ctx, 0, 4, GW, 2, '#080612');
+  // Downstairs indicator (south edge)
+  for (let ss = 0; ss < 3; ss++) {
+    gr(ctx, Math.floor(GW/2) - 12 + ss*2, GH - 6 - ss*2, 20 - ss*4, 4, `rgba(30,20,50,${0.9 - ss*0.2})`);
+  }
+  drawPixelText(ctx, '< DOWNSTAIRS', Math.floor(GW/2) - 22, GH - 12, '#554466', 1);
 
-  // ── Three doors ──
-  const doors = [
-    { x: 14, label: "MOM'S ROOM", frameColor: '#1a0a10', glow: '#ff3366', open: false },
-    { x: Math.floor(GW / 2) - 16, label: 'YOUR ROOM', frameColor: '#0a1020', glow: '#4488ff', open: false },
-    { x: GW - 46, label: 'BATHROOM', frameColor: '#141010', glow: '#333333', open: false },
-  ];
-
+  // ── Three doors in north wall ─────────────────────────────────────────────────
   const glowPulse = (Math.sin(t * 2) + 1) / 2;
-
+  const doorSpacing = Math.floor(GW / 4);
+  const doors = [
+    { cx: doorSpacing,         label: "MOM'S ROOM", glow: '#ff3366', glowRgb: [255,51,102] },
+    { cx: doorSpacing * 2,     label: 'YOUR ROOM',  glow: '#4488ff', glowRgb: [68,136,255] },
+    { cx: doorSpacing * 3,     label: 'BATHROOM',   glow: '#44ddaa', glowRgb: [68,221,170] },
+  ];
   for (const door of doors) {
-    const dh = 44;
-    const dw = 26;
-    // Frame outer (dark wood)
-    gr(ctx, door.x - 2, floorY - dh - 2, dw + 4, dh + 2, door.frameColor);
-    gr(ctx, door.x - 1, floorY - dh - 1, dw + 2, 1, '#201828'); // frame top highlight
-    // Door panel (near-black)
-    gr(ctx, door.x, floorY - dh, dw, dh, '#050408');
-    gr(ctx, door.x + 1, floorY - dh, dw - 2, 1, '#0a0810'); // panel highlight
-    // Center divider
-    gr(ctx, door.x + Math.floor(dw / 2) - 1, floorY - dh + 2, 2, dh - 2, '#030206');
+    const dw = 22, dhVisible = 10;
+    const dx = door.cx - Math.floor(dw / 2);
+    // Door opening in north wall (darker than wall)
+    gr(ctx, dx, 0, dw, dhVisible, '#0a0610');
+    gr(ctx, dx + 1, 1, dw - 2, dhVisible - 2, '#060408');
+    // Door frame highlight
+    gr(ctx, dx - 1, 0, 1, dhVisible, '#1e1430');
+    gr(ctx, dx + dw, 0, 1, dhVisible, '#1e1430');
+    // Color glow spilling from door onto floor
+    const [r, g, b] = door.glowRgb;
+    ctx.fillStyle = `rgba(${r},${g},${b},${0.08 + glowPulse * 0.10})`;
+    ctx.fillRect(dx * S, 10 * S, dw * S, 14 * S);
     // Handle
-    gr(ctx, door.x + Math.floor(dw * 0.7), floorY - Math.floor(dh * 0.5), 3, 5, '#2a2030');
-    gr(ctx, door.x + Math.floor(dw * 0.7), floorY - Math.floor(dh * 0.5), 3, 1, '#3a3040');
-    // Color glow seeping under door
-    ctx.fillStyle = `rgba(${parseInt(door.glow.slice(1,3),16)},${parseInt(door.glow.slice(3,5),16)},${parseInt(door.glow.slice(5,7),16)},${0.06 + glowPulse * 0.08})`;
-    ctx.fillRect((door.x) * S, (floorY - 3) * S, dw * S, 3 * S);
-    // Label above door
-    drawPixelText(ctx, door.label, door.x - 2, floorY - dh - 12, '#554466', 1);
+    gr(ctx, dx + dw - 6, dhVisible - 4, 2, 3, '#2a1a40');
+    // Label
+    drawPixelText(ctx, door.label, dx - 2, dhVisible + 4, '#554466', 1);
   }
 
-  // Lock on bathroom (padlock)
-  const bathX = GW - 46;
-  gr(ctx, bathX + 8, floorY - 26, 8, 6, '#332200');
-  gr(ctx, bathX + 9, floorY - 29, 6, 3, '#221a00');
-  gr(ctx, bathX + 11, floorY - 28, 2, 2, '#080600');
-  gr(ctx, bathX + 9, floorY - 26, 2, 3, '#221a00');  // shackle left
-  gr(ctx, bathX + 15, floorY - 26, 2, 3, '#221a00'); // shackle right
-
-  // Wall art / photo frames
-  const photos = [Math.floor(GW * 0.22), Math.floor(GW * 0.5), Math.floor(GW * 0.77)];
-  for (const pfx of photos) {
-    gr(ctx, pfx - 1, 7, 18, 16, '#12101a');  // frame
-    gr(ctx, pfx, 8, 16, 14, '#0a0814');       // inner
-    // Abstract shapes in frame (like family photo silhouettes)
-    gr(ctx, pfx + 3, 11, 3, 8, '#1a1628');
-    gr(ctx, pfx + 8, 10, 3, 9, '#1e1a2c');
-    gr(ctx, pfx + 3, 10, 3, 2, '#201c30');
-    gr(ctx, pfx + 8, 9, 3, 2, '#241e34');
+  // Hallway runner rug (center strip)
+  gr(ctx, Math.floor(GW*0.12), 18, Math.floor(GW*0.76), Math.floor(GH*0.55), '#241a34');
+  gr(ctx, Math.floor(GW*0.13), 19, Math.floor(GW*0.74), Math.floor(GH*0.53), '#2a1e3c');
+  // Rug border pattern
+  for (let rx = Math.floor(GW*0.13); rx < Math.floor(GW*0.87); rx += 6) {
+    gr(ctx, rx, 19, 3, 2, '#3a2a50');
+    gr(ctx, rx, 18 + Math.floor(GH*0.53) - 2, 3, 2, '#3a2a50');
   }
 
-  // Overhead lamp
-  const lx = Math.floor(GW / 2);
-  gr(ctx, lx - 4, 0, 8, 5, '#14121e');
-  gr(ctx, lx - 2, 5, 4, 4, '#1c1828');
-  const glowA = 0.06 + glowPulse * 0.03;
-  ctx.fillStyle = `rgba(180,160,255,${glowA})`;
-  ctx.fillRect((lx - 40) * S, 9 * S, 80 * S, 30 * S);
-  gr(ctx, lx - 2, 5, 4, 2, '#302850'); // bulb tint
+  // Wall sconces (left and right walls, top area)
+  for (const scx of [8, GW - 14]) {
+    const scGlow = 0.06 + glowPulse * 0.06;
+    gr(ctx, scx, 14, 6, 8, '#2a2040');
+    gr(ctx, scx + 1, 15, 4, 4, '#ffeecc');
+    ctx.fillStyle = `rgba(255,220,140,${scGlow})`;
+    ctx.fillRect((scx - 4) * S, 10 * S, 14 * S, 20 * S);
+  }
 }
 
 function drawBedroom(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: number) {
-  const floorY = Math.floor(GH * 0.62);
-
-  // ── Dark bedroom (Undertale-style) ──
-  // Wall: dark blue-grey but visible
-  ctx.fillStyle = '#121928';
-  ctx.fillRect(0, 0, GW * S, floorY * S);
-  // Subtle wallpaper texture
-  for (let wy = 0; wy < floorY; wy += 10) {
-    ctx.fillStyle = 'rgba(100,140,255,0.025)';
-    ctx.fillRect(0, wy * S, GW * S, 5 * S);
-  }
-
-  // Floor: dark wood
-  for (let fy = floorY; fy < GH; fy += 7) {
-    ctx.fillStyle = fy % 14 === 0 ? '#0e0b02' : '#0b0800';
+  // ── TOP-DOWN BEDROOM (bird's eye view) ──────────────────────────────────────
+  // Floor: dark hardwood planks (horizontal lines)
+  ctx.fillStyle = '#1a1208';
+  ctx.fillRect(0, 0, GW * S, GH * S);
+  for (let fy = 0; fy < GH; fy += 7) {
+    ctx.fillStyle = fy % 14 === 0 ? '#221808' : '#1a1208';
     ctx.fillRect(0, fy * S, GW * S, 7 * S);
-    for (let fx = 0; fx < GW; fx += 22) gr(ctx, fx, fy, 1, 7, '#080600');
+    for (let fx = 0; fx < GW; fx += 28) gr(ctx, fx + (Math.floor(fy/7)%2)*14, fy, 1, 7, '#100a04');
   }
-  gr(ctx, 0, floorY - 3, GW, 3, '#0e0c18');
-  gr(ctx, 0, floorY - 4, GW, 1, '#141220');
 
-  // Bookshelf (left wall)
-  const shelfX = 4;
-  const shelfY = Math.floor(GH * 0.2);
-  gr(ctx, shelfX, shelfY, 2, 44, '#5a3e1a');
-  gr(ctx, shelfX + 26, shelfY, 2, 44, '#5a3e1a');
-  for (let shelf = 0; shelf < 3; shelf++) {
-    gr(ctx, shelfX, shelfY + shelf * 14 + 13, 28, 2, '#5a3e1a');
-    const bookColors = ['#c41e3a', '#1a6b3a', '#2244aa', '#aa6600', '#6a1aaa'];
-    let bx = shelfX + 2;
-    while (bx < shelfX + 24) {
-      const bw = 3 + Math.floor(Math.abs(Math.sin(bx * 7.3)) * 3);
-      gr(ctx, bx, shelfY + shelf * 14 + 1, bw, 12, bookColors[(bx + shelf) % bookColors.length]);
-      bx += bw + 1;
+  // Subtle blue wallpaper at top wall strip
+  const glow = (Math.sin(t * 1.5) + 1) / 2;
+  // Walls
+  gr(ctx, 0, 0, GW, 8, '#121928');
+  gr(ctx, 0, 0, 6, GH, '#121928');
+  gr(ctx, GW - 6, 0, 6, GH, '#121928');
+  gr(ctx, 0, 8, GW, 1, '#1e2a3c');
+  gr(ctx, 6, 0, 1, GH, '#1e2a3c');
+  gr(ctx, GW - 7, 0, 1, GH, '#1e2a3c');
+
+  // ── BED: top-left, against north wall ──
+  const bedX = 8, bedY = 10;
+  gr(ctx, bedX, bedY, 44, 26, '#3b5a8f');       // bed frame
+  gr(ctx, bedX + 2, bedY + 8, 40, 16, '#6b8fcf'); // sheets (viewed from above)
+  gr(ctx, bedX, bedY, 44, 7, '#2a3f6a');         // headboard (north/top side)
+  gr(ctx, bedX + 3, bedY + 1, 16, 5, '#f0f4ff'); // pillow 1
+  gr(ctx, bedX + 22, bedY + 1, 16, 5, '#e8ecf8'); // pillow 2
+  // Bed shadow
+  gr(ctx, bedX, bedY + 26, 44, 2, '#110e06');
+
+  // ── BOOKSHELF: along west wall (top-down = thin, taller) ──
+  const shelfX = 6, shelfY = 46;
+  gr(ctx, shelfX, shelfY, 14, 40, '#3a2810');
+  gr(ctx, shelfX + 1, shelfY + 1, 12, 38, '#4a3418');
+  // Shelf levels + books viewed from above
+  for (let sl = 0; sl < 3; sl++) {
+    gr(ctx, shelfX, shelfY + sl * 13 + 12, 14, 1, '#2a1e0c');
+    const bkColors = ['#c41e3a','#1a6b3a','#2244aa','#aa6600','#6a1aaa','#cc8800'];
+    let bpos = shelfX + 1;
+    while (bpos < shelfX + 13) {
+      const bw = 2 + Math.floor(Math.abs(Math.sin(bpos * 5.7 + sl)) * 2);
+      gr(ctx, bpos, shelfY + sl * 13 + 1, bw, 10, bkColors[(bpos + sl * 3) % bkColors.length]);
+      bpos += bw + 1;
     }
   }
 
-  // Bed (right side)
-  const bedX = Math.floor(GW * 0.55);
-  const bedY = floorY - 24;
-  gr(ctx, bedX, bedY, 40, 26, '#3b5a8f');
-  gr(ctx, bedX + 2, bedY + 4, 36, 20, '#6b8fcf');
-  gr(ctx, bedX, bedY, 40, 8, '#2a3f6a');
-  // Pillow
-  gr(ctx, bedX + 4, bedY + 2, 14, 5, '#f0f0f0');
-
-  // Computer desk (far right)
-  const deskX = Math.floor(GW * 0.75);
-  const deskY = floorY - 18;
-  gr(ctx, deskX, deskY, 28, 4, '#8B6914');
-  gr(ctx, deskX + 2, deskY - 22, 24, 22, '#1a1a2e');
-  gr(ctx, deskX + 4, deskY - 20, 20, 18, '#0a0a1a');
+  // ── DESK + COMPUTER: top-right corner ──
+  const deskX = GW - 44, deskY = 10;
+  gr(ctx, deskX, deskY, 38, 18, '#6b4a1a'); // desk surface
+  gr(ctx, deskX + 1, deskY + 1, 36, 1, '#8b6a2a'); // desk highlight
+  // Monitor (viewed from above: wide rectangle at back of desk)
+  gr(ctx, deskX + 4, deskY + 1, 26, 10, '#1a1a2e'); // monitor back
+  gr(ctx, deskX + 5, deskY + 2, 24, 8, '#0a0a1e');   // screen
+  // Email glow on screen (always on)
+  const emailGlow = 0.3 + 0.2 * Math.sin(t * 2);
+  ctx.fillStyle = `rgba(0,255,200,${emailGlow})`;
+  ctx.fillRect((deskX + 7) * S, (deskY + 3) * S, 20 * S, 6 * S);
+  gr(ctx, deskX + 9, deskY + 4, 4, 1, '#00ffcc'); gr(ctx, deskX + 14, deskY + 4, 6, 1, '#00ddaa');
+  gr(ctx, deskX + 9, deskY + 6, 10, 1, '#00bb88');
   // Monitor stand
-  gr(ctx, deskX + 11, deskY - 1, 6, 3, '#333');
-  // Keyboard
-  gr(ctx, deskX + 2, deskY + 2, 20, 3, '#333');
+  gr(ctx, deskX + 15, deskY + 11, 6, 4, '#333');
+  // Keyboard at front of desk
+  gr(ctx, deskX + 4, deskY + 14, 22, 3, '#2a2a2a');
+  gr(ctx, deskX + 5, deskY + 14, 20, 1, '#3a3a3a');
   // Desk lamp
-  gr(ctx, deskX + 24, deskY - 14, 2, 14, '#555');
-  gr(ctx, deskX + 20, deskY - 14, 8, 2, '#555');
-  gr(ctx, deskX + 22, deskY - 15, 4, 4, '#ffeeaa');
+  gr(ctx, deskX + 33, deskY + 2, 3, 12, '#555');
+  gr(ctx, deskX + 28, deskY + 1, 9, 2, '#555');
+  ctx.fillStyle = `rgba(255,230,140,${0.12 + glow * 0.06})`;
+  ctx.fillRect((deskX + 26) * S, deskY * S, 12 * S, 14 * S);
 
-  // Closet door (center back)
-  const closetX = Math.floor(GW * 0.38);
-  const closetY = floorY - 50;
-  gr(ctx, closetX, closetY, 30, 52, '#a07050');
-  gr(ctx, closetX + 2, closetY + 2, 26, 48, '#b08060');
-  gr(ctx, closetX + 14, closetY + 2, 2, 48, '#9a7050');
-  gr(ctx, closetX + 10, closetY + 22, 3, 5, '#7a5030');
-  gr(ctx, closetX + 17, closetY + 22, 3, 5, '#7a5030');
-  // "slightly open" shadow
-  gr(ctx, closetX + 28, closetY + 2, 2, 48, '#222');
+  // ── CLOSET: right wall center ──
+  const closetX = GW - 8, closetY = Math.floor(GH * 0.38);
+  gr(ctx, closetX - 2, closetY, 8, 30, '#a07050'); // door in wall
+  gr(ctx, closetX - 1, closetY + 1, 6, 28, '#b08060');
+  gr(ctx, closetX, closetY + 14, 1, 4, '#7a5030'); // handle
+  // "slightly open" shadow line
+  gr(ctx, closetX - 3, closetY, 1, 30, '#111');
 
-  // Poster (wall, above bed)
-  gr(ctx, bedX + 4, 8, 34, 22, '#111133');
-  gr(ctx, bedX + 5, 9, 32, 20, '#0a0a22');
-  drawPixelText(ctx, 'CODE', bedX + 8, 12, '#39ff14', 1);
-  drawPixelText(ctx, 'OR', bedX + 14, 19, '#ff4444', 1);
-  drawPixelText(ctx, 'DIE', bedX + 12, 25, '#ffffff', 1);
+  // ── POSTER on north wall (above the bed, visible as rectangle in wall) ──
+  const postX = bedX + 46, postY = 1;
+  gr(ctx, postX, postY, 28, 6, '#111133');
+  gr(ctx, postX + 1, postY + 1, 26, 4, '#0a0a22');
+  drawPixelText(ctx, 'CODE OR DIE', postX + 2, postY + 2, '#39ff14', 1);
 
-  // Overhead light
-  gr(ctx, Math.floor(GW / 2) - 4, 0, 8, 3, '#ccc');
-  const glow = (Math.sin(t * 1.5) + 1) / 2;
-  ctx.fillStyle = `rgba(255,230,160,${0.1 + glow * 0.05})`;
-  ctx.fillRect(0, 3 * S, GW * S, 20 * S);
+  // ── Floor lamp: bottom-left ──
+  gr(ctx, 12, GH - 20, 4, 14, '#666');
+  fillEllipse(ctx, 14, GH - 22, 6, 2, '#ffeeaa');
+  ctx.fillStyle = `rgba(255,220,120,${0.07 + glow * 0.04})`;
+  ctx.fillRect(0, (GH - 35) * S, 30 * S, 30 * S);
+
+  // ── Overhead ambient ──
+  ctx.fillStyle = `rgba(255,230,160,${0.05 + glow * 0.02})`;
+  ctx.fillRect(0, 0, GW * S, GH * S);
 }
 
 function drawMomsRoom(ctx: CanvasRenderingContext2D, GW: number, GH: number, itemIdx: number) {
-  const floorY = Math.floor(GH * 0.62);
-
-  // ── Mom's room: dark warm walls ──
-  ctx.fillStyle = '#100a06';
-  ctx.fillRect(0, 0, GW * S, floorY * S);
-  // Subtle wallpaper — tiny diamond pattern
-  for (let wy = 4; wy < floorY; wy += 10) {
-    for (let wx = 0; wx < GW; wx += 10) {
-      ctx.fillStyle = 'rgba(120,60,20,0.04)';
-      ctx.fillRect(wx * S, wy * S, 5 * S, 5 * S);
-    }
-  }
-  // Dark floor
-  for (let fy = floorY; fy < GH; fy += 7) {
-    ctx.fillStyle = fy % 14 === 0 ? '#120e04' : '#0e0b02';
+  // ── TOP-DOWN MOM'S ROOM (bird's eye view) ─────────────────────────────────────
+  // Floor: warm dark hardwood
+  for (let fy = 0; fy < GH; fy += 7) {
+    ctx.fillStyle = fy % 14 === 0 ? '#221204' : '#1a0e02';
     ctx.fillRect(0, fy * S, GW * S, 7 * S);
+    for (let fx = 0; fx < GW; fx += 24) gr(ctx, fx + (Math.floor(fy/7)%2)*12, fy, 1, 7, '#0e0800');
   }
-  gr(ctx, 0, floorY - 3, GW, 3, '#1a1006');
-  gr(ctx, 0, floorY - 4, GW, 1, '#221408');
+  // Subtle warm wallpaper stripes
+  for (let wy = 0; wy < 8; wy += 2) {
+    ctx.fillStyle = 'rgba(120,60,20,0.06)';
+    ctx.fillRect(0, wy * S, GW * S, S);
+  }
 
-  // Bed
-  const bedX = Math.floor(GW * 0.3);
-  gr(ctx, bedX, floorY - 26, 38, 28, '#8B7355');
-  gr(ctx, bedX + 2, floorY - 24, 34, 22, '#8b1a2a');
-  gr(ctx, bedX + 4, floorY - 24, 14, 5, '#f0f0f0');
-  // Pillow
-  gr(ctx, bedX + 4, floorY - 24, 14, 5, '#f8f8f8');
+  // Walls
+  gr(ctx, 0, 0, GW, 8, '#1a0c06');
+  gr(ctx, 0, 0, 6, GH, '#1a0c06');
+  gr(ctx, GW - 6, 0, 6, GH, '#1a0c06');
+  gr(ctx, 0, 8, GW, 1, '#2e1a0a');
+  gr(ctx, 6, 0, 1, GH, '#2e1a0a');
+  gr(ctx, GW - 7, 0, 1, GH, '#2e1a0a');
 
-  // ── Diary on desk (item 0) ──
-  const deskX = Math.floor(GW * 0.6);
-  gr(ctx, deskX, floorY - 16, 34, 4, '#6b4a1a');
-  gr(ctx, deskX + 2, floorY - 28, 26, 12, '#3a1800');
-  gr(ctx, deskX + 4, floorY - 26, 22, 10, '#4a2000');
-  drawPixelText(ctx, 'DIARY', deskX + 5, floorY - 24, '#cc8844', 1);
-  drawPixelText(ctx, 'VOL.47', deskX + 4, floorY - 18, '#aa6633', 1);
-  // highlight if currently reading
+  // ── BED: against north wall, center-left ──
+  const bedX = Math.floor(GW * 0.2), bedY = 10;
+  gr(ctx, bedX, bedY, 44, 26, '#8B7355');           // bed frame
+  gr(ctx, bedX + 2, bedY + 8, 40, 16, '#8b1a2a');  // deep red sheets
+  gr(ctx, bedX, bedY, 44, 7, '#6a502e');            // headboard
+  gr(ctx, bedX + 3, bedY + 1, 16, 5, '#f8f8f8');   // pillow 1
+  gr(ctx, bedX + 22, bedY + 1, 16, 5, '#f0f0ee');  // pillow 2
+  // Bed shadow
+  gr(ctx, bedX, bedY + 26, 44, 2, '#0e0800');
+
+  // ── DESK + DIARY (item 0): top-right corner ──
+  const deskX = GW - 48, deskY = 10;
+  gr(ctx, deskX, deskY, 36, 18, '#7b5a2a');
+  gr(ctx, deskX + 1, deskY + 1, 34, 1, '#9b7a4a');
+  // Diary on desk (top-down: rectangle book with text visible)
+  gr(ctx, deskX + 6, deskY + 3, 18, 12, '#3a1800');
+  gr(ctx, deskX + 7, deskY + 4, 16, 10, '#4a2000');
+  drawPixelText(ctx, 'DIARY', deskX + 9, deskY + 5, '#cc8844', 1);
+  drawPixelText(ctx, 'vol.47', deskX + 9, deskY + 10, '#aa6633', 1);
   if (itemIdx === 0) {
-    ctx.fillStyle = 'rgba(255,200,80,0.12)';
-    ctx.fillRect((deskX - 2) * S, (floorY - 30) * S, 30 * S, 18 * S);
+    ctx.fillStyle = 'rgba(255,200,80,0.14)';
+    ctx.fillRect((deskX + 4) * S, (deskY + 1) * S, 22 * S, 16 * S);
   }
 
-  // ── Trophy cabinet (JEFFERY'S ACHIEVEMENTS) (item 1) ──
-  const trophyX = 8;
-  gr(ctx, trophyX, floorY - 50, 28, 52, '#5a3e1a');
-  gr(ctx, trophyX + 1, floorY - 49, 26, 50, '#4a2e0a');
-  // Label
-  drawPixelText(ctx, "JEFF'S", trophyX + 2, floorY - 48, '#ffcc44', 1);
-  drawPixelText(ctx, 'TROPHIES', trophyX + 1, floorY - 42, '#ffcc44', 1);
-  // Trophies on shelves
+  // ── TROPHY CABINET: left wall (top-down view = thin strip) ──
+  const trophyX = 6, trophyY = 44;
+  gr(ctx, trophyX, trophyY, 18, 40, '#5a3e1a');
+  gr(ctx, trophyX + 1, trophyY + 1, 16, 38, '#4a2e0a');
+  drawPixelText(ctx, "JEFF'S", trophyX + 1, trophyY + 3, '#ffcc44', 1);
+  // Top-down trophy shelves
   for (let sh = 0; sh < 3; sh++) {
-    gr(ctx, trophyX + 2, floorY - 50 + sh * 16 + 14, 24, 1, '#3a2008');
-    // Trophy shape
-    const tx2 = trophyX + 4 + sh * 6;
-    gr(ctx, tx2, floorY - 50 + sh * 16 + 4, 4, 6, '#ffaa00');
-    gr(ctx, tx2 - 2, floorY - 50 + sh * 16 + 7, 8, 2, '#ffcc44');
-    gr(ctx, tx2 + 1, floorY - 50 + sh * 16 + 9, 2, 4, '#cc8800');
-    gr(ctx, tx2 - 1, floorY - 50 + sh * 16 + 12, 6, 1, '#cc8800');
+    gr(ctx, trophyX, trophyY + sh * 12 + 11, 18, 1, '#3a2008');
+    gr(ctx, trophyX + 4 + sh * 4, trophyY + sh * 12 + 2, 4, 8, '#ffaa00');
+    gr(ctx, trophyX + 2 + sh * 4, trophyY + sh * 12 + 6, 8, 2, '#ffcc44');
   }
-  // Player's name area — empty with sticky note
-  gr(ctx, trophyX + 2, floorY - 18, 24, 14, '#0a0804');
-  drawPixelText(ctx, 'Potential', trophyX + 3, floorY - 15, '#aaaa44', 1);
-  drawPixelText(ctx, '(pending)', trophyX + 3, floorY - 9, '#888833', 1);
+  // "Potential (pending)" slot
+  gr(ctx, trophyX + 1, trophyY + 30, 16, 7, '#0a0804');
+  drawPixelText(ctx, '?????', trophyX + 3, trophyY + 32, '#aaaa44', 1);
   if (itemIdx === 1) {
-    ctx.fillStyle = 'rgba(255,200,80,0.12)';
-    ctx.fillRect(trophyX * S, (floorY - 52) * S, 30 * S, 54 * S);
+    ctx.fillStyle = 'rgba(255,200,80,0.14)';
+    ctx.fillRect(trophyX * S, trophyY * S, 20 * S, 42 * S);
   }
 
-  // ── Photo on wall (item 2) ──
+  // ── PHOTO ON NORTH WALL (item 2) ──
   const photoX = Math.floor(GW * 0.5);
-  gr(ctx, photoX, 8, 24, 18, '#2a2018');
-  gr(ctx, photoX + 2, 9, 20, 16, '#1a140c');
-  // Mom and baby silhouettes
-  gr(ctx, photoX + 4, 12, 5, 10, '#3a2a1a');
-  gr(ctx, photoX + 4, 10, 5, 3, '#3a2a1a');
-  gr(ctx, photoX + 11, 14, 3, 6, '#2a1e12');
-  gr(ctx, photoX + 11, 13, 3, 2, '#2a1e12');
-  // "Looking proud" expression — tiny white smile dots
-  gr(ctx, photoX + 5, 11, 1, 1, '#aa8866');
-  gr(ctx, photoX + 7, 11, 1, 1, '#aa8866');
+  gr(ctx, photoX, 1, 24, 6, '#2a2018');
+  gr(ctx, photoX + 1, 2, 22, 4, '#1a140c');
+  gr(ctx, photoX + 3, 2, 5, 4, '#3a2a1a');
+  gr(ctx, photoX + 11, 3, 3, 3, '#2a1e12');
+  gr(ctx, photoX + 5, 3, 1, 1, '#aa8866');
+  gr(ctx, photoX + 7, 3, 1, 1, '#aa8866');
   if (itemIdx === 2) {
-    ctx.fillStyle = 'rgba(255,200,80,0.12)';
-    ctx.fillRect((photoX - 1) * S, 7 * S, 26 * S, 20 * S);
+    ctx.fillStyle = 'rgba(255,200,80,0.14)';
+    ctx.fillRect((photoX - 1) * S, 0, 26 * S, 8 * S);
   }
+
+  // ── Candle on nightstand ──
+  gr(ctx, bedX + 46, bedY + 2, 6, 10, '#e8d8c0');
+  gr(ctx, bedX + 48, bedY + 1, 2, 3, '#ffee88');
+  gr(ctx, bedX + 46, bedY + 12, 6, 6, '#3a2a1a');
 
   // Item labels
   drawPixelText(ctx, `[${itemIdx + 1}/${MOMS_ROOM_ITEMS.length}] ${MOMS_ROOM_ITEMS[itemIdx]?.label ?? ''}`, 4, GH - 18, '#886644', 1);
 }
 
 function drawBathroom(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: number, interactIdx: number) {
-  const floorY = Math.floor(GH * 0.62);
-
-  // Tiled bathroom walls — pale greenish
-  ctx.fillStyle = '#0c1210';
-  ctx.fillRect(0, 0, GW * S, floorY * S);
-  // Tile grid
-  for (let ty = 0; ty < floorY; ty += 12) {
+  // ── TOP-DOWN BATHROOM (bird's eye view) ───────────────────────────────────────
+  // Floor: white tile grid
+  ctx.fillStyle = '#c8d4cc';
+  ctx.fillRect(0, 0, GW * S, GH * S);
+  for (let ty = 0; ty < GH; ty += 10) {
     for (let tx = 0; tx < GW; tx += 10) {
-      ctx.strokeStyle = 'rgba(100,160,120,0.08)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(tx * S, ty * S, 10 * S, 12 * S);
+      ctx.fillStyle = (Math.floor(ty/10) + Math.floor(tx/10)) % 2 === 0 ? '#c8d4cc' : '#d4e0d8';
+      ctx.fillRect(tx * S, ty * S, 10 * S, 10 * S);
+      // Grout lines
+      ctx.fillStyle = '#a0b0a8';
+      ctx.fillRect(tx * S, ty * S, GW > 0 ? 1 : 0, S);
+      ctx.fillRect(tx * S, ty * S, S, GH > 0 ? 1 : 0);
     }
   }
-  // Floor tiles
-  for (let fy = floorY; fy < GH; fy += 8) {
-    ctx.fillStyle = fy % 16 === 0 ? '#0e1208' : '#0b0f06';
-    ctx.fillRect(0, fy * S, GW * S, 8 * S);
-  }
-  gr(ctx, 0, floorY - 3, GW, 3, '#0d150d');
 
-  // ── Mirror above sink ──
-  const mirrorX = Math.floor(GW * 0.3);
-  const mirrorY = 10;
-  gr(ctx, mirrorX, mirrorY, 28, 22, '#1a2a22');
-  gr(ctx, mirrorX + 1, mirrorY + 1, 26, 20, '#d0e0d8'); // reflective surface
-  // Reflection — player silhouette (very faint)
-  ctx.globalAlpha = 0.15;
-  gr(ctx, mirrorX + 8, mirrorY + 6, 12, 14, '#888888');
-  ctx.globalAlpha = 1;
-  // Mirror frame glow
   const mg = (Math.sin(t * 1.5) + 1) * 0.02;
-  ctx.fillStyle = `rgba(200,255,220,${0.05 + mg})`;
-  ctx.fillRect((mirrorX - 2) * S, (mirrorY - 2) * S, 32 * S, 26 * S);
-  if (interactIdx === 0) {
-    ctx.fillStyle = 'rgba(200,255,220,0.1)';
-    ctx.fillRect((mirrorX - 2) * S, (mirrorY - 2) * S, 32 * S, 26 * S);
-  }
+  // Walls
+  gr(ctx, 0, 0, GW, 8, '#1a2a22');
+  gr(ctx, 0, 0, 6, GH, '#1a2a22');
+  gr(ctx, GW - 6, 0, 6, GH, '#1a2a22');
+  gr(ctx, 0, 8, GW, 1, '#2a3e34');
+  gr(ctx, 6, 0, 1, GH, '#2a3e34');
+  gr(ctx, GW - 7, 0, 1, GH, '#2a3e34');
 
-  // Sink
-  gr(ctx, mirrorX + 4, floorY - 20, 20, 20, '#1a2820');
-  gr(ctx, mirrorX + 6, floorY - 18, 16, 14, '#0a1410');
+  // ── TOILET: against north wall, right side (from above) ──
+  const toiX = GW - 30, toiY = 9;
+  gr(ctx, toiX, toiY, 22, 10, '#b0c0b8');          // tank (back)
+  gr(ctx, toiX + 2, toiY + 1, 18, 8, '#c8d8d0');   // tank highlight
+  fillEllipse(ctx, toiX + 11, toiY + 18, 10, 7, '#b0c0b8');  // bowl
+  fillEllipse(ctx, toiX + 11, toiY + 18, 8, 6, '#d0e0d8');   // bowl inner
+  fillEllipse(ctx, toiX + 11, toiY + 18, 4, 3, '#8090a8');   // bowl water
+  // Toilet handle on tank
+  gr(ctx, toiX + 2, toiY + 3, 3, 2, '#889898');
+
+  // ── SINK: against north wall, center (from above) ──
+  const sinkX = Math.floor(GW * 0.35), sinkY = 9;
+  gr(ctx, sinkX, sinkY, 24, 14, '#a8b8b0');         // sink outer
+  fillEllipse(ctx, sinkX + 12, sinkY + 8, 10, 5, '#c0d0c8');  // basin rim
+  fillEllipse(ctx, sinkX + 12, sinkY + 8, 8, 4, '#ccddd4');   // basin
+  fillEllipse(ctx, sinkX + 12, sinkY + 8, 2, 1, '#6a8080');   // drain
   // Faucet
-  gr(ctx, mirrorX + 13, floorY - 22, 4, 4, '#334433');
-  gr(ctx, mirrorX + 14, floorY - 24, 2, 3, '#445544');
+  gr(ctx, sinkX + 9, sinkY + 2, 6, 2, '#889090');
+  gr(ctx, sinkX + 11, sinkY + 1, 2, 2, '#9aacaa');
 
-  // Medicine cabinet (right wall)
-  const cabX = Math.floor(GW * 0.65);
-  gr(ctx, cabX, 8, 26, 28, '#162014');
-  gr(ctx, cabX + 1, 9, 24, 26, '#1e2c1a');
-  drawPixelText(ctx, 'CABINET', cabX + 2, 10, '#446644', 1);
-  // Little pill bottles inside
-  for (let i = 0; i < 3; i++) {
-    gr(ctx, cabX + 3 + i * 7, 15, 5, 10, i === 0 ? '#446688' : i === 1 ? '#884444' : '#664422');
-    gr(ctx, cabX + 4 + i * 7, 14, 3, 2, '#888888');
+  // ── MIRROR on north wall (visible as a shiny strip) (item 0) ──
+  const mirrorX = Math.floor(GW * 0.15), mirrorY = 1;
+  gr(ctx, mirrorX, mirrorY, 26, 6, '#1a2a22');
+  gr(ctx, mirrorX + 1, mirrorY + 1, 24, 4, '#d0e8e0');
+  ctx.globalAlpha = 0.13 + mg;
+  gr(ctx, mirrorX + 1, mirrorY + 2, 24, 2, '#ffffff');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = `rgba(200,255,220,${0.05 + mg})`;
+  ctx.fillRect((mirrorX - 2) * S, 0, 30 * S, 14 * S);
+  if (interactIdx === 0) {
+    ctx.fillStyle = 'rgba(200,255,220,0.12)';
+    ctx.fillRect((mirrorX - 2) * S, 0, 30 * S, 16 * S);
   }
-  // Highlight the mysterious book on bottom shelf
-  gr(ctx, cabX + 2, 25, 22, 9, '#110e08');
-  drawPixelText(ctx, '"HOW TO', cabX + 3, 26, '#886644', 1);
-  drawPixelText(ctx, 'PARENT"', cabX + 3, 31, '#886644', 1);
+
+  // ── MEDICINE CABINET: right wall (item 1) ──
+  const cabX = GW - 8, cabY = 24;
+  gr(ctx, cabX - 4, cabY, 10, 28, '#1e2c1a');
+  gr(ctx, cabX - 3, cabY + 1, 8, 26, '#2a3c26');
+  drawPixelText(ctx, 'MED', cabX - 3, cabY + 3, '#446644', 1);
+  // Pill bottles (from above: circles in cabinet)
+  for (let i = 0; i < 3; i++) {
+    gr(ctx, cabX - 3 + i, cabY + 8 + i * 5, 4, 4, i === 0 ? '#446688' : i === 1 ? '#884444' : '#664422');
+  }
+  // Mysterious book at bottom
+  gr(ctx, cabX - 3, cabY + 20, 8, 6, '#3a2a10');
+  drawPixelText(ctx, '"??"', cabX - 2, cabY + 22, '#886644', 1);
   if (interactIdx === 1) {
     ctx.fillStyle = 'rgba(255,200,80,0.12)';
-    ctx.fillRect(cabX * S, 8 * S, 26 * S, 28 * S);
+    ctx.fillRect((cabX - 5) * S, cabY * S, 12 * S, 30 * S);
   }
 
-  // Toilet (right side)
-  const toiX = GW - 28;
-  gr(ctx, toiX, floorY - 22, 22, 24, '#1a2218');
-  gr(ctx, toiX + 2, floorY - 24, 18, 4, '#222e20');
-  gr(ctx, toiX + 4, floorY - 20, 14, 18, '#0e1810');
+  // ── Bathtub: left wall area (from above) ──
+  const tubX = 6, tubY = 38;
+  gr(ctx, tubX, tubY, 18, 32, '#a8b8b0');
+  gr(ctx, tubX + 1, tubY + 1, 16, 30, '#b8c8c0');
+  fillEllipse(ctx, tubX + 9, tubY + 16, 7, 13, '#9ab0b8');  // water
+  fillEllipse(ctx, tubX + 9, tubY + 16, 5, 11, '#aac4cc');
+  gr(ctx, tubX + 7, tubY + 2, 4, 2, '#889898'); // faucet
 
   drawPixelText(ctx, `[${interactIdx + 1}/${BATHROOM_LINES.length}] ${BATHROOM_LINES[interactIdx]?.label ?? ''}`, 4, GH - 18, '#446644', 1);
 }
@@ -1934,23 +1939,24 @@ export default function IntroEngine({ onComplete }: Props) {
       startDialogue(DARKNESS_LINES[0].text);
       s.dialogueTyping = true;
     } else if (phase === 'kitchen') {
-      s.playerX = Math.floor(GW * 0.45);
-      s.playerY = Math.floor(GH * 0.55);
-      s.playerDir = 'left';
+      s.playerX = Math.floor(GW * 0.5);
+      s.playerY = Math.floor(GH * 0.65); // start near bottom of kitchen floor
+      s.playerDir = 'up';
       s.cameraX = 0;
       s.devilEyeMode = false;
       fadeIn(1.5);
       startDialogue(KITCHEN_LINES[0].text);
     } else if (phase === 'upstairs') {
       s.playerX = Math.floor(GW * 0.45);
-      s.playerY = Math.floor(GH * 0.6) - 22;
-      s.playerDir = 'right';
+      s.playerY = Math.floor(GH * 0.55); // start in middle of hallway corridor
+      s.playerDir = 'up';
       s.upstairsSubPhase = 'hall';
       fadeIn(1.0);
     } else if (phase === 'bedroom') {
-      s.playerX = Math.floor(GW * 0.15);
-      s.playerY = Math.floor(GH * 0.62) - 22;
-      s.playerDir = 'right';
+      // Start at the desk (top-right corner of room) — player is at the laptop
+      s.playerX = Math.floor(GW * 0.82) - 14;
+      s.playerY = Math.floor(GH * 0.18) + 14; // just below the desk
+      s.playerDir = 'down';
       fadeIn(1.0);
       startDialogue(BEDROOM_LINES[0].text);
     } else if (phase === 'closet') {
@@ -2310,95 +2316,84 @@ export default function IntroEngine({ onComplete }: Props) {
       }
 
       if (s.phase === 'kitchen' && s.freeRoam) {
-        // Player movement
+        // 4-directional movement
         const speed = 1.5;
         let moved = false;
-        if ((s.keys['ArrowLeft'] || s.keys['KeyA']) && s.playerX > 10) {
-          s.playerX -= speed;
-          s.playerDir = 'left';
-          moved = true;
+        if ((s.keys['ArrowLeft'] || s.keys['KeyA']) && s.playerX > 8) {
+          s.playerX -= speed; s.playerDir = 'left'; moved = true;
         }
-        if ((s.keys['ArrowRight'] || s.keys['KeyD']) && s.playerX < GW - 20) {
-          s.playerX += speed;
-          s.playerDir = 'right';
-          moved = true;
+        if ((s.keys['ArrowRight'] || s.keys['KeyD']) && s.playerX < GW - 18) {
+          s.playerX += speed; s.playerDir = 'right'; moved = true;
         }
-        if (moved) {
-          s.walkTimer += 0; // handled above
+        if ((s.keys['ArrowUp'] || s.keys['KeyW']) && s.playerY > 14) {
+          s.playerY -= speed; s.playerDir = 'up'; moved = true;
         }
+        if ((s.keys['ArrowDown'] || s.keys['KeyS']) && s.playerY < GH - 16) {
+          s.playerY += speed; s.playerDir = 'down'; moved = true;
+        }
+        if (moved) s.walkTimer = (s.walkTimer + dt * 8) % 4;
 
-        // Check exits — stair trigger must be within movement bound (GW-20)
-        const kitchenStairX = GW - 26;
-        if (s.playerX > kitchenStairX) {
-          // Stairs exit
+        // Stair trigger: bottom-right corner of kitchen (top-down: south-east)
+        const kitchenStairX = GW - 24;
+        const kitchenStairY = GH - 18;
+        if (s.playerX > kitchenStairX && s.playerY > kitchenStairY) {
           s.freeRoam = false;
           fadeToBlack(0.8, () => initPhase('upstairs'));
         }
 
-        // Left exit check (blocked)
-        if (s.playerX < 12 && !s.kitchenExitBlocked) {
+        // Left exit (blocked — front door, top-left)
+        if (s.playerX < 10 && !s.kitchenExitBlocked) {
           s.kitchenExitBlocked = true;
-          s.playerX = 14;
+          s.playerX = 12;
           s.shakeTimer = 0.5;
           startDialogue(BLOCKED_EXIT_LINE.text);
           s.kitchenBlockTimer = 2;
         }
-
         if (s.kitchenBlockTimer > 0) {
           s.kitchenBlockTimer -= dt;
-          if (s.kitchenBlockTimer <= 0) {
-            s.kitchenExitBlocked = false;
-          }
-        }
-
-        // Devil eye → advance automatically
-        if (s.devilEyeMode && s.dialogueProgress >= s.dialogueText.length && s.phaseTimer > 0.3) {
-          // Managed by user pressing space
+          if (s.kitchenBlockTimer <= 0) s.kitchenExitBlocked = false;
         }
       }
 
       if (s.phase === 'upstairs' && s.upstairsSubPhase === 'hall') {
-        if (!s.freeRoam) {
-          s.freeRoam = true;
-        }
+        if (!s.freeRoam) s.freeRoam = true;
         const speed = 1.5;
-        if ((s.keys['ArrowLeft'] || s.keys['KeyA']) && s.playerX > 10) {
-          s.playerX -= speed;
-          s.playerDir = 'left';
+        // 4-directional movement within hallway corridor
+        if ((s.keys['ArrowLeft'] || s.keys['KeyA']) && s.playerX > 8) {
+          s.playerX -= speed; s.playerDir = 'left';
         }
-        if ((s.keys['ArrowRight'] || s.keys['KeyD']) && s.playerX < GW - 20) {
-          s.playerX += speed;
-          s.playerDir = 'right';
+        if ((s.keys['ArrowRight'] || s.keys['KeyD']) && s.playerX < GW - 18) {
+          s.playerX += speed; s.playerDir = 'right';
+        }
+        // Up/down movement clamped to hallway depth (y 12..GH-12)
+        if ((s.keys['ArrowUp'] || s.keys['KeyW']) && s.playerY > 14) {
+          s.playerY -= speed; s.playerDir = 'up';
+        }
+        if ((s.keys['ArrowDown'] || s.keys['KeyS']) && s.playerY < GH - 14) {
+          s.playerY += speed; s.playerDir = 'down';
         }
 
-        // Door zones — Mom's Room (far left), Your Room (center), Bathroom (far right)
-        const momsRoomX = 14;
-        const yourRoomX = Math.floor(GW / 2) - 16;
-        const bathroomX = GW - 46;
+        // Door zones in north wall — player enters by walking up (y < 18) near door
+        const doorSpacing = Math.floor(GW / 4);
+        const momsRoomCX   = doorSpacing;
+        const yourRoomCX   = doorSpacing * 2;
+        const bathroomCX   = doorSpacing * 3;
+        const nearDoor = (cx: number) => Math.abs(s.playerX - cx) < 16;
 
-        // E to enter rooms when near a door
-        if (s.keys['KeyE']) {
-          if (s.playerX < momsRoomX + 38) {
+        // E key to enter — or walking up into a door
+        const enteringDoor = s.playerY < 18 || s.keys['KeyE'];
+        if (enteringDoor) {
+          if (nearDoor(momsRoomCX)) {
             s.upstairsSubPhase = 'momsroom';
             s.momsRoomItemIdx = 0;
             s.freeRoam = false;
             startDialogue(MOMS_ROOM_ITEMS[0].text);
-          } else if (s.playerX > bathroomX - 20 && s.playerX < bathroomX + 30) {
+          } else if (nearDoor(bathroomCX)) {
             s.upstairsSubPhase = 'bathroom';
             s.bathroomInteractIdx = 0;
             s.freeRoam = false;
             startDialogue(BATHROOM_LINES[0].text);
-          } else if (s.playerX > yourRoomX - 5 && s.playerX < yourRoomX + 40) {
-            s.upstairsSubPhase = 'yourroom';
-            s.freeRoam = false;
-            startDialogue(BEDROOM_LINES[0].text);
-          }
-        }
-
-        // Auto-enter your room if walked all the way right
-        if (s.playerX > yourRoomX + 18 && !s.keys['ArrowLeft'] && !s.keys['KeyA']) {
-          const nearYour = s.playerX > yourRoomX - 5 && s.playerX < yourRoomX + 40;
-          if (nearYour && s.playerDir === 'right') {
+          } else if (nearDoor(yourRoomCX)) {
             s.upstairsSubPhase = 'yourroom';
             s.freeRoam = false;
             startDialogue(BEDROOM_LINES[0].text);
@@ -2407,33 +2402,38 @@ export default function IntroEngine({ onComplete }: Props) {
       }
 
       if (s.phase === 'upstairs' && s.upstairsSubPhase === 'momsroom') {
-        // Cycle through mom's room items on E/Space
+        // Handled by advanceDialogue
       }
-
       if (s.phase === 'upstairs' && s.upstairsSubPhase === 'bathroom') {
         // Handled by advanceDialogue
       }
 
       if (s.phase === 'bedroom' && s.freeRoam) {
         const speed = 1.5;
-        if ((s.keys['ArrowLeft'] || s.keys['KeyA']) && s.playerX > 10) {
-          s.playerX -= speed;
-          s.playerDir = 'left';
+        // Full 4-directional movement — walls are at y<12 and y>GH-12, x<8, x>GW-8
+        if ((s.keys['ArrowLeft'] || s.keys['KeyA']) && s.playerX > 8) {
+          s.playerX -= speed; s.playerDir = 'left';
         }
-        if ((s.keys['ArrowRight'] || s.keys['KeyD']) && s.playerX < GW - 20) {
-          s.playerX += speed;
-          s.playerDir = 'right';
+        if ((s.keys['ArrowRight'] || s.keys['KeyD']) && s.playerX < GW - 18) {
+          s.playerX += speed; s.playerDir = 'right';
+        }
+        if ((s.keys['ArrowUp'] || s.keys['KeyW']) && s.playerY > 12) {
+          s.playerY -= speed; s.playerDir = 'up';
+        }
+        if ((s.keys['ArrowDown'] || s.keys['KeyS']) && s.playerY < GH - 14) {
+          s.playerY += speed; s.playerDir = 'down';
         }
 
-        // Proximity checks
-        const deskX = Math.floor(GW * 0.75);
-        const shelfX = 4;
-        const closetX2 = Math.floor(GW * 0.38);
+        // Proximity checks (top-down positions)
+        const deskX = Math.floor(GW * 0.82) - 14;
+        const deskY = Math.floor(GH * 0.18);
+        const shelfX = 8, shelfY = 46;
+        const closetX2 = GW - 14, closetY2 = Math.floor(GH * 0.38);
 
-        s.nearDesk = Math.abs(s.playerX - deskX) < 18;
-        s.nearBookshelf = Math.abs(s.playerX - shelfX) < 20;
-        s.nearCloset = Math.abs(s.playerX - closetX2) < 20;
-        s.nearComputer = Math.abs(s.playerX - deskX) < 14;
+        s.nearDesk = Math.abs(s.playerX - deskX) < 22 && Math.abs(s.playerY - deskY) < 20;
+        s.nearBookshelf = Math.abs(s.playerX - shelfX) < 22 && Math.abs(s.playerY - shelfY) < 24;
+        s.nearCloset = Math.abs(s.playerX - closetX2) < 22 && Math.abs(s.playerY - closetY2) < 24;
+        s.nearComputer = Math.abs(s.playerX - deskX) < 16 && Math.abs(s.playerY - deskY) < 16;
       }
 
       if (s.phase === 'closet') {
@@ -2542,18 +2542,17 @@ export default function IntroEngine({ onComplete }: Props) {
 
       if (s.phase === 'kitchen') {
         if (!s.devilEyeMode) {
-          drawKitchen(ctx, GW, GH, s.cameraX, s.t);
-          // Mom at table left
-          const tableX = Math.floor(GW * 0.3);
-          const tableY = Math.floor(GH * 0.52);
+          drawKitchen(ctx, GW, GH, s.t);
+          // Mom at dining table (top-down: drawn from above)
+          const tableX = Math.floor(GW * 0.28);
+          const tableY = Math.floor(GH * 0.38);
           const momState = s.dialogueIdx === 0 || s.dialogueIdx === 2 ? 'angry' : s.dialogueIdx === 1 || s.dialogueIdx === 3 ? 'idle' : 'angry';
-          drawMom(ctx, tableX - 18, tableY - 34, avatar.skinTone, momState as 'idle' | 'angry' | 'talking', s.momFrame);
-          // Player at table (Enzyme is NOT here — she first appears in the Void)
-          drawPlayer(ctx, Math.floor(s.playerX), Math.floor(s.playerY), avatar, s.playerDir, s.walkFrame, s.freeRoam ? false : true);
+          drawMomTopDown(ctx, tableX - 12, tableY - 8, avatar.skinTone, momState as 'idle' | 'angry' | 'talking', s.momFrame);
+          // Player (top-down sprite)
+          drawPlayerTopDown(ctx, Math.floor(s.playerX), Math.floor(s.playerY), avatar, s.playerDir, s.walkFrame);
 
           if (s.freeRoam) {
-            drawPixelText(ctx, '< > MOVE', Math.floor(GW / 2) - 18, GH - 12, '#888888', 1);
-            drawPixelText(ctx, 'E INTERACT', Math.floor(GW / 2) - 18, GH - 6, '#888888', 1);
+            drawPixelText(ctx, 'WASD MOVE  E INTERACT', Math.floor(GW / 2) - 38, GH - 8, '#888888', 1);
           }
         } else {
           drawDevilEyes(ctx, canvas.width, canvas.height, s.t, s.playerX, s.playerY, avatar);
@@ -2563,36 +2562,36 @@ export default function IntroEngine({ onComplete }: Props) {
       if (s.phase === 'upstairs') {
         if (s.upstairsSubPhase === 'hall' || s.upstairsSubPhase === 'yourroom') {
           drawUpstairs(ctx, GW, GH, s.t);
-          drawPlayer(ctx, Math.floor(s.playerX), Math.floor(s.playerY), avatar, s.playerDir, s.walkFrame);
+          drawPlayerTopDown(ctx, Math.floor(s.playerX), Math.floor(s.playerY), avatar, s.playerDir, s.walkFrame);
           if (s.freeRoam) {
-            drawPixelText(ctx, '< > MOVE  E ENTER ROOM', Math.floor(GW / 2) - 40, GH - 8, '#888888', 1);
+            drawPixelText(ctx, 'WASD MOVE  W/UP ENTER ROOM', Math.floor(GW / 2) - 46, GH - 8, '#888888', 1);
           }
         } else if (s.upstairsSubPhase === 'momsroom') {
           drawMomsRoom(ctx, GW, GH, s.momsRoomItemIdx);
-          drawPlayer(ctx, Math.floor(GW * 0.5), floorY, avatar, 'left', 0);
+          drawPlayerTopDown(ctx, Math.floor(GW * 0.5), Math.floor(GH * 0.55), avatar, 'up', 0);
           drawPixelText(ctx, 'SPACE to continue', Math.floor(GW / 2) - 30, GH - 8, '#666688', 1);
         } else if (s.upstairsSubPhase === 'bathroom') {
           drawBathroom(ctx, GW, GH, s.t, s.bathroomInteractIdx);
-          drawPlayer(ctx, Math.floor(GW * 0.5), floorY, avatar, 'right', 0);
+          drawPlayerTopDown(ctx, Math.floor(GW * 0.5), Math.floor(GH * 0.55), avatar, 'up', 0);
           drawPixelText(ctx, 'SPACE to continue', Math.floor(GW / 2) - 30, GH - 8, '#666688', 1);
         }
       }
 
       if (s.phase === 'bedroom') {
         drawBedroom(ctx, GW, GH, s.t);
-        drawPlayer(ctx, Math.floor(s.playerX), Math.floor(s.playerY), avatar, s.playerDir, s.walkFrame);
+        drawPlayerTopDown(ctx, Math.floor(s.playerX), Math.floor(s.playerY), avatar, s.playerDir, s.walkFrame);
         if (s.freeRoam) {
-          drawPixelText(ctx, '< > MOVE  E INTERACT', Math.floor(GW / 2) - 36, GH - 8, '#888888', 1);
-          if (s.nearCloset) drawPixelText(ctx, 'E OPEN CLOSET', Math.floor(GW * 0.38) - 4, Math.floor(GH * 0.62) - 58, '#ffdd44', 1);
-          if (s.nearComputer) drawPixelText(ctx, 'E USE COMPUTER', Math.floor(GW * 0.75) - 4, Math.floor(GH * 0.38) - 8, '#ffdd44', 1);
-          if (s.nearBookshelf) drawPixelText(ctx, 'E READ', 6, Math.floor(GH * 0.2) - 8, '#ffdd44', 1);
+          drawPixelText(ctx, 'WASD MOVE  E INTERACT', Math.floor(GW / 2) - 38, GH - 8, '#888888', 1);
+          if (s.nearCloset) drawPixelText(ctx, '[E] OPEN CLOSET', GW - 32, Math.floor(GH * 0.38) + 32, '#ffdd44', 1);
+          if (s.nearComputer) drawPixelText(ctx, '[E] USE COMPUTER', Math.floor(GW * 0.82) - 28, Math.floor(GH * 0.18) + 22, '#ffdd44', 1);
+          if (s.nearBookshelf) drawPixelText(ctx, '[E] READ', 8, 46 - 8, '#ffdd44', 1);
         }
       }
 
       if (s.phase === 'closet') {
         drawCloset(ctx, GW, GH, s.zoomLevel, s.closetZoomStage, s.t);
         if (s.closetZoomStage < 2) {
-          drawPlayer(ctx, Math.floor(s.playerX), Math.floor(s.playerY), avatar, 'right', s.walkFrame);
+          drawPlayerTopDown(ctx, Math.floor(s.playerX), Math.floor(s.playerY), avatar, 'up', s.walkFrame);
         }
         // Exclamation mark
         if (s.closetZoomStage === 1) {
@@ -2602,14 +2601,15 @@ export default function IntroEngine({ onComplete }: Props) {
 
       if (s.phase === 'computer') {
         drawBedroom(ctx, GW, GH, s.t);
-        // Player walking to desk
-        const deskX = Math.floor(GW * 0.75) - 14;
-        drawPlayer(ctx, deskX, Math.floor(GH * 0.62) - 22, avatar, 'right', s.walkFrame);
+        // Player at desk (top-down)
+        const deskX = Math.floor(GW * 0.82) - 22;
+        const deskY2 = Math.floor(GH * 0.18) + 14;
+        drawPlayerTopDown(ctx, deskX, deskY2, avatar, 'up', s.walkFrame);
 
-        // Computer screen content
-        const screenX = Math.floor(GW * 0.75) + 4;
-        const screenY = Math.floor(GH * 0.38) - 20;
-        drawComputerScreen(ctx, screenX, screenY, 20, 18, s.computerPhase, s.t);
+        // Computer screen content (inside monitor top-down)
+        const screenX = Math.floor(GW * 0.82) - 36;
+        const screenY = Math.floor(GH * 0.18) + 2;
+        drawComputerScreen(ctx, screenX, screenY, 20, 8, s.computerPhase, s.t);
 
         if (s.computerPhase === 3 && !s.computerLinkClicked) {
           drawPixelText(ctx, 'E CLICK LINK', screenX - 2, screenY + 20, '#ffdd44', 1);
