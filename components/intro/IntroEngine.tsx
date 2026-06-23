@@ -26,7 +26,7 @@ interface IntroState {
   dialogueTimer: number;
   playerX: number;
   playerY: number;
-  playerDir: 'left' | 'right';
+  playerDir: 'left' | 'right' | 'up' | 'down';
   walkFrame: number;
   walkTimer: number;
   momFrame: number;
@@ -390,6 +390,84 @@ function shiftGr(hex: string, amt: number): string {
   return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
 }
 
+// ─── Top-down player sprite (OMORI-style bird's eye view) ────────────────────
+
+function drawPlayerTopDown(
+  ctx: CanvasRenderingContext2D,
+  px: number, py: number,
+  avatar: AvatarConfig,
+  facing: 'left' | 'right' | 'up' | 'down',
+  walkFrame: number,
+) {
+  const skin = avatar.skinTone || '#c68642';
+  const hair = avatar.hairColor || '#2a1a0a';
+  const cloth = avatar.clothingColorPrimary || '#1f2937';
+
+  // Shadow beneath
+  ctx.globalAlpha = 0.25;
+  gr(ctx, px + 1, py + 9, 8, 2, '#000000');
+  ctx.globalAlpha = 1;
+
+  // Body (top-down view: oval torso)
+  gr(ctx, px + 1, py + 4, 8, 6, cloth);
+  gr(ctx, px + 2, py + 3, 6, 7, cloth);
+
+  // Head: circle from above
+  gr(ctx, px + 2, py, 6, 6, skin);
+  gr(ctx, px + 1, py + 1, 8, 4, skin);
+
+  // Hair on top of head (varies by facing)
+  if (facing === 'up') {
+    gr(ctx, px + 1, py, 8, 3, hair);
+  } else if (facing === 'down') {
+    gr(ctx, px + 2, py, 6, 2, hair);
+    gr(ctx, px + 1, py + 1, 2, 2, hair);
+    gr(ctx, px + 7, py + 1, 2, 2, hair);
+  } else {
+    gr(ctx, px + 2, py, 6, 2, hair);
+    const sideHair = facing === 'left' ? px + 1 : px + 6;
+    gr(ctx, sideHair, py, 3, 4, hair);
+  }
+
+  // Feet (animated, sticking out from body)
+  const legOff = (walkFrame % 2 === 0) ? 0 : 1;
+  if (facing === 'down' || facing === 'up') {
+    gr(ctx, px + 1, py + 10 - legOff, 3, 2, skin);
+    gr(ctx, px + 6, py + 10 + legOff, 3, 2, skin);
+  } else {
+    const baseY = py + 9;
+    gr(ctx, px + 3, baseY - legOff, 4, 2, skin);
+    gr(ctx, px + 3, baseY + legOff + 2, 4, 2, skin);
+  }
+}
+
+// ─── Top-down Mom sprite ──────────────────────────────────────────────────────
+
+function drawMomTopDown(
+  ctx: CanvasRenderingContext2D,
+  px: number, py: number,
+  skinTone: string,
+  state: 'idle' | 'angry' | 'talking',
+  frame: number,
+) {
+  // Dress (red, viewed from above - oval shape)
+  gr(ctx, px + 1, py + 3, 10, 8, '#c41e3a');
+  gr(ctx, px + 2, py + 2, 8, 10, '#c41e3a');
+  // Head
+  gr(ctx, px + 2, py - 1, 8, 6, skinTone);
+  gr(ctx, px + 1, py, 10, 4, skinTone);
+  // Hair bun (top view — brown circle)
+  gr(ctx, px + 3, py - 3, 6, 4, '#3d1a00');
+  gr(ctx, px + 4, py - 4, 4, 2, '#3d1a00');
+  // Angry indicators
+  if (state === 'angry' || state === 'talking') {
+    const steamOff = (frame % 4 < 2) ? 0 : 1;
+    gr(ctx, px + 2, py - 5 - steamOff, 1, 3, '#cccccc');
+    gr(ctx, px + 6, py - 6 + steamOff, 1, 3, '#cccccc');
+    gr(ctx, px + 10, py - 4 - steamOff, 1, 3, '#cccccc');
+  }
+}
+
 function drawMom(
   ctx: CanvasRenderingContext2D,
   gx: number, gy: number,
@@ -455,94 +533,162 @@ function drawMom(
   gr(ctx, x + 7, gy + 32, 5, 2, '#330011');
 }
 
+// Helper: fill ellipse via horizontal scanlines
+function fillEllipse(ctx: CanvasRenderingContext2D, cx: number, cy: number, rw: number, rh: number, color: string) {
+  ctx.fillStyle = color;
+  for (let dy = -rh; dy <= rh; dy++) {
+    const p = 1 - (dy / rh) * (dy / rh);
+    if (p <= 0) continue;
+    const hw = Math.max(1, Math.floor(rw * Math.sqrt(p)));
+    ctx.fillRect((cx - hw) * S, (cy + dy) * S, hw * 2 * S, S);
+  }
+}
+
 function drawDevilEyes(
   ctx: CanvasRenderingContext2D,
   cw: number, ch: number,
   t: number,
-  playerGX: number, playerGY: number,
+  _playerGX: number, _playerGY: number,
   avatar: AvatarConfig
 ) {
   const GW = Math.floor(cw / S);
   const GH = Math.floor(ch / S);
+  const cx = Math.floor(GW / 2);
+  const pulse = (Math.sin(t * 1.8) + 1) / 2;
 
-  // Background swirl
+  // ── Background ────────────────────────────────────────────────────────────────
   ctx.fillStyle = '#0a0005';
   ctx.fillRect(0, 0, cw, ch);
+  ctx.fillStyle = `rgba(120,0,30,${0.05 + pulse * 0.08})`;
+  ctx.fillRect(0, 0, cw, ch);
 
-  // Dark energy tendrils
+  const headCY = Math.floor(GH * 0.42);
+
+  // ── HORNS ─────────────────────────────────────────────────────────────────────
+  for (let h = 0; h < 24; h++) {
+    const hw = Math.max(1, 6 - Math.floor(h / 4));
+    gr(ctx, cx - 30 - Math.floor(h * 0.5), headCY - 20 - h, hw, 1, h < 12 ? '#2a0010' : '#180008');
+    gr(ctx, cx + 25 + Math.floor(h * 0.5), headCY - 20 - h, hw, 1, h < 12 ? '#2a0010' : '#180008');
+  }
+
+  // ── HEAD (skull oval) ─────────────────────────────────────────────────────────
+  fillEllipse(ctx, cx, headCY, Math.floor(GW * 0.22), Math.floor(GH * 0.22), '#1a0010');
+  fillEllipse(ctx, cx - 8, headCY - 6, Math.floor(GW * 0.12), Math.floor(GH * 0.10), '#220018');
+  fillEllipse(ctx, cx, headCY + Math.floor(GH * 0.12), Math.floor(GW * 0.18), Math.floor(GH * 0.08), '#140008');
+
+  // ── HAIR TENDRILS ─────────────────────────────────────────────────────────────
   for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2 + t * 0.3;
-    const len = 40 + Math.sin(t * 2 + i) * 10;
+    const angle = (i / 8) * Math.PI * 2 - 0.3 + t * 0.15;
+    const len = 28 + Math.floor(Math.sin(t * 1.2 + i * 0.9) * 6);
     for (let d = 0; d < len; d++) {
-      const nx = Math.floor(GW / 2 + Math.cos(angle) * d);
-      const ny = Math.floor(GH / 2 + Math.sin(angle) * d);
+      const nx = cx + Math.floor(Math.cos(angle) * (Math.floor(GW * 0.2) + d));
+      const ny = headCY + Math.floor(Math.sin(angle) * (Math.floor(GH * 0.18) + d));
       if (nx >= 0 && nx < GW && ny >= 0 && ny < GH) {
         const fade = 1 - d / len;
-        const r = Math.floor(80 * fade);
-        gr(ctx, nx, ny, 1, 1, `rgb(${r},0,${Math.floor(r * 0.3)})`);
+        const r = Math.floor(50 * fade);
+        gr(ctx, nx, ny, 1, 1, `rgb(${r},0,${Math.floor(r * 0.4)})`);
       }
     }
   }
 
-  // Left eye
-  const eyeLX = Math.floor(GW * 0.28);
-  const eyeRX = Math.floor(GW * 0.58);
-  const eyeY = Math.floor(GH * 0.3);
-  const eyeW = Math.floor(GW * 0.2);
-  const eyeH = Math.floor(GH * 0.35);
+  // ── EYES (oval — NOT rectangles) ─────────────────────────────────────────────
+  const eyeOffX = Math.floor(GW * 0.12);
+  const eyeCY   = Math.floor(GH * 0.36);
+  const eyeRW   = Math.floor(GW * 0.085);
+  const eyeRH   = Math.floor(GH * 0.075);
+  const glowPulse = (Math.sin(t * 3) + 1) / 2;
 
-  for (let eye = 0; eye < 2; eye++) {
-    const ex = eye === 0 ? eyeLX : eyeRX;
+  for (let side = 0; side < 2; side++) {
+    const ecx = cx + (side === 0 ? -eyeOffX : eyeOffX);
 
-    // White of eye
-    ctx.fillStyle = '#ffeeee';
-    ctx.fillRect(ex * S, eyeY * S, eyeW * S, eyeH * S);
+    ctx.globalAlpha = 0.18 + glowPulse * 0.25;
+    fillEllipse(ctx, ecx, eyeCY, eyeRW + 5, eyeRH + 4, '#ff2244');
+    ctx.globalAlpha = 1;
 
-    // Iris (red)
-    const irisX = ex + Math.floor(eyeW * 0.15);
-    const irisY = eyeY + Math.floor(eyeH * 0.1);
-    const irisW = Math.floor(eyeW * 0.7);
-    const irisH = Math.floor(eyeH * 0.8);
-    ctx.fillStyle = '#cc0000';
-    ctx.fillRect(irisX * S, irisY * S, irisW * S, irisH * S);
+    fillEllipse(ctx, ecx, eyeCY, eyeRW, eyeRH, '#ffcccc');
 
-    // Slit pupil
-    const pupX = ex + Math.floor(eyeW * 0.45);
-    const pupY = eyeY + Math.floor(eyeH * 0.05);
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(pupX * S, pupY * S, 4 * S, eyeH * S);
+    // Upper eyelid shadow
+    for (let dy = -eyeRH; dy < -Math.floor(eyeRH * 0.3); dy++) {
+      const p = 1 - (dy / eyeRH) * (dy / eyeRH);
+      if (p <= 0) continue;
+      const hw = Math.max(1, Math.floor(eyeRW * Math.sqrt(p)));
+      ctx.fillStyle = 'rgba(20,0,8,0.78)';
+      ctx.fillRect((ecx - hw) * S, (eyeCY + dy) * S, hw * 2 * S, S);
+    }
+    // Lower eyelid shadow
+    for (let dy = Math.floor(eyeRH * 0.65); dy <= eyeRH; dy++) {
+      const p = 1 - (dy / eyeRH) * (dy / eyeRH);
+      if (p <= 0) continue;
+      const hw = Math.max(1, Math.floor(eyeRW * Math.sqrt(p)));
+      ctx.fillStyle = 'rgba(20,0,8,0.55)';
+      ctx.fillRect((ecx - hw) * S, (eyeCY + dy) * S, hw * 2 * S, S);
+    }
 
-    // Eye glow
-    const glowPulse = (Math.sin(t * 3) + 1) / 2;
-    ctx.fillStyle = `rgba(200,0,0,${0.1 + glowPulse * 0.15})`;
-    ctx.fillRect((ex - 3) * S, (eyeY - 3) * S, (eyeW + 6) * S, (eyeH + 6) * S);
+    fillEllipse(ctx, ecx, eyeCY, Math.floor(eyeRW * 0.68), Math.floor(eyeRH * 0.72), '#cc0000');
+    fillEllipse(ctx, ecx, eyeCY, Math.floor(eyeRW * 0.50), Math.floor(eyeRH * 0.54), '#ee1122');
 
-    // Flames above eye
-    for (let f = 0; f < 5; f++) {
-      const fx = ex + f * Math.floor(eyeW / 5);
-      const fh = 4 + Math.floor(Math.sin(t * 4 + f) * 3);
+    const slitH = Math.floor(eyeRH * 1.3);
+    gr(ctx, ecx - 1, eyeCY - slitH, 3, slitH * 2, '#000000');
+    gr(ctx, ecx + Math.floor(eyeRW * 0.28), eyeCY - Math.floor(eyeRH * 0.38), 2, 2, '#ff6688');
+    gr(ctx, ecx + Math.floor(eyeRW * 0.28), eyeCY - Math.floor(eyeRH * 0.38), 1, 1, '#ffffff');
+  }
+
+  // ── FLAMES above eyes ────────────────────────────────────────────────────────
+  for (let side = 0; side < 2; side++) {
+    const ecx = cx + (side === 0 ? -eyeOffX : eyeOffX);
+    for (let f = 0; f < 7; f++) {
+      const fx = ecx - eyeRW + Math.floor(f * eyeRW * 2 / 6);
+      const fh = 4 + Math.floor(Math.sin(t * 5 + f * 0.9) * 3);
       for (let frow = 0; frow < fh; frow++) {
-        const fcolor = frow < fh / 2 ? '#ff4400' : '#ff8800';
-        gr(ctx, fx, eyeY - fh + frow, 2, 1, fcolor);
+        const frac = frow / fh;
+        const fcol = frac < 0.3 ? '#ffcc00' : frac < 0.6 ? '#ff8800' : '#ff4400';
+        gr(ctx, fx, eyeCY - eyeRH - fh + frow, 2, 1, fcol);
       }
     }
   }
 
-  // Caption: "The Mom-Demon of Incomplete Science Projects"
-  const caption = 'The Mom-Demon of Incomplete Science Projects';
-  const capY = Math.floor(GH * 0.68);
-  gr(ctx, 2, capY - 2, GW - 4, 10, '#0a0005');
+  // ── NOSE ──────────────────────────────────────────────────────────────────────
+  gr(ctx, cx - 5, headCY + 2, 3, 3, '#0a0004');
+  gr(ctx, cx + 3, headCY + 2, 3, 3, '#0a0004');
+
+  // ── MOUTH (wide jagged grin) ──────────────────────────────────────────────────
+  const mouthY = Math.floor(GH * 0.56);
+  const mouthL = Math.floor(GW * 0.18);
+  const mouthR = Math.floor(GW * 0.82);
+  const mouthW = mouthR - mouthL;
+  gr(ctx, mouthL, mouthY - 2, mouthW, 2, '#660000');
+  gr(ctx, mouthL, mouthY + 6, mouthW, 2, '#440000');
+  gr(ctx, mouthL, mouthY, mouthW, 6, '#0a0002');
+  const toothCount = 14;
+  const toothW = Math.floor(mouthW / toothCount);
+  for (let tooth = 0; tooth < toothCount; tooth++) {
+    const tx = mouthL + tooth * toothW;
+    const isUp = tooth % 2 === 0;
+    gr(ctx, tx + 1, mouthY - 1, toothW - 1, isUp ? 4 : 2, isUp ? '#f0f0f0' : '#cc0000');
+    gr(ctx, tx + 1, mouthY + 3, toothW - 1, isUp ? 2 : 4, isUp ? '#cc0000' : '#f0f0f0');
+  }
+  for (let d = 0; d < 4; d++) {
+    const dx = mouthL + Math.floor(mouthW * (0.15 + d * 0.22));
+    const dl = 2 + Math.floor(Math.sin(t * 1.5 + d) * 1);
+    gr(ctx, dx, mouthY + 8, 2, dl, '#cc0000');
+  }
+
+  // ── CAPTION ───────────────────────────────────────────────────────────────────
+  const caption = 'THE MOM-DEMON OF INCOMPLETE SCIENCE PROJECTS';
+  const capY = Math.floor(GH * 0.82);
+  ctx.globalAlpha = 0.35 + pulse * 0.2;
+  gr(ctx, Math.floor(GW / 2) - 90, capY - 3, 180, 10, '#440011');
+  ctx.globalAlpha = 1;
   drawPixelText(ctx, caption, Math.floor(GW / 2) - Math.floor(caption.length * 3.5), capY, '#cc3344', 1);
 
-  // Tiny horrified player at bottom center
-  const px = Math.floor(GW / 2) - 6;
-  const py = Math.floor(GH * 0.78);
-  drawPlayer(ctx, px, py, avatar, 'right', 0);
-
-  // Player look: camera → mom → camera (text toggle)
-  const lookPhase = Math.floor(t * 0.8) % 3;
-  const lookText = lookPhase === 0 ? '(looks at camera)' : lookPhase === 1 ? '(looks at mom-demon)' : '(looks at camera again)';
-  drawPixelText(ctx, lookText, Math.floor(GW / 2) - Math.floor(lookText.length * 3.5), py + 26, '#888888', 1);
+  // ── TINY HORRIFIED PLAYER ────────────────────────────────────────────────────
+  const ppx = Math.floor(GW / 2) - 6;
+  const ppy = Math.floor(GH * 0.88);
+  drawPlayer(ctx, ppx, ppy, avatar, 'right', 0);
+  if (Math.floor(t * 3) % 2 === 0) {
+    gr(ctx, ppx + 4, ppy - 10, 2, 6, '#ffdd00');
+    gr(ctx, ppx + 4, ppy - 2, 2, 2, '#ffdd00');
+  }
 }
 
 function drawEnzyme(
@@ -638,157 +784,103 @@ function drawEnzyme(
 
 // ─── Scene Drawers ────────────────────────────────────────────────────────────
 
-function drawKitchen(ctx: CanvasRenderingContext2D, GW: number, GH: number, cameraX: number, t: number) {
-  const ox = -Math.floor(cameraX);
-  const floorY = Math.floor(GH * 0.62);
-
-  // ── Undertale-dark background ──
-  // Wall (dark warm tone — visible but moody)
-  ctx.fillStyle = '#2a1e12';
-  ctx.fillRect(0, 0, GW * S, floorY * S);
-  // Wall texture: subtle vertical stripe variation
-  for (let wx = 0; wx < GW; wx += 8) {
-    ctx.fillStyle = wx % 16 === 0 ? 'rgba(0,0,0,0.06)' : 'rgba(255,200,100,0.02)';
-    ctx.fillRect(wx * S, 0, 8 * S, floorY * S);
-  }
-
-  // Baseboard strip
-  gr(ctx, 0 + ox, floorY - 5, GW + 16, 5, '#3a2814');
-  gr(ctx, 0 + ox, floorY - 6, GW + 16, 1, '#4e3820');
-
-  // Dark wood floor planks
-  for (let fy = floorY; fy < GH; fy += 6) {
-    ctx.fillStyle = fy % 12 === 0 ? '#281a08' : '#221408';
+function drawKitchen(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: number) {
+  // ── TOP-DOWN OMORI-STYLE KITCHEN ──────────────────────────────────────────
+  // Full floor: dark warm wood planks (horizontal lines)
+  ctx.fillStyle = '#2a1a0a';
+  ctx.fillRect(0, 0, GW * S, GH * S);
+  for (let fy = 0; fy < GH; fy += 6) {
+    ctx.fillStyle = fy % 12 === 0 ? '#3a2810' : '#2a1a0a';
     ctx.fillRect(0, fy * S, GW * S, 6 * S);
-    // Plank lines
-    for (let fx = 0; fx < GW; fx += 24) {
-      ctx.fillStyle = '#160d04';
-      ctx.fillRect((fx + ox) * S, fy * S, S, 6 * S);
+    // Plank divider lines (vertical seams)
+    for (let fx = 0; fx < GW; fx += 28) {
+      gr(ctx, fx + (Math.floor(fy / 6) % 2) * 14, fy, 1, 6, '#1a0e04');
     }
-    // Grain highlight
-    ctx.fillStyle = 'rgba(255,180,60,0.025)';
-    ctx.fillRect(0, fy * S, GW * S, 2);
   }
 
-  // Wainscoting (dark wood paneling strip at bottom of wall)
-  gr(ctx, 0 + ox, floorY - 18, GW + 16, 13, '#362410');
-  gr(ctx, 0 + ox, floorY - 19, GW + 16, 1, '#4a3018');
-  for (let px = 0; px < GW; px += 20) {
-    gr(ctx, px + ox + 1, floorY - 17, 18, 11, '#301e0c');
-    gr(ctx, px + ox + 2, floorY - 16, 16, 1, '#443018');
-  }
-
-  // Window (night — dark outside with stars)
-  const winX = 40 + ox;
-  const winY = 8;
-  gr(ctx, winX - 2, winY - 2, 28, 24, '#4a3018'); // frame
-  gr(ctx, winX, winY, 24, 20, '#091520');          // glass - night sky
-  gr(ctx, winX + 11, winY, 2, 20, '#3a2410');      // divider
-  // Stars
-  [[3,3],[8,6],[17,4],[21,8],[6,12],[19,14]].forEach(([sx,sy]) => {
-    gr(ctx, winX + sx, winY + sy, 1, 1, '#aaccff');
-  });
-  // Curtains
-  gr(ctx, winX - 2, winY - 2, 5, 22, '#2a0a0a');
-  gr(ctx, winX + 21, winY - 2, 5, 22, '#2a0a0a');
-  // Warm glow from inside light hitting window top
-  const wg = (Math.sin(t * 0.8) + 1) / 2;
-  ctx.fillStyle = `rgba(255,180,80,${0.04 + wg * 0.02})`;
-  ctx.fillRect(winX * S, winY * S, 24 * S, 20 * S);
-
-  // Counter (dark wood, right side)
-  const ctrX = GW - 70 + ox;
-  gr(ctx, ctrX, 30, 70, 5, '#4a3018');    // counter surface
-  gr(ctx, ctrX, 30, 70, 2, '#6a4824');    // highlight top
-  gr(ctx, ctrX, 35, 70, 28, '#362410');   // cabinet body
-  // Cabinet doors
-  for (let c = 0; c < 3; c++) {
-    gr(ctx, ctrX + c * 22 + 2, 37, 18, 24, '#3a2010');
-    gr(ctx, ctrX + c * 22 + 3, 38, 16, 22, '#301a0c');
-    gr(ctx, ctrX + c * 22 + 10, 48, 2, 4, '#5a3a1c'); // handle
-    gr(ctx, ctrX + c * 22 + 3, 38, 16, 1, '#4a2e14'); // inner top highlight
-  }
-
-  // Refrigerator (dark steel — not white)
-  const fridgeX = GW - 18 + ox;
-  gr(ctx, fridgeX, 5, 16, 57, '#303030');
-  gr(ctx, fridgeX + 1, 6, 14, 1, '#3e3e3e');  // highlight
-  gr(ctx, fridgeX + 14, 20, 1, 10, '#222'); // handle
-  gr(ctx, fridgeX + 4, 32, 8, 1, '#1a1a1a'); // divider line
-  gr(ctx, fridgeX + 1, 33, 14, 1, '#181818');
-
-  // Stove
-  gr(ctx, ctrX - 22, 30, 20, 5, '#252525');
-  gr(ctx, ctrX - 20, 24, 16, 6, '#1e1e1e');
-  // Burner glow
-  const heatPulse = (Math.sin(t * 3) + 1) / 2;
-  gr(ctx, ctrX - 16, 27, 5, 2, `#${Math.floor(80 + heatPulse * 80).toString(16).padStart(2,'0')}2000` as string);
-  gr(ctx, ctrX - 10, 28, 4, 2, '#301000');
-  // Pot
-  gr(ctx, ctrX - 14, 21, 8, 4, '#1a1a1a');
-  gr(ctx, ctrX - 12, 18, 4, 3, '#222');
-  gr(ctx, ctrX - 14, 21, 8, 1, '#282828');
-  // Steam
-  if (Math.floor(t * 4) % 2 === 0) {
-    gr(ctx, ctrX - 12, 14, 1, 4, '#333');
-    gr(ctx, ctrX - 10, 12, 1, 5, '#2a2a2a');
-    gr(ctx, ctrX - 8, 15, 1, 3, '#333');
-  }
-
-  // Dining table (dark wood)
-  const tableX = Math.floor(GW * 0.3) + ox;
-  const tableY = Math.floor(GH * 0.52);
-  const tableW = 60;
-  gr(ctx, tableX, tableY, tableW, 8, '#5a3418'); // tabletop
-  gr(ctx, tableX, tableY, tableW, 2, '#7a4a24'); // highlight
-  gr(ctx, tableX, tableY + 8, tableW, 1, '#3a200e'); // shadow
-  // Legs
-  gr(ctx, tableX + 2, tableY + 8, 4, 12, '#3a2010');
-  gr(ctx, tableX + tableW - 6, tableY + 8, 4, 12, '#3a2010');
-
-  // Chairs
-  for (let c = 0; c < 2; c++) {
-    const chX = tableX + c * (tableW - 14);
-    gr(ctx, chX + 2, tableY - 12, 10, 8, '#4a2c14');   // seat
-    gr(ctx, chX + 2, tableY - 12, 10, 1, '#6a3c1e');   // seat highlight
-    gr(ctx, chX + 2, tableY - 18, 10, 6, '#3a2010');   // back
-    gr(ctx, chX + 2, tableY - 19, 10, 1, '#4e2e16');   // back highlight
-    gr(ctx, chX + 3, tableY - 4, 3, 8, '#2e1a0c');     // legs
-    gr(ctx, chX + 9, tableY - 4, 3, 8, '#2e1a0c');
-  }
-
-  // Wall shelf on left
-  const shelfX = 8 + ox;
-  gr(ctx, shelfX, 18, 30, 2, '#1e1408');
-  gr(ctx, shelfX, 18, 30, 1, '#2a1c0c');
-  gr(ctx, shelfX, 20, 2, 14, '#1a1006');
-  gr(ctx, shelfX + 28, 20, 2, 14, '#1a1006');
-  // Kitchen items on shelf
-  gr(ctx, shelfX + 4, 12, 5, 8, '#1a0a0a'); // dark jar
-  gr(ctx, shelfX + 5, 11, 3, 1, '#220e0e');
-  gr(ctx, shelfX + 12, 13, 4, 7, '#0a1a0a'); // green jar
-  gr(ctx, shelfX + 12, 12, 4, 1, '#0e220e');
-  gr(ctx, shelfX + 20, 14, 6, 6, '#1a1510'); // container
-
-  // Overhead light fixture
-  const lightX = Math.floor(GW / 2) + ox;
-  gr(ctx, lightX - 5, 0, 10, 4, '#1a1a18');
-  gr(ctx, lightX - 3, 4, 6, 4, '#282824');
+  // Warm ambient light overlay (subtle)
   const glow = (Math.sin(t * 0.8) + 1) / 2;
-  // Warm cone of light downward
-  ctx.fillStyle = `rgba(255,200,80,${0.08 + glow * 0.03})`;
-  ctx.fillRect((lightX - 30) * S, 8 * S, 60 * S, 40 * S);
-  ctx.fillStyle = `rgba(255,200,80,${0.04 + glow * 0.02})`;
-  ctx.fillRect((lightX - 50) * S, 8 * S, 100 * S, 30 * S);
-  gr(ctx, lightX - 3, 4, 6, 2, '#504840'); // glowing bulb
+  ctx.fillStyle = `rgba(255,200,80,${0.04 + glow * 0.015})`;
+  ctx.fillRect(0, 0, GW * S, GH * S);
 
-  // Stairs indicator on right (leading off-screen)
-  const stairX = GW - 10 + ox;
-  for (let ss = 0; ss < 8; ss++) {
-    gr(ctx, stairX + ss, floorY + ss * 3, 12 - ss, 3, `#${(0x14 + ss * 2).toString(16)}${(0x0e + ss).toString(16)}04`);
-    gr(ctx, stairX + ss, floorY + ss * 3, 12 - ss, 1, `#${(0x1e + ss * 2).toString(16)}${(0x14 + ss).toString(16)}08`);
+  // ── Walls (top, left, right) ──
+  gr(ctx, 0, 0, GW, 8, '#1a1008'); // top wall
+  gr(ctx, 0, 0, 6, GH, '#1a1008'); // left wall
+  gr(ctx, GW - 6, 0, 6, GH, '#1a1008'); // right wall
+  // Wall highlight edges
+  gr(ctx, 0, 8, GW, 1, '#2a1e10');
+  gr(ctx, 6, 0, 1, GH, '#2a1e10');
+  gr(ctx, GW - 7, 0, 1, GH, '#2a1e10');
+
+  // ── Counter along TOP wall (full width) ──
+  const ctrY = 8;
+  gr(ctx, 6, ctrY, GW - 12, 12, '#4a3018'); // counter body
+  gr(ctx, 6, ctrY, GW - 12, 2, '#6a4828'); // surface highlight
+  gr(ctx, 6, ctrY + 12, GW - 12, 1, '#2a1808'); // bottom shadow
+
+  // Stove (left-of-center on counter)
+  const stoveX = Math.floor(GW * 0.25);
+  gr(ctx, stoveX, ctrY + 1, 18, 10, '#252525'); // stove top
+  gr(ctx, stoveX + 1, ctrY + 2, 16, 8, '#1e1e1e');
+  // Burners (4 circles from above)
+  const heatPulse = (Math.sin(t * 3) + 1) / 2;
+  const burnerHot = `#${Math.floor(80 + heatPulse * 100).toString(16).padStart(2,'0')}2000`;
+  for (const [bx, by] of [[stoveX+3,ctrY+3],[stoveX+9,ctrY+3],[stoveX+3,ctrY+7],[stoveX+9,ctrY+7]]) {
+    gr(ctx, bx, by, 4, 3, burnerHot);
+    gr(ctx, bx+1, by+1, 2, 1, '#ff4400');
   }
-  drawPixelText(ctx, '> STAIRS', stairX - 4, floorY - 12, '#887766', 1);
+
+  // Refrigerator (top-right corner, viewed from above = rectangle)
+  const fridgeX = GW - 22;
+  gr(ctx, fridgeX, ctrY + 1, 14, 10, '#303030'); // fridge top
+  gr(ctx, fridgeX + 1, ctrY + 2, 12, 3, '#3e3e3e'); // freezer compartment
+  gr(ctx, fridgeX + 1, ctrY + 6, 12, 4, '#2a2a2a'); // fridge compartment
+  gr(ctx, fridgeX + 13, ctrY + 4, 2, 4, '#444'); // handle
+
+  // ── Dining table (center-left, top-down view) ──
+  const tableX = Math.floor(GW * 0.28);
+  const tableY = Math.floor(GH * 0.38);
+  const tableW = 28, tableH = 18;
+  gr(ctx, tableX, tableY, tableW, tableH, '#5a3a18'); // table surface
+  gr(ctx, tableX + 1, tableY + 1, tableW - 2, 2, '#6a4a24'); // highlight
+  gr(ctx, tableX, tableY + tableH - 1, tableW, 1, '#3a2008'); // bottom shadow
+
+  // 4 Chairs around table (viewed from above: small rectangles)
+  // Top chairs
+  gr(ctx, tableX + 4, tableY - 8, 8, 6, '#4a2e10');
+  gr(ctx, tableX + 4, tableY - 9, 8, 1, '#6a3e18');
+  gr(ctx, tableX + tableW - 12, tableY - 8, 8, 6, '#4a2e10');
+  gr(ctx, tableX + tableW - 12, tableY - 9, 8, 1, '#6a3e18');
+  // Bottom chairs
+  gr(ctx, tableX + 4, tableY + tableH + 2, 8, 6, '#4a2e10');
+  gr(ctx, tableX + 4, tableY + tableH + 7, 8, 1, '#3a1e08');
+  gr(ctx, tableX + tableW - 12, tableY + tableH + 2, 8, 6, '#4a2e10');
+  gr(ctx, tableX + tableW - 12, tableY + tableH + 7, 8, 1, '#3a1e08');
+
+  // Bowl on table
+  gr(ctx, tableX + 10, tableY + 6, 8, 6, '#8B4513');
+  gr(ctx, tableX + 11, tableY + 7, 6, 4, '#a05020');
+  gr(ctx, tableX + 13, tableY + 8, 2, 2, '#cc7733'); // food
+
+  // ── Window: LEFT wall (top-down = view into wall recess) ──
+  const winY = Math.floor(GH * 0.55);
+  gr(ctx, 0, winY, 6, 18, '#1a1008'); // wall
+  gr(ctx, 1, winY + 1, 4, 16, '#091520'); // night glass
+  gr(ctx, 1, winY + 7, 4, 2, '#3a2410'); // divider
+  for (const [sx,sy] of [[2,2],[3,5],[2,11]]) gr(ctx, sx, winY+sy, 1, 1, '#aaccff');
+
+  // ── Stairs indicator: bottom-right ──
+  const stairX = GW - 20;
+  const stairY = GH - 16;
+  for (let ss = 0; ss < 4; ss++) {
+    gr(ctx, stairX + ss*2, stairY + ss*2, 16 - ss*2, 3, `#${(0x28+ss*8).toString(16).padStart(2,'0')}${(0x18+ss*4).toString(16).padStart(2,'0')}08`);
+    gr(ctx, stairX + ss*2, stairY + ss*2, 16-ss*2, 1, `#${(0x38+ss*6).toString(16).padStart(2,'0')}2010`);
+  }
+  drawPixelText(ctx, '> STAIRS', stairX - 2, stairY - 8, '#887766', 1);
+
+  // ── Overhead light (center cast from above) ──
+  ctx.fillStyle = `rgba(255,210,100,${0.07 + glow * 0.025})`;
+  ctx.fillRect(Math.floor(GW*0.3) * S, Math.floor(GH*0.3) * S, Math.floor(GW*0.4) * S, Math.floor(GH*0.5) * S);
 }
 
 function drawUpstairs(ctx: CanvasRenderingContext2D, GW: number, GH: number, t: number) {
